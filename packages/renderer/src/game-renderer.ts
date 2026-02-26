@@ -1,0 +1,145 @@
+import { Application, Container } from "pixi.js";
+import type { GameState } from "@farmgame/engine";
+import { TerrainLayer } from "./layers/terrain.js";
+import { CropLayer } from "./layers/crop.js";
+import { BuildingLayer } from "./layers/building.js";
+import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
+import { WeatherEffects } from "./layers/weather-effects.js";
+import { Camera } from "./camera.js";
+import { InputHandler, type InputEvent } from "./input.js";
+import { generateTileset, TILE_SIZE } from "./sprites/tileset.js";
+
+export interface RendererOptions {
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
+}
+
+export class GameRenderer {
+  private app: Application;
+  private world: Container;
+  private terrainLayer: TerrainLayer;
+  private cropLayer: CropLayer;
+  private buildingLayer: BuildingLayer;
+  private gridOverlay: GridOverlay;
+  private weatherEffects: WeatherEffects;
+  private camera: Camera;
+  private inputHandler: InputHandler;
+  private initialized = false;
+  private onInput: ((event: InputEvent) => void) | null = null;
+  private animationTickerId: number | null = null;
+  private lastState: GameState | null = null;
+  private dragStartTileIndex: number | null = null;
+
+  static readonly CELL_SIZE = TILE_SIZE;
+
+  constructor() {
+    this.app = new Application();
+    this.world = new Container();
+    this.terrainLayer = new TerrainLayer();
+    this.cropLayer = new CropLayer();
+    this.buildingLayer = new BuildingLayer();
+    this.gridOverlay = new GridOverlay();
+    this.weatherEffects = new WeatherEffects();
+    this.camera = new Camera();
+    this.inputHandler = new InputHandler();
+  }
+
+  async init(options: RendererOptions): Promise<void> {
+    await this.app.init({
+      canvas: options.canvas,
+      width: options.width,
+      height: options.height,
+      backgroundColor: 0x87ceeb,
+      antialias: false,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+    });
+
+    await generateTileset(this.app);
+
+    this.app.stage.addChild(this.world);
+    this.world.addChild(this.terrainLayer.container);
+    this.world.addChild(this.cropLayer.container);
+    this.world.addChild(this.buildingLayer.container);
+    this.world.addChild(this.gridOverlay.container);
+    this.world.addChild(this.weatherEffects.container);
+
+    this.camera.attach(this.world, options.canvas);
+    this.inputHandler.attach(options.canvas, (event: InputEvent) => {
+      if (event.type === "tile_hover") {
+        // Update hover directly on the overlay — no React/zustand involved
+        this.gridOverlay.hoveredTileIndex = event.tileIndex;
+        // Redraw just the hover graphic if we have state
+        if (this.lastState) {
+          this.gridOverlay.update(this.lastState);
+        }
+      }
+      if (event.type === "tile_drag_move") {
+        const dragStart = this.dragStartTileIndex;
+        if (dragStart !== null) {
+          this.gridOverlay.setDragPreview(dragStart, event.tileIndex);
+        }
+      }
+      if (event.type === "tile_drag_start") {
+        this.dragStartTileIndex = event.tileIndex;
+      }
+      if (event.type === "tile_drag_end" || event.type === "tile_click") {
+        this.gridOverlay.clearDragPreview();
+        this.dragStartTileIndex = null;
+      }
+      if (this.onInput) {
+        this.onInput(event);
+      }
+    });
+
+    // Animation loop — only does work when weather particles exist
+    const animate = () => {
+      this.weatherEffects.tick();
+      this.animationTickerId = requestAnimationFrame(animate);
+    };
+    this.animationTickerId = requestAnimationFrame(animate);
+
+    this.initialized = true;
+  }
+
+  setInputHandler(handler: (event: InputEvent) => void): void {
+    this.onInput = handler;
+  }
+
+  setOverlayMode(mode: OverlayMode): void {
+    this.gridOverlay.setOverlayMode(mode);
+    if (this.lastState) {
+      this.gridOverlay.markOverlayDirty();
+      this.gridOverlay.update(this.lastState);
+    }
+  }
+
+  setDragEnabled(enabled: boolean): void {
+    this.inputHandler.setDragEnabled(enabled);
+  }
+
+  /** Called when game state changes (every tick, ~1-3 seconds). */
+  update(state: GameState): void {
+    if (!this.initialized) return;
+    this.lastState = state;
+
+    this.terrainLayer.update(state);
+    this.cropLayer.update(state);
+    this.buildingLayer.update(state);
+    this.gridOverlay.update(state);
+    this.weatherEffects.updateState(state);
+
+    this.inputHandler.updateGrid(state.world.width, state.world.height, this.world);
+  }
+
+  destroy(): void {
+    if (this.animationTickerId !== null) {
+      cancelAnimationFrame(this.animationTickerId);
+    }
+    this.camera.detach();
+    this.inputHandler.detach();
+    this.app.destroy(true);
+    this.initialized = false;
+  }
+}

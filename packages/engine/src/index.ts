@@ -1,0 +1,80 @@
+// Core
+export { nextTick } from "./tick.js";
+export {
+  createGameState,
+  DAYS_PER_SEASON,
+  SEASONS,
+  BASE_INVENTORY_CAPACITY,
+  SILO_CAPACITY_BONUS,
+  type GameState,
+  type Notification,
+  type TickResult,
+  type CreateGameOptions,
+} from "./state.js";
+
+// Commands
+export { applyCommand, type CommandResult } from "./command-handler.js";
+export type { GameCommand, SprayType } from "./commands.js";
+
+// Entities
+export type {
+  CropId,
+  CropDefinition,
+  CropCategory,
+  Season,
+} from "./entities/crop.js";
+
+export type {
+  TerrainType,
+  Tile,
+  WorldState,
+} from "./entities/world.js";
+export {
+  createTile,
+  tileIndex,
+  tileCoords,
+  plotIndex,
+  plotCoords,
+} from "./entities/world.js";
+
+export type {
+  FieldState,
+  Field,
+} from "./entities/field.js";
+export { createField } from "./entities/field.js";
+
+export type {
+  BuildingType,
+  BuildingDefinition,
+  Building,
+} from "./entities/building.js";
+export { createBuilding, BUILDING_CATALOG } from "./entities/building.js";
+
+export type {
+  WeatherCondition,
+  ForecastDay,
+  WeatherState,
+} from "./entities/weather.js";
+export { createWeatherState } from "./entities/weather.js";
+
+export type {
+  PriceSnapshot,
+  MarketState,
+} from "./entities/market.js";
+export { createMarketState } from "./entities/market.js";
+
+export type { ToolId, ToolDefinition } from "./entities/tools.js";
+export { TOOL_CATALOG } from "./entities/tools.js";
+
+// Data
+export { CROP_CATALOG, ALL_CROP_IDS, getCropDef } from "./data/crops.js";
+
+// RNG
+export {
+  createRng,
+  nextFloat,
+  nextInt,
+  nextBool,
+  pickRandom,
+  type RngState,
+} from "./rng.js";
