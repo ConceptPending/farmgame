@@ -5,7 +5,7 @@ import { animalValue } from "../entities/animal.js";
 import { getCropDef } from "../data/crops.js";
 
 // Seasonal cost tuning.
-export const LAND_TAX_PER_PLOT = 40;
+export const LAND_TAX_PER_PLOT = 80;
 export const BUILDING_UPKEEP_RATE = 0.02; // per season, of build cost
 export const FIELD_OVERHEAD = 5; // per designated field, per season
 export const BASE_OVERHEAD = 20; // flat per season
