@@ -64,7 +64,7 @@ export const BASE_INVENTORY_CAPACITY = 100;
 export const SILO_CAPACITY_BONUS = 100;
 
 /** Default net-worth target to win the game. */
-export const DEFAULT_GOAL_NET_WORTH = 100000;
+export const DEFAULT_GOAL_NET_WORTH = 40000;
 /** Maximum the player can owe the bank at once. */
 export const LOAN_LIMIT = 50000;
 

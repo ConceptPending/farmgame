@@ -8,6 +8,7 @@ import { createField } from "./entities/field.js";
 import { tileIndex } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
 import { getGoodInfo } from "./data/goods.js";
+import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
 import { computeLivestockCapacity } from "./systems/livestock.js";
@@ -399,19 +400,27 @@ function handleSell(state: GameState, goodId: string, quantity: number): Command
     return fail(state, `Not enough ${def.name}. Have ${available}, want to sell ${quantity}`);
   }
 
+  // Sell against a downward-sloping demand curve: each unit nudges demand (and
+  // thus price) down, so a big batch averages a lower price (slippage) and
+  // leaves the market depressed until demand recovers. Pricing is relative to
+  // the currently displayed price, so you sell near what the market panel shows.
+  const clampPrice = (p: number) => Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, p));
   const price = state.market.prices[goodId] ?? def.basePrice;
-  const revenue = Math.round(quantity * price);
+  const demand = state.market.demand[goodId] ?? 1.0;
+  const endDemand = Math.max(MIN_DEMAND, demand - quantity * SELL_DEMAND_IMPACT);
+  const slip = demand > 0 ? (demand + endDemand) / 2 / demand : 1; // <= 1
+  const avgPrice = clampPrice(price * slip);
+  const revenue = Math.round(quantity * avgPrice);
 
   const newInventory = { ...state.inventory };
   newInventory[goodId] = available - quantity;
   if (newInventory[goodId] === 0) delete newInventory[goodId];
 
-  // Selling depresses price slightly
   const newPrices = { ...state.market.prices };
-  newPrices[goodId] = Math.max(1, (newPrices[goodId] ?? def.basePrice) * (1 - quantity * 0.005));
+  newPrices[goodId] = clampPrice(demand > 0 ? price * (endDemand / demand) : price);
 
   const newDemand = { ...state.market.demand };
-  newDemand[goodId] = Math.max(0.5, (newDemand[goodId] ?? 1) - quantity * 0.01);
+  newDemand[goodId] = endDemand;
 
   return {
     state: {

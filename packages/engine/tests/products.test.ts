@@ -56,12 +56,15 @@ describe("production", () => {
 });
 
 describe("selling products", () => {
-  it("sells a product for cash at the market price", () => {
+  it("sells a product for cash near the market price", () => {
     const s = { ...withBarn(), inventory: { eggs: 10 } };
     const price = s.market.prices.eggs;
     const r = applyCommand(s, { type: "SELL", cropId: "eggs", quantity: 10 });
     expect(r.success).toBe(true);
-    expect(r.state.money).toBe(s.money + Math.round(10 * price));
+    const gained = r.state.money - s.money;
+    // Revenue tracks the market price, minus a little selling slippage.
+    expect(gained).toBeGreaterThan(10 * price * 0.9);
+    expect(gained).toBeLessThanOrEqual(10 * price);
     expect(r.state.inventory.eggs).toBeUndefined();
   });
 

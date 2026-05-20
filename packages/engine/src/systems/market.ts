@@ -6,6 +6,13 @@ import { nextFloat, nextBool } from "../rng.js";
 
 const MAX_HISTORY = 100;
 
+/** How fast demand (and thus price) drifts back toward 1.0 each tick. */
+export const DEMAND_RECOVERY = 0.1;
+/** Demand lost per unit sold — the "depth" of the market. */
+export const SELL_DEMAND_IMPACT = 0.003;
+/** Demand can't be driven below this (price floor is enforced separately). */
+export const MIN_DEMAND = 0.1;
+
 export function marketSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
@@ -17,10 +24,9 @@ export function marketSystem(state: GameState): {
 
   for (const cropId of ALL_CROP_IDS) {
     const def = CROP_CATALOG[cropId];
-    const currentPrice = newPrices[cropId] ?? def.basePrice;
     const demand = newDemand[cropId] ?? 1.0;
 
-    // Small random walk
+    // Small random walk for life
     const walkResult = nextFloat(rng);
     rng = walkResult.rng;
     const walk = (walkResult.value - 0.5) * 0.06 * def.basePrice; // +/- 3% of base
@@ -30,25 +36,21 @@ export function marketSystem(state: GameState): {
       ? -0.01 * def.basePrice // slight downward pressure in season
       : 0.005 * def.basePrice; // slight upward pressure off-season
 
-    // Demand recovery (demand drifts back toward 1.0)
-    newDemand[cropId] = demand + (1.0 - demand) * 0.02;
-
-    // Apply price change
-    let newPrice = currentPrice + walk + seasonBias;
-    newPrice *= (0.9 + newDemand[cropId] * 0.2); // demand multiplier
-
-    // Clamp price to [30% .. 300%] of base price
+    // Demand recovers toward 1.0; price is anchored to it (mean-reverting),
+    // so a market crashed by heavy selling climbs back only as demand heals.
+    newDemand[cropId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    let newPrice = def.basePrice * newDemand[cropId] + walk + seasonBias;
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[cropId] = Math.round(newPrice * 100) / 100;
   }
 
-  // Animal products: priced off demand only (no RNG walk), so the random
-  // stream stays identical whether or not the player keeps livestock.
+  // Animal products: same demand anchoring, no RNG walk (keeps the random
+  // stream identical whether or not the player keeps livestock).
   for (const productId of ALL_PRODUCT_IDS) {
     const def = PRODUCT_CATALOG[productId];
     const demand = newDemand[productId] ?? 1.0;
-    newDemand[productId] = demand + (1.0 - demand) * 0.02; // drift back to 1.0
-    let newPrice = def.basePrice * (0.9 + newDemand[productId] * 0.2);
+    newDemand[productId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    let newPrice = def.basePrice * newDemand[productId];
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[productId] = Math.round(newPrice * 100) / 100;
   }

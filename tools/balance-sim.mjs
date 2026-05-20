@@ -10,7 +10,7 @@ import {
 
 const THRESHOLDS = [25000, 50000, 100000, 150000, 200000];
 const MAX_DAYS = 1500;
-const SELL_PER_DAY = 25;     // units per good per day (avoid crashing price)
+const SELL_PER_DAY = 15;     // units per good per day (avoid crashing price)
 const TARGET_FIELDS = 8;
 const CHUNK = 12;            // tiles per designated field
 
@@ -47,9 +47,13 @@ function run(seed) {
     // 1. Harvest ready fields
     for (const f of state.fields.filter((f) => f.state === "ready")) apply({ type: "HARVEST_FIELD", fieldId: f.id });
 
-    // 2. Sell a batch of each good (diversified selling limits price crashes)
+    // 2. Sell a batch of each good — but hold when the market is depressed
+    //    (a sensible player waits for demand to recover rather than dumping).
     for (const [good, qty] of Object.entries(state.inventory)) {
       if (qty <= 0) continue;
+      const base = CROP_CATALOG[good]?.basePrice;
+      if (!base) continue;
+      if ((state.market.prices[good] ?? base) < base * 0.5) continue;
       const sell = Math.min(qty, SELL_PER_DAY);
       const before = state.money;
       const r = apply({ type: "SELL", cropId: good, quantity: sell });

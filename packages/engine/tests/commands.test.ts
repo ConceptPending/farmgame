@@ -464,13 +464,16 @@ describe("SELL", () => {
 
   it("uses market price not base price for revenue", () => {
     const state = { ...stateWithSeed(), inventory: { wheat: 10 } };
-    // Set market price to something specific
+    // Set market price well above base; revenue should track it (minus a little
+    // slippage), not fall back to the $15 base price.
     const s2 = {
       ...state,
       market: { ...state.market, prices: { ...state.market.prices, wheat: 25 } },
     };
     const result = applyCommand(s2, { type: "SELL", cropId: "wheat", quantity: 10 });
-    expect(result.state.money).toBe(s2.money + 250);
+    const gained = result.state.money - s2.money;
+    expect(gained).toBeGreaterThan(10 * 15); // clearly above base-price revenue
+    expect(gained).toBeLessThanOrEqual(10 * 25); // never above the shown price
   });
 });
 
