@@ -6,6 +6,7 @@ import {
   ANIMAL_CATALOG,
   ALL_ANIMAL_TYPES,
   CROP_CATALOG,
+  PRODUCT_CATALOG,
   animalValue,
   computeLivestockCapacity,
 } from "@farmgame/engine";
@@ -76,12 +77,15 @@ export function LivestockPanel() {
         {ALL_ANIMAL_TYPES.map((type) => {
           const def = ANIMAL_CATALOG[type];
           const disabled = used >= capacity || state.money < def.cost;
+          const productNote = def.product
+            ? ` · yields ${def.yieldPerSeason} ${PRODUCT_CATALOG[def.product].name.toLowerCase()}/season`
+            : "";
           return (
             <button
               key={type}
               disabled={disabled}
               onClick={() => dispatch({ type: "BUY_ANIMAL", animalType: type })}
-              title={`Sells for up to $${def.matureValue} when grown · eats ${def.feedPerSeason} grain/season`}
+              title={`Sells for up to $${def.matureValue} grown · eats ${def.feedPerSeason} grain/season${productNote}`}
               style={{
                 padding: "4px 8px",
                 fontSize: 11,
