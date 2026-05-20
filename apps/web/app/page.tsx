@@ -8,6 +8,8 @@ import { ToolPalette } from "../components/game/ToolPalette";
 import { InfoPanel } from "../components/game/InfoPanel";
 import { WeatherPanel } from "../components/game/WeatherPanel";
 import { MarketPanel } from "../components/game/MarketPanel";
+import { FinancePanel } from "../components/game/FinancePanel";
+import { GameOverOverlay } from "../components/game/GameOverOverlay";
 
 export default function Home() {
   const initialized = useRef(false);
@@ -29,9 +31,11 @@ export default function Home() {
           <GameCanvas />
           <WeatherPanel />
           <MarketPanel />
+          <FinancePanel />
         </div>
         <InfoPanel />
       </div>
+      <GameOverOverlay />
     </div>
   );
 }

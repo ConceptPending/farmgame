@@ -3,7 +3,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { TOOL_CATALOG } from "@farmgame/engine";
+import { TOOL_CATALOG, computeNetWorth } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import type { WeatherCondition } from "@farmgame/engine";
 
@@ -41,6 +41,7 @@ export function HUD() {
   const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
   const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
+  const setShowFinancePanel = useUIStore((s) => s.setShowFinancePanel);
 
   useEffect(() => {
     if (notifications.length > 8) {
@@ -58,6 +59,8 @@ export function HUD() {
   };
 
   const toolDef = TOOL_CATALOG[selectedTool];
+  const netWorth = computeNetWorth(state);
+  const goalPct = Math.min(100, Math.round((netWorth / state.goalNetWorth) * 100));
 
   return (
     <>
@@ -74,9 +77,33 @@ export function HUD() {
         }}
       >
         {/* Money */}
-        <div style={{ fontSize: 18, fontWeight: "bold", color: "#4ecca3" }}>
+        <div style={{ fontSize: 18, fontWeight: "bold", color: state.money < 0 ? "#ff6b6b" : "#4ecca3" }}>
           ${state.money.toLocaleString()}
         </div>
+
+        {/* Net worth vs. goal */}
+        <button
+          onClick={() => setShowFinancePanel(true)}
+          title="Open finances"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            border: "1px solid #0f3460",
+            background: "#0a1628",
+            borderRadius: 4,
+            padding: "3px 8px",
+            cursor: "pointer",
+          }}
+        >
+          <span style={{ fontSize: 10, color: "#7a8a9a" }}>
+            NET WORTH <span style={{ color: "#eee" }}>${netWorth.toLocaleString()}</span>
+            {state.loan > 0 && <span style={{ color: "#ff6b6b" }}> · debt ${state.loan.toLocaleString()}</span>}
+          </span>
+          <div style={{ width: 120, height: 5, background: "#16213e", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${goalPct}%`, height: "100%", background: "#4ecca3" }} />
+          </div>
+        </button>
 
         {/* Season/Day/Year */}
         <div style={{ color: seasonColors[state.season] ?? "#eee", fontWeight: 600 }}>
@@ -176,7 +203,21 @@ export function HUD() {
 
           <div style={divider} />
 
-          {/* Market button */}
+          {/* Finance + Market buttons */}
+          <button
+            onClick={() => setShowFinancePanel(true)}
+            style={{
+              padding: "2px 10px",
+              fontSize: 11,
+              border: "1px solid #555",
+              borderRadius: 3,
+              background: "#222",
+              color: "#4ecca3",
+              cursor: "pointer",
+            }}
+          >
+            Finance
+          </button>
           <button
             onClick={() => setShowMarketPanel(true)}
             style={{

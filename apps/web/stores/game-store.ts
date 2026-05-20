@@ -45,10 +45,12 @@ function intervalForSpeed(speed: 1 | 2 | 3): number {
 // Cap on a single "skip to event" so a quiet farm can't loop indefinitely (~4 months).
 const MAX_SKIP_DAYS = 120;
 
-// Events worth stopping for: crop ready/lost, field crises, market swings, and
-// season changes. Deliberately excludes routine weather warnings (frost/storm/
-// drought happen often and may not threaten anything you've planted).
-const STOP_WORTHY = /ready to harvest|killed|has died|died from|infestation|overrun|prices crashing|demand surging|has arrived/i;
+// Events worth stopping for: crop ready/lost, field crises, market swings,
+// random events, and season changes. Deliberately excludes routine weather
+// warnings (frost/storm/drought happen often and may not threaten crops) and
+// seasonal expense notices (every season — too noisy).
+const STOP_WORTHY =
+  /ready to harvest|killed|has died|died from|infestation|overrun|prices crashing|demand surging|has arrived|Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown/i;
 
 function isStopWorthy(n: Notification): boolean {
   return n.type === "error" || STOP_WORTHY.test(n.message);
@@ -79,8 +81,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   autoPauseOnEvents: true,
 
   initGame: () => {
+    get().stopLoop();
     const state = createGameState({ seed: Date.now() });
-    set({ state });
+    set({ state, notifications: [] });
     if (get().autoplay) get().startLoop();
   },
 
@@ -116,8 +119,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const speed = state?.speed ?? 1;
     const interval = setInterval(() => {
       const newNotifications = runTick(get, set);
-      // Auto-pause so the player isn't surprised by an event scrolling past.
-      if (get().autoPauseOnEvents && newNotifications.some(isStopWorthy)) {
+      // Stop the timer when the game ends, or auto-pause on a noteworthy event.
+      if (get().state?.status !== "playing") {
+        get().setAutoplay(false);
+      } else if (get().autoPauseOnEvents && newNotifications.some(isStopWorthy)) {
         get().setAutoplay(false);
       }
     }, intervalForSpeed(speed));
@@ -150,7 +155,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Manual stepping implies turn-based control: pause any running timer first.
     get().stopLoop();
     for (let i = 0; i < days; i++) {
-      if (!get().state) break;
+      if (get().state?.status !== "playing") break;
       runTick(get, set);
     }
   },
@@ -158,7 +163,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceToEvent: (maxDays: number = MAX_SKIP_DAYS) => {
     get().stopLoop();
     for (let i = 0; i < maxDays; i++) {
-      if (!get().state) break;
+      if (get().state?.status !== "playing") break;
       const newNotifications = runTick(get, set);
       if (newNotifications.some(isStopWorthy)) break;
     }
