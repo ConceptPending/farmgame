@@ -12,6 +12,10 @@ import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
 import { computeLivestockCapacity } from "./systems/livestock.js";
+import type { EquipmentType } from "./entities/equipment.js";
+import {
+  EQUIPMENT_CATALOG, createEquipment, workableTiles, cultivatedTiles, EQUIPMENT_SALVAGE,
+} from "./entities/equipment.js";
 
 export interface CommandResult {
   state: GameState;
@@ -153,6 +157,16 @@ function handlePlowField(state: GameState, fieldId: number): CommandResult {
   const field = state.fields.find((f) => f.id === fieldId);
   if (!field) return fail(state, "Field not found");
   if (field.state !== "fallow") return fail(state, "Field must be fallow to plow");
+
+  // Mechanization limits how much land can be under cultivation at once.
+  const capacity = workableTiles(state.equipment);
+  const inUse = cultivatedTiles(state.fields);
+  if (inUse + field.tileIndices.length > capacity) {
+    return fail(
+      state,
+      `Not enough machinery: ${inUse}/${capacity} tiles worked. Buy equipment to cultivate more land.`,
+    );
+  }
 
   return {
     state: {
@@ -479,6 +493,44 @@ function handleSellAnimal(state: GameState, animalId: number): CommandResult {
   };
 }
 
+function handleBuyEquipment(state: GameState, equipmentType: EquipmentType): CommandResult {
+  const def = EQUIPMENT_CATALOG[equipmentType];
+  if (state.money < def.cost) {
+    return fail(state, `Not enough money. Need $${def.cost}, have $${state.money}`);
+  }
+  const item = createEquipment(state.nextEquipmentId, equipmentType);
+  return {
+    state: {
+      ...state,
+      money: state.money - def.cost,
+      equipment: [...state.equipment, item],
+      nextEquipmentId: state.nextEquipmentId + 1,
+    },
+    success: true,
+    notifications: [
+      { type: "success", message: `Bought a ${def.name.toLowerCase()} for $${def.cost}` },
+    ],
+  };
+}
+
+function handleSellEquipment(state: GameState, equipmentId: number): CommandResult {
+  const item = state.equipment.find((e) => e.id === equipmentId);
+  if (!item) return fail(state, "Equipment not found");
+  const def = EQUIPMENT_CATALOG[item.type];
+  const value = Math.round(def.cost * EQUIPMENT_SALVAGE);
+  return {
+    state: {
+      ...state,
+      money: state.money + value,
+      equipment: state.equipment.filter((e) => e.id !== equipmentId),
+    },
+    success: true,
+    notifications: [
+      { type: "info", message: `Sold a ${def.name.toLowerCase()} for $${value}` },
+    ],
+  };
+}
+
 function handleTakeLoan(state: GameState, amount: number): CommandResult {
   if (amount <= 0) return fail(state, "Loan amount must be positive");
   const available = LOAN_LIMIT - state.loan;
@@ -533,6 +585,10 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleBuyAnimal(state, command.animalType);
     case "SELL_ANIMAL":
       return handleSellAnimal(state, command.animalId);
+    case "BUY_EQUIPMENT":
+      return handleBuyEquipment(state, command.equipmentType);
+    case "SELL_EQUIPMENT":
+      return handleSellEquipment(state, command.equipmentId);
     case "TAKE_LOAN":
       return handleTakeLoan(state, command.amount);
     case "REPAY_LOAN":

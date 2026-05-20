@@ -6,6 +6,7 @@
 import {
   createGameState, nextTick, applyCommand, computeNetWorth,
   CROP_CATALOG, ALL_CROP_IDS,
+  EQUIPMENT_CATALOG, workableTiles, cultivatedTiles,
 } from "../packages/engine/dist/index.js";
 
 const THRESHOLDS = [25000, 50000, 100000, 150000, 200000];
@@ -33,14 +34,14 @@ const ranked = [...ALL_CROP_IDS].sort((a, b) => {
 function run(seed) {
   let state = createGameState({ seed, goalNetWorth: THRESHOLDS[THRESHOLDS.length - 1] });
   let cropIdx = 0;
-  let revenue = 0, spentSeed = 0, spentSpray = 0, spentLand = 0;
+  let revenue = 0, spentSeed = 0, spentSpray = 0, spentLand = 0, spentEquip = 0;
   const crossed = {}; // threshold -> day
 
   for (let day = 0; day < MAX_DAYS; day++) {
     const nw = computeNetWorth(state);
     for (const t of THRESHOLDS) if (crossed[t] === undefined && nw >= t) crossed[t] = day;
-    if (crossed[THRESHOLDS[THRESHOLDS.length - 1]] !== undefined) return { day, crossed, state, revenue, spentSeed, spentSpray, spentLand };
-    if (state.status !== "playing") return { day, crossed, state, revenue, spentSeed, spentSpray, spentLand };
+    if (crossed[THRESHOLDS[THRESHOLDS.length - 1]] !== undefined) return { day, crossed, state, revenue, spentSeed, spentSpray, spentLand, spentEquip };
+    if (state.status !== "playing") return { day, crossed, state, revenue, spentSeed, spentSpray, spentLand, spentEquip };
 
     const apply = (cmd) => { const r = applyCommand(state, cmd); if (r.success) state = r.state; return r; };
 
@@ -87,6 +88,16 @@ function run(seed) {
       }
     }
 
+    // 4b. Mechanize: buy equipment when cultivation-capped and affordable
+    if (cultivatedTiles(state.fields) + CHUNK > workableTiles(state.equipment)) {
+      const have = (t) => state.equipment.filter((e) => e.type === t).length;
+      const next = have("plow") === 0 ? "plow" : have("tractor") === 0 ? "tractor" : have("combine") === 0 ? "combine" : null;
+      if (next && state.money >= EQUIPMENT_CATALOG[next].cost * 1.5) {
+        const before = state.money;
+        if (apply({ type: "BUY_EQUIPMENT", equipmentType: next }).success) spentEquip += before - state.money;
+      }
+    }
+
     // 5. Designate new fields from spare owned dirt
     if (state.fields.length < TARGET_FIELDS) {
       const tiles = ownedEmptyDirt(state);
@@ -108,7 +119,7 @@ function run(seed) {
 
     state = nextTick(state).state;
   }
-  return { day: MAX_DAYS, crossed, state, revenue, spentSeed, spentSpray, spentLand };
+  return { day: MAX_DAYS, crossed, state, revenue, spentSeed, spentSpray, spentLand, spentEquip };
 }
 
 const seeds = [1, 2, 3, 4, 5];
@@ -125,4 +136,4 @@ const avgFor = (t) => {
 };
 console.log("avg:" + THRESHOLDS.map((t) => fmtDay(avgFor(t)).padStart(10)).join(""));
 const last = results[0];
-console.log(`\nsample(seed1): plots=${last.state.world.plotOwnership.filter(Boolean).length} rev=$${Math.round(last.revenue)} seed=$${Math.round(last.spentSeed)} spray=$${Math.round(last.spentSpray)} land=$${Math.round(last.spentLand)}`);
+console.log(`\nsample(seed1): plots=${last.state.world.plotOwnership.filter(Boolean).length} equip=[${last.state.equipment.map((e) => e.type).join(",")}] rev=$${Math.round(last.revenue)} seed=$${Math.round(last.spentSeed)} spray=$${Math.round(last.spentSpray)} land=$${Math.round(last.spentLand)} equipCost=$${Math.round(last.spentEquip)}`);
