@@ -11,12 +11,20 @@ import { createMarketState } from "./entities/market.js";
 import { ALL_CROP_IDS, CROP_CATALOG } from "./data/crops.js";
 import { generateWorld } from "./data/world-gen.js";
 
+export type GameStatus = "playing" | "won" | "lost";
+
 export interface GameState {
   tick: number;
   season: Season;
   day: number;
   year: number;
   money: number;
+  /** Outstanding loan principal owed to the bank. */
+  loan: number;
+  /** Net-worth target that wins the game. */
+  goalNetWorth: number;
+  /** "playing" until the player wins (hits the goal) or loses (bankruptcy). */
+  status: GameStatus;
   rng: RngState;
   paused: boolean;
   speed: 1 | 2 | 3;
@@ -52,13 +60,23 @@ export const SEASONS: readonly Season[] = [
 export const BASE_INVENTORY_CAPACITY = 100;
 export const SILO_CAPACITY_BONUS = 100;
 
+/** Default net-worth target to win the game. */
+export const DEFAULT_GOAL_NET_WORTH = 25000;
+/** Maximum the player can owe the bank at once. */
+export const LOAN_LIMIT = 50000;
+
 export interface CreateGameOptions {
   seed?: number;
   startingMoney?: number;
+  goalNetWorth?: number;
 }
 
 export function createGameState(options: CreateGameOptions = {}): GameState {
-  const { seed = Date.now(), startingMoney = 500 } = options;
+  const {
+    seed = Date.now(),
+    startingMoney = 500,
+    goalNetWorth = DEFAULT_GOAL_NET_WORTH,
+  } = options;
 
   let rng = createRng(seed);
   const worldResult = generateWorld(rng);
@@ -75,6 +93,9 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     day: 1,
     year: 1,
     money: startingMoney,
+    loan: 0,
+    goalNetWorth,
+    status: "playing",
     rng,
     paused: false,
     speed: 1,

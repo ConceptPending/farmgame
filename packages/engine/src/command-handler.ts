@@ -1,6 +1,6 @@
 import type { GameCommand, SprayType } from "./commands.js";
 import type { GameState, Notification } from "./state.js";
-import { BASE_INVENTORY_CAPACITY, SILO_CAPACITY_BONUS } from "./state.js";
+import { BASE_INVENTORY_CAPACITY, SILO_CAPACITY_BONUS, LOAN_LIMIT } from "./state.js";
 import type { CropId } from "./entities/crop.js";
 import type { BuildingType } from "./entities/building.js";
 import { BUILDING_CATALOG, createBuilding } from "./entities/building.js";
@@ -427,6 +427,34 @@ function handleSell(state: GameState, cropId: CropId, quantity: number): Command
   };
 }
 
+function handleTakeLoan(state: GameState, amount: number): CommandResult {
+  if (amount <= 0) return fail(state, "Loan amount must be positive");
+  const available = LOAN_LIMIT - state.loan;
+  if (amount > available) {
+    return fail(state, `Loan limit exceeded. You can borrow up to $${available}`);
+  }
+  return {
+    state: { ...state, money: state.money + amount, loan: state.loan + amount },
+    success: true,
+    notifications: [
+      { type: "info", message: `Borrowed $${amount}. Total owed: $${state.loan + amount}` },
+    ],
+  };
+}
+
+function handleRepayLoan(state: GameState, amount: number): CommandResult {
+  if (amount <= 0) return fail(state, "Repayment must be positive");
+  if (amount > state.loan) return fail(state, `You only owe $${state.loan}`);
+  if (amount > state.money) return fail(state, "Not enough cash to repay that much");
+  return {
+    state: { ...state, money: state.money - amount, loan: state.loan - amount },
+    success: true,
+    notifications: [
+      { type: "info", message: `Repaid $${amount}. Remaining debt: $${state.loan - amount}` },
+    ],
+  };
+}
+
 export function applyCommand(state: GameState, command: GameCommand): CommandResult {
   switch (command.type) {
     case "BUY_PLOT":
@@ -449,6 +477,10 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleSpray(state, command.fieldId, command.sprayType);
     case "SELL":
       return handleSell(state, command.cropId, command.quantity);
+    case "TAKE_LOAN":
+      return handleTakeLoan(state, command.amount);
+    case "REPAY_LOAN":
+      return handleRepayLoan(state, command.amount);
     case "PAUSE":
       return { state: { ...state, paused: true }, success: true, notifications: [] };
     case "RESUME":

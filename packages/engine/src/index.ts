@@ -6,11 +6,21 @@ export {
   SEASONS,
   BASE_INVENTORY_CAPACITY,
   SILO_CAPACITY_BONUS,
+  DEFAULT_GOAL_NET_WORTH,
+  LOAN_LIMIT,
   type GameState,
+  type GameStatus,
   type Notification,
   type TickResult,
   type CreateGameOptions,
 } from "./state.js";
+
+// Finance
+export {
+  computeNetWorth,
+  computeSeasonalExpenses,
+  type SeasonalExpenses,
+} from "./systems/finance.js";
 
 // Commands
 export { applyCommand, type CommandResult } from "./command-handler.js";

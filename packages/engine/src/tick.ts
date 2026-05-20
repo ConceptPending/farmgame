@@ -4,14 +4,17 @@ import { weatherSystem } from "./systems/weather.js";
 import { waterSystem } from "./systems/water.js";
 import { cropSystem } from "./systems/crop.js";
 import { fieldHealthSystem } from "./systems/field-health.js";
+import { eventSystem } from "./systems/events.js";
 import { marketSystem } from "./systems/market.js";
+import { financeSystem } from "./systems/finance.js";
 
 /**
  * Core tick function. Pure: same state in = same state out.
- * Pipeline: season → weather → water → crops → fieldHealth → market
+ * Pipeline: season → weather → water → crops → fieldHealth → events → market → finance
  */
 export function nextTick(state: GameState): TickResult {
-  if (state.paused) {
+  // Don't advance while paused or after the game has ended.
+  if (state.paused || state.status !== "playing") {
     return { state, notifications: [] };
   }
 
@@ -45,10 +48,20 @@ export function nextTick(state: GameState): TickResult {
   current = healthResult.state;
   notifications.push(...healthResult.notifications);
 
+  // Random events (disasters + strokes of luck)
+  const eventResult = eventSystem(current);
+  current = eventResult.state;
+  notifications.push(...eventResult.notifications);
+
   // Market system (price fluctuation)
   const marketResult = marketSystem(current);
   current = marketResult.state;
   notifications.push(...marketResult.notifications);
+
+  // Finance system (seasonal expenses, interest, win/lose resolution)
+  const financeResult = financeSystem(current);
+  current = financeResult.state;
+  notifications.push(...financeResult.notifications);
 
   return { state: current, notifications };
 }

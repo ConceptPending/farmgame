@@ -14,6 +14,8 @@ export type GameCommand =
   | { type: "DEMOLISH"; buildingId: number }
   | { type: "SPRAY"; fieldId: number; sprayType: SprayType }
   | { type: "SELL"; cropId: CropId; quantity: number }
+  | { type: "TAKE_LOAN"; amount: number }
+  | { type: "REPAY_LOAN"; amount: number }
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "SET_SPEED"; speed: 1 | 2 | 3 };
