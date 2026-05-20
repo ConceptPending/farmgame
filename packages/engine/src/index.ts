@@ -80,6 +80,12 @@ export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js"
 export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, BARN_CAPACITY, animalValue } from "./entities/animal.js";
 export { computeLivestockCapacity } from "./systems/livestock.js";
 
+export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
+export {
+  EQUIPMENT_CATALOG, ALL_EQUIPMENT_TYPES, BASE_WORKABLE_TILES, EQUIPMENT_SALVAGE,
+  createEquipment, workableTiles, cultivatedTiles,
+} from "./entities/equipment.js";
+
 // Data
 export { CROP_CATALOG, ALL_CROP_IDS, getCropDef } from "./data/crops.js";
 export type { ProductType, ProductDefinition } from "./data/products.js";

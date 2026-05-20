@@ -1,6 +1,7 @@
 import type { GameState, Notification } from "../state.js";
 import { LOAN_LIMIT } from "../state.js";
 import { BUILDING_CATALOG } from "../entities/building.js";
+import { EQUIPMENT_CATALOG } from "../entities/equipment.js";
 import { animalValue } from "../entities/animal.js";
 import { getCropDef } from "../data/crops.js";
 
@@ -29,6 +30,9 @@ export function computeSeasonalExpenses(state: GameState): SeasonalExpenses {
   let buildingUpkeep = 0;
   for (const b of state.buildings) {
     buildingUpkeep += Math.round(BUILDING_CATALOG[b.type].cost * BUILDING_UPKEEP_RATE);
+  }
+  for (const e of state.equipment) {
+    buildingUpkeep += EQUIPMENT_CATALOG[e.type].upkeepPerSeason;
   }
   const upkeep = buildingUpkeep + state.fields.length * FIELD_OVERHEAD + BASE_OVERHEAD;
 
@@ -71,6 +75,10 @@ export function computeNetWorth(state: GameState): number {
 
   for (const a of state.animals) {
     total += animalValue(a);
+  }
+
+  for (const e of state.equipment) {
+    total += Math.round(EQUIPMENT_CATALOG[e.type].cost * 0.6); // depreciated asset value
   }
 
   for (const [cropId, qty] of Object.entries(state.inventory)) {
