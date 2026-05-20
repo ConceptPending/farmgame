@@ -131,6 +131,7 @@ export class GameRenderer {
     this.weatherEffects.updateState(state);
 
     this.inputHandler.updateGrid(state.world.width, state.world.height, this.world);
+    this.camera.setWorldSize(state.world.width, state.world.height);
   }
 
   destroy(): void {

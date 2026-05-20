@@ -8,6 +8,15 @@ export class Camera {
   private lastX = 0;
   private lastY = 0;
   private keys = new Set<string>();
+  private worldTilesW = 48;
+  private worldTilesH = 48;
+
+  /** Tell the camera the world dimensions so it can bound panning. */
+  setWorldSize(widthTiles: number, heightTiles: number): void {
+    this.worldTilesW = widthTiles;
+    this.worldTilesH = heightTiles;
+    this.clamp();
+  }
 
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 1 || e.button === 2) {
@@ -101,6 +110,7 @@ export class Camera {
 
     world.x = viewWidth / 2 - centerWorldX * world.scale.x;
     world.y = viewHeight / 2 - centerWorldY * world.scale.y;
+    this.clamp();
 
     canvas.addEventListener("mousedown", this.onMouseDown);
     canvas.addEventListener("mousemove", this.onMouseMove);
@@ -143,9 +153,26 @@ export class Camera {
     this.panLoopId = requestAnimationFrame(loop);
   }
 
+  // How far the world edge may be pulled inside the viewport (px of slack).
+  private static readonly PAN_MARGIN = 80;
+
+  /** Keep the world within view: bounded when larger than the viewport,
+   *  centered when smaller (e.g. fully zoomed out). */
   private clamp() {
-    // Optional: prevent panning too far from the world
-    // Allow some margin so user can see edges
+    if (!this.target || !this.canvas) return;
+    const scale = this.target.scale.x;
+    const worldW = this.worldTilesW * TILE_SIZE * scale;
+    const worldH = this.worldTilesH * TILE_SIZE * scale;
+    this.target.x = this.clampAxis(this.target.x, this.canvas.clientWidth, worldW);
+    this.target.y = this.clampAxis(this.target.y, this.canvas.clientHeight, worldH);
+  }
+
+  private clampAxis(pos: number, viewport: number, world: number): number {
+    if (world <= viewport) return (viewport - world) / 2; // center when smaller
+    const margin = Camera.PAN_MARGIN;
+    const min = viewport - world - margin; // panned hard one way
+    const max = margin; // panned hard the other way
+    return Math.min(max, Math.max(min, pos));
   }
 
   detach(): void {
