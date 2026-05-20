@@ -22,7 +22,6 @@ export function InfoPanel() {
     : null;
 
   const plotSize = state.world.plotSize;
-  const plotsPerRow = state.world.width / plotSize;
 
   // If hovering an unowned plot, show purchase info
   let unownedPlotInfo: { plotX: number; plotY: number } | null = null;

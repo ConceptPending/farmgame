@@ -55,7 +55,6 @@ export const SPRITES = {
 
 type SpriteKey = keyof typeof SPRITES;
 const textureCache = new Map<SpriteKey, Texture>();
-let sheetTexture: Texture | null = null;
 
 /** Generate and cache all tile textures programmatically. */
 export async function generateTileset(app: Application): Promise<void> {
@@ -114,7 +113,6 @@ export async function generateTileset(app: Application): Promise<void> {
   // Render to texture
   const rt = RenderTexture.create({ width: w, height: h });
   app.renderer.render({ container: g, target: rt });
-  sheetTexture = rt;
 
   // Cut individual textures
   for (const [key, pos] of Object.entries(SPRITES)) {

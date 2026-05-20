@@ -19,19 +19,19 @@ export function generateWorld(rng: RngState): WorldGenResult {
   }
 
   // Generate river (sinusoidal path from top to bottom)
-  let riverResult = generateRiver(tiles, rng);
+  const riverResult = generateRiver(tiles, rng);
   rng = riverResult.rng;
 
   // Place forest clusters
-  let forestResult = generateForests(tiles, rng);
+  const forestResult = generateForests(tiles, rng);
   rng = forestResult.rng;
 
   // Place rock outcrops
-  let rockResult = generateRocks(tiles, rng);
+  const rockResult = generateRocks(tiles, rng);
   rng = rockResult.rng;
 
   // Set soil quality (higher near river, randomized)
-  let soilResult = setSoilQuality(tiles, rng);
+  const soilResult = setSoilQuality(tiles, rng);
   rng = soilResult.rng;
 
   // Set initial moisture (higher near water)
@@ -81,15 +81,15 @@ function markPlotOwned(tiles: Tile[], plotX: number, plotY: number): void {
 function generateRiver(tiles: Tile[], rng: RngState): { rng: RngState } {
   // River flows from top to bottom with sinusoidal wandering
   let r = rng;
-  let offsetResult = nextInt(r, 16, 32);
-  let baseX = offsetResult.value;
+  const offsetResult = nextInt(r, 16, 32);
+  const baseX = offsetResult.value;
   r = offsetResult.rng;
 
-  let ampResult = nextFloat(r);
+  const ampResult = nextFloat(r);
   const amplitude = 4 + ampResult.value * 6; // 4-10 tile wander
   r = ampResult.rng;
 
-  let phaseResult = nextFloat(r);
+  const phaseResult = nextFloat(r);
   const phase = phaseResult.value * Math.PI * 2;
   r = phaseResult.rng;
 
@@ -113,16 +113,16 @@ function generateRiver(tiles: Tile[], rng: RngState): { rng: RngState } {
 function generateForests(tiles: Tile[], rng: RngState): { rng: RngState } {
   let r = rng;
   // Place 8-15 forest clusters
-  let countResult = nextInt(r, 8, 15);
+  const countResult = nextInt(r, 8, 15);
   const clusterCount = countResult.value;
   r = countResult.rng;
 
   for (let c = 0; c < clusterCount; c++) {
-    let xResult = nextInt(r, 2, WORLD_SIZE - 3);
+    const xResult = nextInt(r, 2, WORLD_SIZE - 3);
     r = xResult.rng;
-    let yResult = nextInt(r, 2, WORLD_SIZE - 3);
+    const yResult = nextInt(r, 2, WORLD_SIZE - 3);
     r = yResult.rng;
-    let sizeResult = nextInt(r, 2, 5);
+    const sizeResult = nextInt(r, 2, 5);
     r = sizeResult.rng;
 
     const cx = xResult.value;
@@ -140,7 +140,7 @@ function generateForests(tiles: Tile[], rng: RngState): { rng: RngState } {
         if (tiles[idx].terrain === "water") continue;
 
         // Random chance to place tree (sparser at edges)
-        let treeResult = nextFloat(r);
+        const treeResult = nextFloat(r);
         r = treeResult.rng;
         const dist = Math.sqrt(dx * dx + dy * dy) / radius;
         if (treeResult.value < 0.7 - dist * 0.4) {
@@ -156,14 +156,14 @@ function generateForests(tiles: Tile[], rng: RngState): { rng: RngState } {
 
 function generateRocks(tiles: Tile[], rng: RngState): { rng: RngState } {
   let r = rng;
-  let countResult = nextInt(r, 5, 10);
+  const countResult = nextInt(r, 5, 10);
   const rockCount = countResult.value;
   r = countResult.rng;
 
   for (let i = 0; i < rockCount; i++) {
-    let xResult = nextInt(r, 0, WORLD_SIZE - 1);
+    const xResult = nextInt(r, 0, WORLD_SIZE - 1);
     r = xResult.rng;
-    let yResult = nextInt(r, 0, WORLD_SIZE - 1);
+    const yResult = nextInt(r, 0, WORLD_SIZE - 1);
     r = yResult.rng;
 
     const x = xResult.value;
@@ -175,7 +175,7 @@ function generateRocks(tiles: Tile[], rng: RngState): { rng: RngState } {
     tiles[idx].soilQuality = 0;
 
     // Sometimes place a small cluster (2-3 rocks)
-    let clusterResult = nextFloat(r);
+    const clusterResult = nextFloat(r);
     r = clusterResult.rng;
     if (clusterResult.value < 0.5) {
       for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
@@ -184,7 +184,7 @@ function generateRocks(tiles: Tile[], rng: RngState): { rng: RngState } {
         if (nx >= WORLD_SIZE || ny >= WORLD_SIZE) continue;
         const nIdx = tileIndex(nx, ny, WORLD_SIZE);
         if (tiles[nIdx].terrain === "water") continue;
-        let placeResult = nextFloat(r);
+        const placeResult = nextFloat(r);
         r = placeResult.rng;
         if (placeResult.value < 0.4) {
           tiles[nIdx].terrain = "rock";
@@ -225,7 +225,7 @@ function setSoilQuality(tiles: Tile[], rng: RngState): { rng: RngState } {
       const riverBonus = Math.max(0, 1 - minDist / 15) * 0.4;
 
       // Random variation
-      let randResult = nextFloat(r);
+      const randResult = nextFloat(r);
       r = randResult.rng;
       const randomPart = 0.3 + randResult.value * 0.4; // 0.3-0.7
 

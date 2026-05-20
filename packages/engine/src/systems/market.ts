@@ -2,7 +2,6 @@ import type { GameState, Notification } from "../state.js";
 import type { PriceSnapshot } from "../entities/market.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { nextFloat, nextBool } from "../rng.js";
-import type { RngState } from "../rng.js";
 
 const MAX_HISTORY = 100;
 
@@ -21,17 +20,14 @@ export function marketSystem(state: GameState): {
     const demand = newDemand[cropId] ?? 1.0;
 
     // Small random walk
-    let walkResult = nextFloat(rng);
+    const walkResult = nextFloat(rng);
     rng = walkResult.rng;
     const walk = (walkResult.value - 0.5) * 0.06 * def.basePrice; // +/- 3% of base
 
     // Seasonal bias: crops in their harvest season are cheaper
-    let seasonBias = 0;
-    if (def.plantSeasons.includes(state.season)) {
-      seasonBias = -0.01 * def.basePrice; // slight downward pressure
-    } else {
-      seasonBias = 0.005 * def.basePrice; // slight upward pressure off-season
-    }
+    const seasonBias = def.plantSeasons.includes(state.season)
+      ? -0.01 * def.basePrice // slight downward pressure in season
+      : 0.005 * def.basePrice; // slight upward pressure off-season
 
     // Demand recovery (demand drifts back toward 1.0)
     newDemand[cropId] = demand + (1.0 - demand) * 0.02;
@@ -46,16 +42,16 @@ export function marketSystem(state: GameState): {
   }
 
   // Occasional market events (~2% chance per tick)
-  let eventResult = nextBool(rng, 0.02);
+  const eventResult = nextBool(rng, 0.02);
   rng = eventResult.rng;
   if (eventResult.value) {
-    let cropPickResult = nextFloat(rng);
+    const cropPickResult = nextFloat(rng);
     rng = cropPickResult.rng;
     const eventCropIdx = Math.floor(cropPickResult.value * ALL_CROP_IDS.length);
     const eventCropId = ALL_CROP_IDS[eventCropIdx];
     const eventDef = CROP_CATALOG[eventCropId];
 
-    let typeResult = nextFloat(rng);
+    const typeResult = nextFloat(rng);
     rng = typeResult.rng;
 
     if (typeResult.value < 0.5) {
