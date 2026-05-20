@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG } from "@farmgame/engine";
@@ -16,11 +16,29 @@ const CONDITION_ICONS: Record<WeatherCondition, string> = {
   drought: "🔥",
 };
 
+const stepBtnStyle: CSSProperties = {
+  padding: "2px 8px",
+  fontSize: 11,
+  border: "1px solid #555",
+  borderRadius: 3,
+  background: "#222",
+  color: "#ccc",
+  cursor: "pointer",
+};
+
+const divider: CSSProperties = { width: 1, height: 18, background: "#0f3460" };
+
 export function HUD() {
   const state = useGameStore((s) => s.state);
   const notifications = useGameStore((s) => s.notifications);
   const dispatch = useGameStore((s) => s.dispatch);
   const clearNotifications = useGameStore((s) => s.clearNotifications);
+  const autoplay = useGameStore((s) => s.autoplay);
+  const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
+  const autoPauseOnEvents = useGameStore((s) => s.autoPauseOnEvents);
+  const setAutoPauseOnEvents = useGameStore((s) => s.setAutoPauseOnEvents);
+  const advanceDays = useGameStore((s) => s.advanceDays);
+  const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
   const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
 
@@ -82,41 +100,81 @@ export function HUD() {
         <OverlaySelector />
 
         {/* Right side controls */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-          {/* Speed controls */}
-          {([1, 2, 3] as const).map((speed) => (
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+          {/* Manual stepping (turn-based) */}
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <span style={{ fontSize: 9, color: "#7a8a9a" }}>STEP</span>
+            <button onClick={() => advanceDays(1)} style={stepBtnStyle} title="Advance one day">
+              +1d
+            </button>
+            <button onClick={() => advanceDays(7)} style={stepBtnStyle} title="Advance one week">
+              +1wk
+            </button>
             <button
-              key={speed}
-              onClick={() => dispatch({ type: "SET_SPEED", speed })}
+              onClick={() => advanceToEvent()}
+              style={stepBtnStyle}
+              title="Fast-forward until something needs your attention"
+            >
+              ⏩ Skip
+            </button>
+          </div>
+
+          <div style={divider} />
+
+          {/* Auto-advance */}
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button
+              onClick={toggleAutoplay}
+              title={autoplay ? "Pause auto-advance" : "Resume auto-advance"}
               style={{
-                padding: "2px 8px",
+                padding: "2px 10px",
                 fontSize: 11,
-                border: state.speed === speed ? "1px solid #4ecca3" : "1px solid #444",
                 borderRadius: 3,
-                background: state.speed === speed ? "#1a4040" : "#222",
-                color: state.speed === speed ? "#4ecca3" : "#888",
                 cursor: "pointer",
+                border: autoplay ? "1px solid #4ecca3" : "1px solid #555",
+                background: autoplay ? "#1a4040" : "#222",
+                color: autoplay ? "#4ecca3" : "#ccc",
               }}
             >
-              {speed}x
+              {autoplay ? "⏸ Auto" : "▶ Auto"}
             </button>
-          ))}
+            {([1, 2, 3] as const).map((speed) => (
+              <button
+                key={speed}
+                onClick={() => dispatch({ type: "SET_SPEED", speed })}
+                title={`Auto-advance speed ${speed}×`}
+                style={{
+                  padding: "2px 8px",
+                  fontSize: 11,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  border: state.speed === speed ? "1px solid #4ecca3" : "1px solid #444",
+                  background: state.speed === speed ? "#1a4040" : "#222",
+                  color: state.speed === speed ? "#4ecca3" : "#888",
+                  opacity: autoplay ? 1 : 0.5,
+                }}
+              >
+                {speed}×
+              </button>
+            ))}
+            <button
+              onClick={() => setAutoPauseOnEvents(!autoPauseOnEvents)}
+              title="Auto-pause when something needs attention"
+              style={{
+                padding: "2px 6px",
+                fontSize: 11,
+                borderRadius: 3,
+                cursor: "pointer",
+                border: autoPauseOnEvents ? "1px solid #4ecca3" : "1px solid #444",
+                background: autoPauseOnEvents ? "#1a4040" : "#222",
+                color: autoPauseOnEvents ? "#4ecca3" : "#888",
+              }}
+            >
+              🔔
+            </button>
+          </div>
 
-          {/* Pause */}
-          <button
-            onClick={() => dispatch({ type: state.paused ? "RESUME" : "PAUSE" })}
-            style={{
-              padding: "2px 10px",
-              fontSize: 11,
-              border: "1px solid #555",
-              borderRadius: 3,
-              background: state.paused ? "#4a2020" : "#222",
-              color: state.paused ? "#ff6b6b" : "#ccc",
-              cursor: "pointer",
-            }}
-          >
-            {state.paused ? "Resume" : "Pause"}
-          </button>
+          <div style={divider} />
 
           {/* Market button */}
           <button
