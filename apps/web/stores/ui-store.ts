@@ -13,6 +13,8 @@ interface UIStore {
   selectedTileIndex: number;
   selectedFieldId: number | null;
   showMarketPanel: boolean;
+  showFinancePanel: boolean;
+  showLivestockPanel: boolean;
   showInfoPanel: boolean;
   dragStartTile: number | null;
 
@@ -25,6 +27,8 @@ interface UIStore {
   setSelectedTileIndex: (idx: number) => void;
   setSelectedFieldId: (id: number | null) => void;
   setShowMarketPanel: (show: boolean) => void;
+  setShowFinancePanel: (show: boolean) => void;
+  setShowLivestockPanel: (show: boolean) => void;
   setShowInfoPanel: (show: boolean) => void;
   setDragStartTile: (idx: number | null) => void;
 }
@@ -39,6 +43,8 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedTileIndex: -1,
   selectedFieldId: null,
   showMarketPanel: false,
+  showFinancePanel: false,
+  showLivestockPanel: false,
   showInfoPanel: true,
   dragStartTile: null,
 
@@ -51,6 +57,8 @@ export const useUIStore = create<UIStore>((set) => ({
   setSelectedTileIndex: (idx) => set({ selectedTileIndex: idx }),
   setSelectedFieldId: (id) => set({ selectedFieldId: id }),
   setShowMarketPanel: (show) => set({ showMarketPanel: show }),
+  setShowFinancePanel: (show) => set({ showFinancePanel: show }),
+  setShowLivestockPanel: (show) => set({ showLivestockPanel: show }),
   setShowInfoPanel: (show) => set({ showInfoPanel: show }),
   setDragStartTile: (idx) => set({ dragStartTile: idx }),
 }));

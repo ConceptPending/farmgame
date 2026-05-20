@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { createGameState } from "../src/state.js";
-import { tileCoords } from "../src/entities/world.js";
 
 describe("world generation", () => {
   it("creates a 48x48 world", () => {

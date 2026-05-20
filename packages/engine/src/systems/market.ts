@@ -1,10 +1,17 @@
 import type { GameState, Notification } from "../state.js";
 import type { PriceSnapshot } from "../entities/market.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
+import { PRODUCT_CATALOG, ALL_PRODUCT_IDS } from "../data/products.js";
 import { nextFloat, nextBool } from "../rng.js";
-import type { RngState } from "../rng.js";
 
 const MAX_HISTORY = 100;
+
+/** How fast demand (and thus price) drifts back toward 1.0 each tick. */
+export const DEMAND_RECOVERY = 0.1;
+/** Demand lost per unit sold — the "depth" of the market. */
+export const SELL_DEMAND_IMPACT = 0.003;
+/** Demand can't be driven below this (price floor is enforced separately). */
+export const MIN_DEMAND = 0.1;
 
 export function marketSystem(state: GameState): {
   state: GameState;
@@ -17,45 +24,48 @@ export function marketSystem(state: GameState): {
 
   for (const cropId of ALL_CROP_IDS) {
     const def = CROP_CATALOG[cropId];
-    const currentPrice = newPrices[cropId] ?? def.basePrice;
     const demand = newDemand[cropId] ?? 1.0;
 
-    // Small random walk
-    let walkResult = nextFloat(rng);
+    // Small random walk for life
+    const walkResult = nextFloat(rng);
     rng = walkResult.rng;
     const walk = (walkResult.value - 0.5) * 0.06 * def.basePrice; // +/- 3% of base
 
     // Seasonal bias: crops in their harvest season are cheaper
-    let seasonBias = 0;
-    if (def.plantSeasons.includes(state.season)) {
-      seasonBias = -0.01 * def.basePrice; // slight downward pressure
-    } else {
-      seasonBias = 0.005 * def.basePrice; // slight upward pressure off-season
-    }
+    const seasonBias = def.plantSeasons.includes(state.season)
+      ? -0.01 * def.basePrice // slight downward pressure in season
+      : 0.005 * def.basePrice; // slight upward pressure off-season
 
-    // Demand recovery (demand drifts back toward 1.0)
-    newDemand[cropId] = demand + (1.0 - demand) * 0.02;
-
-    // Apply price change
-    let newPrice = currentPrice + walk + seasonBias;
-    newPrice *= (0.9 + newDemand[cropId] * 0.2); // demand multiplier
-
-    // Clamp price to [30% .. 300%] of base price
+    // Demand recovers toward 1.0; price is anchored to it (mean-reverting),
+    // so a market crashed by heavy selling climbs back only as demand heals.
+    newDemand[cropId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    let newPrice = def.basePrice * newDemand[cropId] + walk + seasonBias;
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[cropId] = Math.round(newPrice * 100) / 100;
   }
 
+  // Animal products: same demand anchoring, no RNG walk (keeps the random
+  // stream identical whether or not the player keeps livestock).
+  for (const productId of ALL_PRODUCT_IDS) {
+    const def = PRODUCT_CATALOG[productId];
+    const demand = newDemand[productId] ?? 1.0;
+    newDemand[productId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    let newPrice = def.basePrice * newDemand[productId];
+    newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
+    newPrices[productId] = Math.round(newPrice * 100) / 100;
+  }
+
   // Occasional market events (~2% chance per tick)
-  let eventResult = nextBool(rng, 0.02);
+  const eventResult = nextBool(rng, 0.02);
   rng = eventResult.rng;
   if (eventResult.value) {
-    let cropPickResult = nextFloat(rng);
+    const cropPickResult = nextFloat(rng);
     rng = cropPickResult.rng;
     const eventCropIdx = Math.floor(cropPickResult.value * ALL_CROP_IDS.length);
     const eventCropId = ALL_CROP_IDS[eventCropIdx];
     const eventDef = CROP_CATALOG[eventCropId];
 
-    let typeResult = nextFloat(rng);
+    const typeResult = nextFloat(rng);
     rng = typeResult.rng;
 
     if (typeResult.value < 0.5) {

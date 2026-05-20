@@ -1,12 +1,17 @@
 import type { GameCommand, SprayType } from "./commands.js";
 import type { GameState, Notification } from "./state.js";
-import { BASE_INVENTORY_CAPACITY, SILO_CAPACITY_BONUS } from "./state.js";
+import { BASE_INVENTORY_CAPACITY, SILO_CAPACITY_BONUS, LOAN_LIMIT } from "./state.js";
 import type { CropId } from "./entities/crop.js";
 import type { BuildingType } from "./entities/building.js";
 import { BUILDING_CATALOG, createBuilding } from "./entities/building.js";
 import { createField } from "./entities/field.js";
 import { tileIndex } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
+import { getGoodInfo } from "./data/goods.js";
+import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
+import type { AnimalType } from "./entities/animal.js";
+import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
+import { computeLivestockCapacity } from "./systems/livestock.js";
 
 export interface CommandResult {
   state: GameState;
@@ -386,28 +391,36 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
   };
 }
 
-function handleSell(state: GameState, cropId: CropId, quantity: number): CommandResult {
-  const def = getCropDef(cropId);
-  if (!def) return fail(state, `Unknown crop: ${cropId}`);
+function handleSell(state: GameState, goodId: string, quantity: number): CommandResult {
+  const def = getGoodInfo(goodId);
+  if (!def) return fail(state, `Unknown good: ${goodId}`);
 
-  const available = state.inventory[cropId] ?? 0;
+  const available = state.inventory[goodId] ?? 0;
   if (available < quantity) {
     return fail(state, `Not enough ${def.name}. Have ${available}, want to sell ${quantity}`);
   }
 
-  const price = state.market.prices[cropId] ?? def.basePrice;
-  const revenue = Math.round(quantity * price);
+  // Sell against a downward-sloping demand curve: each unit nudges demand (and
+  // thus price) down, so a big batch averages a lower price (slippage) and
+  // leaves the market depressed until demand recovers. Pricing is relative to
+  // the currently displayed price, so you sell near what the market panel shows.
+  const clampPrice = (p: number) => Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, p));
+  const price = state.market.prices[goodId] ?? def.basePrice;
+  const demand = state.market.demand[goodId] ?? 1.0;
+  const endDemand = Math.max(MIN_DEMAND, demand - quantity * SELL_DEMAND_IMPACT);
+  const slip = demand > 0 ? (demand + endDemand) / 2 / demand : 1; // <= 1
+  const avgPrice = clampPrice(price * slip);
+  const revenue = Math.round(quantity * avgPrice);
 
   const newInventory = { ...state.inventory };
-  newInventory[cropId] = available - quantity;
-  if (newInventory[cropId] === 0) delete newInventory[cropId];
+  newInventory[goodId] = available - quantity;
+  if (newInventory[goodId] === 0) delete newInventory[goodId];
 
-  // Selling depresses price slightly
   const newPrices = { ...state.market.prices };
-  newPrices[cropId] = Math.max(1, (newPrices[cropId] ?? def.basePrice) * (1 - quantity * 0.005));
+  newPrices[goodId] = clampPrice(demand > 0 ? price * (endDemand / demand) : price);
 
   const newDemand = { ...state.market.demand };
-  newDemand[cropId] = Math.max(0.5, (newDemand[cropId] ?? 1) - quantity * 0.01);
+  newDemand[goodId] = endDemand;
 
   return {
     state: {
@@ -423,6 +436,73 @@ function handleSell(state: GameState, cropId: CropId, quantity: number): Command
     success: true,
     notifications: [
       { type: "success", message: `Sold ${quantity} ${def.name} for $${revenue}` },
+    ],
+  };
+}
+
+function handleBuyAnimal(state: GameState, animalType: AnimalType): CommandResult {
+  const def = ANIMAL_CATALOG[animalType];
+  const capacity = computeLivestockCapacity(state);
+  if (capacity === 0) return fail(state, "Build a barn to house livestock first");
+  if (state.animals.length >= capacity) {
+    return fail(state, "No barn space. Build another barn.");
+  }
+  if (state.money < def.cost) {
+    return fail(state, `Not enough money. Need $${def.cost}, have $${state.money}`);
+  }
+  const animal = createAnimal(state.nextAnimalId, animalType);
+  return {
+    state: {
+      ...state,
+      money: state.money - def.cost,
+      animals: [...state.animals, animal],
+      nextAnimalId: state.nextAnimalId + 1,
+    },
+    success: true,
+    notifications: [{ type: "success", message: `Bought a ${def.name.toLowerCase()} for $${def.cost}` }],
+  };
+}
+
+function handleSellAnimal(state: GameState, animalId: number): CommandResult {
+  const animal = state.animals.find((a) => a.id === animalId);
+  if (!animal) return fail(state, "Animal not found");
+  const value = animalValue(animal);
+  const def = ANIMAL_CATALOG[animal.type];
+  return {
+    state: {
+      ...state,
+      money: state.money + value,
+      animals: state.animals.filter((a) => a.id !== animalId),
+    },
+    success: true,
+    notifications: [{ type: "success", message: `Sold a ${def.name.toLowerCase()} for $${value}` }],
+  };
+}
+
+function handleTakeLoan(state: GameState, amount: number): CommandResult {
+  if (amount <= 0) return fail(state, "Loan amount must be positive");
+  const available = LOAN_LIMIT - state.loan;
+  if (amount > available) {
+    return fail(state, `Loan limit exceeded. You can borrow up to $${available}`);
+  }
+  return {
+    state: { ...state, money: state.money + amount, loan: state.loan + amount },
+    success: true,
+    notifications: [
+      { type: "info", message: `Borrowed $${amount}. Total owed: $${state.loan + amount}` },
+    ],
+  };
+}
+
+function handleRepayLoan(state: GameState, amount: number): CommandResult {
+  if (amount <= 0) return fail(state, "Repayment must be positive");
+  if (amount > state.loan) return fail(state, `You only owe $${state.loan}`);
+  if (amount > state.money) return fail(state, "Not enough cash to repay that much");
+  return {
+    state: { ...state, money: state.money - amount, loan: state.loan - amount },
+    success: true,
+    notifications: [
+      { type: "info", message: `Repaid $${amount}. Remaining debt: $${state.loan - amount}` },
     ],
   };
 }
@@ -449,6 +529,14 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleSpray(state, command.fieldId, command.sprayType);
     case "SELL":
       return handleSell(state, command.cropId, command.quantity);
+    case "BUY_ANIMAL":
+      return handleBuyAnimal(state, command.animalType);
+    case "SELL_ANIMAL":
+      return handleSellAnimal(state, command.animalId);
+    case "TAKE_LOAN":
+      return handleTakeLoan(state, command.amount);
+    case "REPAY_LOAN":
+      return handleRepayLoan(state, command.amount);
     case "PAUSE":
       return { state: { ...state, paused: true }, success: true, notifications: [] };
     case "RESUME":

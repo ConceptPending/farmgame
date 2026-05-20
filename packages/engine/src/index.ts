@@ -6,11 +6,21 @@ export {
   SEASONS,
   BASE_INVENTORY_CAPACITY,
   SILO_CAPACITY_BONUS,
+  DEFAULT_GOAL_NET_WORTH,
+  LOAN_LIMIT,
   type GameState,
+  type GameStatus,
   type Notification,
   type TickResult,
   type CreateGameOptions,
 } from "./state.js";
+
+// Finance
+export {
+  computeNetWorth,
+  computeSeasonalExpenses,
+  type SeasonalExpenses,
+} from "./systems/finance.js";
 
 // Commands
 export { applyCommand, type CommandResult } from "./command-handler.js";
@@ -66,8 +76,15 @@ export { createMarketState } from "./entities/market.js";
 export type { ToolId, ToolDefinition } from "./entities/tools.js";
 export { TOOL_CATALOG } from "./entities/tools.js";
 
+export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
+export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, BARN_CAPACITY, animalValue } from "./entities/animal.js";
+export { computeLivestockCapacity } from "./systems/livestock.js";
+
 // Data
 export { CROP_CATALOG, ALL_CROP_IDS, getCropDef } from "./data/crops.js";
+export type { ProductType, ProductDefinition } from "./data/products.js";
+export { PRODUCT_CATALOG, ALL_PRODUCT_IDS, getProductDef } from "./data/products.js";
+export { getGoodInfo } from "./data/goods.js";
 
 // RNG
 export {

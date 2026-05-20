@@ -86,7 +86,7 @@ describe("field health system", () => {
 
   it("herbicide spray reduces weeds", () => {
     const { state, fieldId } = stateWithField();
-    let s = {
+    const s = {
       ...state,
       fields: state.fields.map((f) =>
         f.id === fieldId ? { ...f, weeds: 0.7 } : f,
@@ -99,7 +99,7 @@ describe("field health system", () => {
 
   it("pesticide spray reduces pests", () => {
     const { state, fieldId } = stateWithField();
-    let s = {
+    const s = {
       ...state,
       fields: state.fields.map((f) =>
         f.id === fieldId ? { ...f, pests: 0.7 } : f,
@@ -112,7 +112,7 @@ describe("field health system", () => {
 
   it("fertilizer improves health", () => {
     const { state, fieldId } = stateWithField();
-    let s = {
+    const s = {
       ...state,
       fields: state.fields.map((f) =>
         f.id === fieldId ? { ...f, health: 0.5 } : f,

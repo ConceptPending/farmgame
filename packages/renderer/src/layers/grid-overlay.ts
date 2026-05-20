@@ -1,6 +1,5 @@
 import { Container, Graphics } from "pixi.js";
 import type { GameState, FieldState } from "@farmgame/engine";
-import { tileCoords } from "@farmgame/engine";
 import { TILE_SIZE } from "../sprites/tileset.js";
 
 export type OverlayMode = "none" | "moisture" | "soil_quality" | "ownership";

@@ -43,6 +43,7 @@ export const SPRITES = {
   windmill: { col: 2, row: 3 },
   irrigation: { col: 3, row: 3 },
   fence: { col: 4, row: 3 },
+  barn: { col: 5, row: 3 },
 
   // Weather icons (row 4)
   weather_clear: { col: 0, row: 4 },
@@ -55,7 +56,6 @@ export const SPRITES = {
 
 type SpriteKey = keyof typeof SPRITES;
 const textureCache = new Map<SpriteKey, Texture>();
-let sheetTexture: Texture | null = null;
 
 /** Generate and cache all tile textures programmatically. */
 export async function generateTileset(app: Application): Promise<void> {
@@ -102,6 +102,7 @@ export async function generateTileset(app: Application): Promise<void> {
   drawWindmill(g, 2, 3);
   drawIrrigation(g, 3, 3);
   drawFence(g, 4, 3);
+  drawBarn(g, 5, 3);
 
   // --- Row 4: Weather icons ---
   drawWeatherClear(g, 0, 4);
@@ -114,7 +115,6 @@ export async function generateTileset(app: Application): Promise<void> {
   // Render to texture
   const rt = RenderTexture.create({ width: w, height: h });
   app.renderer.render({ container: g, target: rt });
-  sheetTexture = rt;
 
   // Cut individual textures
   for (const [key, pos] of Object.entries(SPRITES)) {
@@ -263,6 +263,18 @@ function drawSilo(g: Graphics, col: number, row: number) {
   g.rect(x + 5, y + 3, 6, 2).fill(0xbb4444);
   // Door
   g.rect(x + 6, y + 10, 4, 4).fill(0x5c3a1e);
+}
+
+function drawBarn(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f); // grass base
+  g.rect(x + 2, y + 7, 12, 7).fill(0xb23a2e); // red wall
+  g.rect(x + 1, y + 5, 14, 2).fill(0x7a2820); // roof eave
+  g.rect(x + 4, y + 3, 8, 2).fill(0x7a2820); // roof peak
+  g.rect(x + 6, y + 9, 4, 5).fill(0xf0e6d0); // door
+  g.rect(x + 7, y + 9, 1, 5).fill(0x7a2820); // door cross (vertical)
+  g.rect(x + 6, y + 11, 4, 1).fill(0x7a2820); // door cross (horizontal)
 }
 
 function drawWaterPump(g: Graphics, col: number, row: number) {

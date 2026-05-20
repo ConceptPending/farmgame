@@ -8,6 +8,15 @@ export class Camera {
   private lastX = 0;
   private lastY = 0;
   private keys = new Set<string>();
+  private worldTilesW = 48;
+  private worldTilesH = 48;
+
+  /** Tell the camera the world dimensions so it can bound panning. */
+  setWorldSize(widthTiles: number, heightTiles: number): void {
+    this.worldTilesW = widthTiles;
+    this.worldTilesH = heightTiles;
+    this.clamp();
+  }
 
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 1 || e.button === 2) {
@@ -35,12 +44,43 @@ export class Camera {
   private onWheel = (e: WheelEvent) => {
     if (!this.target) return;
     e.preventDefault();
-    const scale = this.target.scale.x;
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(4, Math.max(0.5, scale * delta));
-    this.target.scale.set(newScale);
-    this.clamp();
+
+    // Pinch-to-zoom arrives as a wheel event with ctrlKey set (all browsers);
+    // cmd/ctrl + wheel is an explicit zoom too. A classic mouse wheel sends
+    // large, integer vertical-only steps. Everything else is a trackpad
+    // two-finger scroll, which should pan the map.
+    const zoomGesture = e.ctrlKey || e.metaKey;
+    const mouseWheel = e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50;
+
+    if (zoomGesture || mouseWheel) {
+      this.zoomAt(e.clientX, e.clientY, e.deltaY);
+    } else {
+      this.target.x -= e.deltaX;
+      this.target.y -= e.deltaY;
+      this.clamp();
+    }
   };
+
+  /** Zoom while keeping the world point under (clientX, clientY) fixed. */
+  private zoomAt(clientX: number, clientY: number, deltaY: number) {
+    if (!this.target || !this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+
+    const oldScale = this.target.scale.x;
+    const newScale = Math.min(4, Math.max(0.5, oldScale * Math.exp(-deltaY * 0.0018)));
+    if (newScale === oldScale) return;
+
+    // World coords under the cursor before zooming.
+    const wx = (px - this.target.x) / oldScale;
+    const wy = (py - this.target.y) / oldScale;
+
+    this.target.scale.set(newScale);
+    this.target.x = px - wx * newScale;
+    this.target.y = py - wy * newScale;
+    this.clamp();
+  }
 
   private onContextMenu = (e: MouseEvent) => {
     e.preventDefault();
@@ -70,6 +110,7 @@ export class Camera {
 
     world.x = viewWidth / 2 - centerWorldX * world.scale.x;
     world.y = viewHeight / 2 - centerWorldY * world.scale.y;
+    this.clamp();
 
     canvas.addEventListener("mousedown", this.onMouseDown);
     canvas.addEventListener("mousemove", this.onMouseMove);
@@ -100,14 +141,38 @@ export class Camera {
         this.target.y += dy;
         this.clamp();
       }
+      // Keyboard zoom (+/-), centered on the viewport.
+      const zoomIn = this.keys.has("=") || this.keys.has("+");
+      const zoomOut = this.keys.has("-") || this.keys.has("_");
+      if ((zoomIn || zoomOut) && this.canvas) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, zoomIn ? -20 : 20);
+      }
       this.panLoopId = requestAnimationFrame(loop);
     };
     this.panLoopId = requestAnimationFrame(loop);
   }
 
+  // How far the world edge may be pulled inside the viewport (px of slack).
+  private static readonly PAN_MARGIN = 80;
+
+  /** Keep the world within view: bounded when larger than the viewport,
+   *  centered when smaller (e.g. fully zoomed out). */
   private clamp() {
-    // Optional: prevent panning too far from the world
-    // Allow some margin so user can see edges
+    if (!this.target || !this.canvas) return;
+    const scale = this.target.scale.x;
+    const worldW = this.worldTilesW * TILE_SIZE * scale;
+    const worldH = this.worldTilesH * TILE_SIZE * scale;
+    this.target.x = this.clampAxis(this.target.x, this.canvas.clientWidth, worldW);
+    this.target.y = this.clampAxis(this.target.y, this.canvas.clientHeight, worldH);
+  }
+
+  private clampAxis(pos: number, viewport: number, world: number): number {
+    if (world <= viewport) return (viewport - world) / 2; // center when smaller
+    const margin = Camera.PAN_MARGIN;
+    const min = viewport - world - margin; // panned hard one way
+    const max = margin; // panned hard the other way
+    return Math.min(max, Math.max(min, pos));
   }
 
   detach(): void {

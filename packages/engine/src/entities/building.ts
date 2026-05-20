@@ -1,5 +1,6 @@
 export type BuildingType =
   | "silo"
+  | "barn"
   | "water_pump"
   | "windmill"
   | "irrigation_ditch"
@@ -37,6 +38,12 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     name: "Silo",
     cost: 500,
     description: "Increases inventory capacity by 100 units",
+  },
+  barn: {
+    type: "barn",
+    name: "Barn",
+    cost: 600,
+    description: "Houses up to 8 livestock",
   },
   water_pump: {
     type: "water_pump",

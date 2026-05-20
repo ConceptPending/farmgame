@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { TOOL_CATALOG } from "@farmgame/engine";
+import { TOOL_CATALOG, computeNetWorth } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import type { WeatherCondition } from "@farmgame/engine";
 
@@ -16,13 +16,33 @@ const CONDITION_ICONS: Record<WeatherCondition, string> = {
   drought: "🔥",
 };
 
+const stepBtnStyle: CSSProperties = {
+  padding: "2px 8px",
+  fontSize: 11,
+  border: "1px solid #555",
+  borderRadius: 3,
+  background: "#222",
+  color: "#ccc",
+  cursor: "pointer",
+};
+
+const divider: CSSProperties = { width: 1, height: 18, background: "#0f3460" };
+
 export function HUD() {
   const state = useGameStore((s) => s.state);
   const notifications = useGameStore((s) => s.notifications);
   const dispatch = useGameStore((s) => s.dispatch);
   const clearNotifications = useGameStore((s) => s.clearNotifications);
+  const autoplay = useGameStore((s) => s.autoplay);
+  const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
+  const autoPauseOnEvents = useGameStore((s) => s.autoPauseOnEvents);
+  const setAutoPauseOnEvents = useGameStore((s) => s.setAutoPauseOnEvents);
+  const advanceDays = useGameStore((s) => s.advanceDays);
+  const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
   const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
+  const setShowFinancePanel = useUIStore((s) => s.setShowFinancePanel);
+  const setShowLivestockPanel = useUIStore((s) => s.setShowLivestockPanel);
 
   useEffect(() => {
     if (notifications.length > 8) {
@@ -40,6 +60,8 @@ export function HUD() {
   };
 
   const toolDef = TOOL_CATALOG[selectedTool];
+  const netWorth = computeNetWorth(state);
+  const goalPct = Math.min(100, Math.round((netWorth / state.goalNetWorth) * 100));
 
   return (
     <>
@@ -56,9 +78,33 @@ export function HUD() {
         }}
       >
         {/* Money */}
-        <div style={{ fontSize: 18, fontWeight: "bold", color: "#4ecca3" }}>
+        <div style={{ fontSize: 18, fontWeight: "bold", color: state.money < 0 ? "#ff6b6b" : "#4ecca3" }}>
           ${state.money.toLocaleString()}
         </div>
+
+        {/* Net worth vs. goal */}
+        <button
+          onClick={() => setShowFinancePanel(true)}
+          title="Open finances"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            border: "1px solid #0f3460",
+            background: "#0a1628",
+            borderRadius: 4,
+            padding: "3px 8px",
+            cursor: "pointer",
+          }}
+        >
+          <span style={{ fontSize: 10, color: "#7a8a9a" }}>
+            NET WORTH <span style={{ color: "#eee" }}>${netWorth.toLocaleString()}</span>
+            {state.loan > 0 && <span style={{ color: "#ff6b6b" }}> · debt ${state.loan.toLocaleString()}</span>}
+          </span>
+          <div style={{ width: 120, height: 5, background: "#16213e", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${goalPct}%`, height: "100%", background: "#4ecca3" }} />
+          </div>
+        </button>
 
         {/* Season/Day/Year */}
         <div style={{ color: seasonColors[state.season] ?? "#eee", fontWeight: 600 }}>
@@ -82,43 +128,111 @@ export function HUD() {
         <OverlaySelector />
 
         {/* Right side controls */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-          {/* Speed controls */}
-          {([1, 2, 3] as const).map((speed) => (
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+          {/* Manual stepping (turn-based) */}
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <span style={{ fontSize: 9, color: "#7a8a9a" }}>STEP</span>
+            <button onClick={() => advanceDays(1)} style={stepBtnStyle} title="Advance one day">
+              +1d
+            </button>
+            <button onClick={() => advanceDays(7)} style={stepBtnStyle} title="Advance one week">
+              +1wk
+            </button>
             <button
-              key={speed}
-              onClick={() => dispatch({ type: "SET_SPEED", speed })}
+              onClick={() => advanceToEvent()}
+              style={stepBtnStyle}
+              title="Fast-forward until something needs your attention"
+            >
+              ⏩ Skip
+            </button>
+          </div>
+
+          <div style={divider} />
+
+          {/* Auto-advance */}
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button
+              onClick={toggleAutoplay}
+              title={autoplay ? "Pause auto-advance" : "Resume auto-advance"}
               style={{
-                padding: "2px 8px",
+                padding: "2px 10px",
                 fontSize: 11,
-                border: state.speed === speed ? "1px solid #4ecca3" : "1px solid #444",
                 borderRadius: 3,
-                background: state.speed === speed ? "#1a4040" : "#222",
-                color: state.speed === speed ? "#4ecca3" : "#888",
                 cursor: "pointer",
+                border: autoplay ? "1px solid #4ecca3" : "1px solid #555",
+                background: autoplay ? "#1a4040" : "#222",
+                color: autoplay ? "#4ecca3" : "#ccc",
               }}
             >
-              {speed}x
+              {autoplay ? "⏸ Auto" : "▶ Auto"}
             </button>
-          ))}
+            {([1, 2, 3] as const).map((speed) => (
+              <button
+                key={speed}
+                onClick={() => dispatch({ type: "SET_SPEED", speed })}
+                title={`Auto-advance speed ${speed}×`}
+                style={{
+                  padding: "2px 8px",
+                  fontSize: 11,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  border: state.speed === speed ? "1px solid #4ecca3" : "1px solid #444",
+                  background: state.speed === speed ? "#1a4040" : "#222",
+                  color: state.speed === speed ? "#4ecca3" : "#888",
+                  opacity: autoplay ? 1 : 0.5,
+                }}
+              >
+                {speed}×
+              </button>
+            ))}
+            <button
+              onClick={() => setAutoPauseOnEvents(!autoPauseOnEvents)}
+              title="Auto-pause when something needs attention"
+              style={{
+                padding: "2px 6px",
+                fontSize: 11,
+                borderRadius: 3,
+                cursor: "pointer",
+                border: autoPauseOnEvents ? "1px solid #4ecca3" : "1px solid #444",
+                background: autoPauseOnEvents ? "#1a4040" : "#222",
+                color: autoPauseOnEvents ? "#4ecca3" : "#888",
+              }}
+            >
+              🔔
+            </button>
+          </div>
 
-          {/* Pause */}
+          <div style={divider} />
+
+          {/* Finance + Market buttons */}
           <button
-            onClick={() => dispatch({ type: state.paused ? "RESUME" : "PAUSE" })}
+            onClick={() => setShowFinancePanel(true)}
             style={{
               padding: "2px 10px",
               fontSize: 11,
               border: "1px solid #555",
               borderRadius: 3,
-              background: state.paused ? "#4a2020" : "#222",
-              color: state.paused ? "#ff6b6b" : "#ccc",
+              background: "#222",
+              color: "#4ecca3",
               cursor: "pointer",
             }}
           >
-            {state.paused ? "Resume" : "Pause"}
+            Finance
           </button>
-
-          {/* Market button */}
+          <button
+            onClick={() => setShowLivestockPanel(true)}
+            style={{
+              padding: "2px 10px",
+              fontSize: 11,
+              border: "1px solid #555",
+              borderRadius: 3,
+              background: "#222",
+              color: "#e0a96d",
+              cursor: "pointer",
+            }}
+          >
+            Animals
+          </button>
           <button
             onClick={() => setShowMarketPanel(true)}
             style={{
@@ -136,15 +250,18 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Notifications toast area */}
+      {/* Notifications toast area — bottom-center so it clears the weather
+          panel and info panel in the top-right corner. */}
       {notifications.length > 0 && (
         <div
           style={{
             position: "fixed",
-            top: 48,
-            right: 200,
+            bottom: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
             display: "flex",
             flexDirection: "column",
+            alignItems: "center",
             gap: 3,
             zIndex: 50,
             pointerEvents: "none",

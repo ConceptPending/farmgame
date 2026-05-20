@@ -52,7 +52,7 @@ function generateCondition(rng: RngState, season: Season): { condition: WeatherC
   const profile = SEASON_PROFILES[season];
   let r = rng;
 
-  let roll = nextFloat(r);
+  const roll = nextFloat(r);
   r = roll.rng;
   const v = roll.value;
 
@@ -76,7 +76,7 @@ function generateCondition(rng: RngState, season: Season): { condition: WeatherC
 
 function generateTemperature(rng: RngState, season: Season): { temp: number; rng: RngState } {
   const profile = SEASON_PROFILES[season];
-  let result = nextFloat(rng);
+  const result = nextFloat(rng);
   const temp = Math.round(profile.tempMin + result.value * (profile.tempMax - profile.tempMin));
   return { temp, rng: result.rng };
 }
@@ -105,15 +105,15 @@ export function weatherSystem(state: GameState): {
   let rng = state.rng;
 
   // Generate today's weather
-  let condResult = generateCondition(rng, state.season);
+  const condResult = generateCondition(rng, state.season);
   rng = condResult.rng;
   const condition = condResult.condition;
 
-  let tempResult = generateTemperature(rng, state.season);
+  const tempResult = generateTemperature(rng, state.season);
   rng = tempResult.rng;
   const temperature = tempResult.temp;
 
-  let windResult = nextInt(rng, 0, 30);
+  const windResult = nextInt(rng, 0, 30);
   rng = windResult.rng;
   const wind = windResult.value;
 
@@ -122,11 +122,11 @@ export function weatherSystem(state: GameState): {
   // Generate 5-day forecast
   const forecast: ForecastDay[] = [];
   for (let i = 0; i < 5; i++) {
-    let fc = generateCondition(rng, state.season);
+    const fc = generateCondition(rng, state.season);
     rng = fc.rng;
-    let fTemp = generateTemperature(rng, state.season);
+    const fTemp = generateTemperature(rng, state.season);
     rng = fTemp.rng;
-    let fTemp2 = generateTemperature(rng, state.season);
+    const fTemp2 = generateTemperature(rng, state.season);
     rng = fTemp2.rng;
 
     forecast.push({

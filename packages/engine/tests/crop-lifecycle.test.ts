@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick, getCropDef, CROP_CATALOG, DAYS_PER_SEASON } from "../src/index.js";
+import { createGameState, nextTick, getCropDef, CROP_CATALOG } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
 import type { CropId, GameState } from "../src/index.js";
 
@@ -67,8 +67,8 @@ describe("crop lifecycle", () => {
   });
 
   it("all crop growth values are bounded [0, 1]", () => {
-    let state = stateWithSeed(42);
-    const { state: s1, fieldId } = setupFieldAndPlant(state, "tomato");
+    const state = stateWithSeed(42);
+    const { state: s1 } = setupFieldAndPlant(state, "tomato");
 
     let s = s1;
     for (let i = 0; i < 50; i++) {
@@ -81,8 +81,8 @@ describe("crop lifecycle", () => {
   });
 
   it("all crop health values are bounded [0, 1]", () => {
-    let state = stateWithSeed(42);
-    const { state: s1, fieldId } = setupFieldAndPlant(state, "corn");
+    const state = stateWithSeed(42);
+    const { state: s1 } = setupFieldAndPlant(state, "corn");
 
     let s = s1;
     for (let i = 0; i < 50; i++) {
@@ -140,7 +140,7 @@ describe("crop lifecycle", () => {
   });
 
   it("weeds and pests accumulate over time", () => {
-    let state = stateWithSeed();
+    const state = stateWithSeed();
     const { state: s1, fieldId } = setupFieldAndPlant(state, "wheat");
 
     let s = s1;
@@ -156,7 +156,7 @@ describe("crop lifecycle", () => {
   });
 
   it("spraying reduces weeds/pests effectively", () => {
-    let state = stateWithSeed();
+    const state = stateWithSeed();
     const { state: s1, fieldId } = setupFieldAndPlant(state, "wheat");
 
     // Let weeds/pests grow

@@ -2,7 +2,7 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { CROP_CATALOG, type CropId } from "@farmgame/engine";
+import { CROP_CATALOG, PRODUCT_CATALOG, ALL_PRODUCT_IDS, type CropId } from "@farmgame/engine";
 
 export function MarketPanel() {
   const state = useGameStore((s) => s.state);
@@ -89,6 +89,45 @@ export function MarketPanel() {
                   {qty > 0 && (
                     <button
                       onClick={() => dispatch({ type: "SELL", cropId, quantity: qty })}
+                      style={{
+                        padding: "2px 8px",
+                        fontSize: 11,
+                        border: "1px solid #4ecca3",
+                        borderRadius: 3,
+                        background: "#1a4040",
+                        color: "#4ecca3",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Sell All (${Math.round(qty * price)})
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* Animal products */}
+      <div style={{ marginTop: 14, color: "#888", fontSize: 11, marginBottom: 4 }}>ANIMAL PRODUCTS</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <tbody>
+          {ALL_PRODUCT_IDS.map((id) => {
+            const def = PRODUCT_CATALOG[id];
+            const price = state.market.prices[id] ?? def.basePrice;
+            const qty = state.inventory[id] ?? 0;
+            return (
+              <tr key={id} style={{ borderBottom: "1px solid #222" }}>
+                <td style={{ padding: "4px 8px", color: "#ccc" }}>{def.name}</td>
+                <td style={{ padding: "4px 8px", color: "#eee", textAlign: "right", fontWeight: 600 }}>
+                  ${price.toFixed(1)}
+                </td>
+                <td style={{ padding: "4px 8px", color: "#aaa", textAlign: "right" }}>{qty > 0 ? qty : "-"}</td>
+                <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                  {qty > 0 && (
+                    <button
+                      onClick={() => dispatch({ type: "SELL", cropId: id, quantity: qty })}
                       style={{
                         padding: "2px 8px",
                         fontSize: 11,

@@ -1,5 +1,3 @@
-import type { CropId } from "./crop.js";
-
 export interface PriceSnapshot {
   tick: number;
   prices: Record<string, number>;
@@ -11,10 +9,10 @@ export interface MarketState {
   demand: Record<string, number>;
 }
 
-export function createMarketState(cropIds: CropId[], basePrices: Record<string, number>): MarketState {
+export function createMarketState(ids: string[], basePrices: Record<string, number>): MarketState {
   const prices: Record<string, number> = {};
   const demand: Record<string, number> = {};
-  for (const id of cropIds) {
+  for (const id of ids) {
     prices[id] = basePrices[id] ?? 10;
     demand[id] = 1.0;
   }
