@@ -9,6 +9,7 @@ import { InfoPanel } from "../components/game/InfoPanel";
 import { WeatherPanel } from "../components/game/WeatherPanel";
 import { MarketPanel } from "../components/game/MarketPanel";
 import { FinancePanel } from "../components/game/FinancePanel";
+import { LivestockPanel } from "../components/game/LivestockPanel";
 import { GameOverOverlay } from "../components/game/GameOverOverlay";
 
 export default function Home() {
@@ -32,6 +33,7 @@ export default function Home() {
           <WeatherPanel />
           <MarketPanel />
           <FinancePanel />
+          <LivestockPanel />
         </div>
         <InfoPanel />
       </div>

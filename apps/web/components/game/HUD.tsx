@@ -42,6 +42,7 @@ export function HUD() {
   const selectedTool = useUIStore((s) => s.selectedTool);
   const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
   const setShowFinancePanel = useUIStore((s) => s.setShowFinancePanel);
+  const setShowLivestockPanel = useUIStore((s) => s.setShowLivestockPanel);
 
   useEffect(() => {
     if (notifications.length > 8) {
@@ -217,6 +218,20 @@ export function HUD() {
             }}
           >
             Finance
+          </button>
+          <button
+            onClick={() => setShowLivestockPanel(true)}
+            style={{
+              padding: "2px 10px",
+              fontSize: 11,
+              border: "1px solid #555",
+              borderRadius: 3,
+              background: "#222",
+              color: "#e0a96d",
+              cursor: "pointer",
+            }}
+          >
+            Animals
           </button>
           <button
             onClick={() => setShowMarketPanel(true)}
