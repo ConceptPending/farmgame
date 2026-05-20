@@ -1,6 +1,7 @@
 import type { Season } from "./entities/crop.js";
 import type { Field } from "./entities/field.js";
 import type { Building } from "./entities/building.js";
+import type { Animal } from "./entities/animal.js";
 import type { WorldState } from "./entities/world.js";
 import type { WeatherState } from "./entities/weather.js";
 import type { MarketState } from "./entities/market.js";
@@ -31,12 +32,14 @@ export interface GameState {
   world: WorldState;
   fields: Field[];
   buildings: Building[];
+  animals: Animal[];
   inventory: Record<string, number>;
   inventoryCapacity: number;
   market: MarketState;
   weather: WeatherState;
   nextFieldId: number;
   nextBuildingId: number;
+  nextAnimalId: number;
 }
 
 export interface Notification {
@@ -102,11 +105,13 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     world: worldResult.world,
     fields: [],
     buildings: [],
+    animals: [],
     inventory: {},
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
     market: createMarketState(ALL_CROP_IDS, basePrices),
     weather: createWeatherState(),
     nextFieldId: 1,
     nextBuildingId: 1,
+    nextAnimalId: 1,
   };
 }

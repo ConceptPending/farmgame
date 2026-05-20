@@ -76,6 +76,10 @@ export { createMarketState } from "./entities/market.js";
 export type { ToolId, ToolDefinition } from "./entities/tools.js";
 export { TOOL_CATALOG } from "./entities/tools.js";
 
+export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
+export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, BARN_CAPACITY, animalValue } from "./entities/animal.js";
+export { computeLivestockCapacity } from "./systems/livestock.js";
+
 // Data
 export { CROP_CATALOG, ALL_CROP_IDS, getCropDef } from "./data/crops.js";
 

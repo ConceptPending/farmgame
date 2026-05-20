@@ -4,13 +4,14 @@ import { weatherSystem } from "./systems/weather.js";
 import { waterSystem } from "./systems/water.js";
 import { cropSystem } from "./systems/crop.js";
 import { fieldHealthSystem } from "./systems/field-health.js";
+import { livestockSystem } from "./systems/livestock.js";
 import { eventSystem } from "./systems/events.js";
 import { marketSystem } from "./systems/market.js";
 import { financeSystem } from "./systems/finance.js";
 
 /**
  * Core tick function. Pure: same state in = same state out.
- * Pipeline: season → weather → water → crops → fieldHealth → events → market → finance
+ * Pipeline: season → weather → water → crops → fieldHealth → livestock → events → market → finance
  */
 export function nextTick(state: GameState): TickResult {
   // Don't advance while paused or after the game has ended.
@@ -47,6 +48,11 @@ export function nextTick(state: GameState): TickResult {
   const healthResult = fieldHealthSystem(current);
   current = healthResult.state;
   notifications.push(...healthResult.notifications);
+
+  // Livestock system (growth, feed, breeding)
+  const livestockResult = livestockSystem(current);
+  current = livestockResult.state;
+  notifications.push(...livestockResult.notifications);
 
   // Random events (disasters + strokes of luck)
   const eventResult = eventSystem(current);

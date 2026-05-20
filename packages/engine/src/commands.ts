@@ -1,5 +1,6 @@
 import type { CropId } from "./entities/crop.js";
 import type { BuildingType } from "./entities/building.js";
+import type { AnimalType } from "./entities/animal.js";
 
 export type SprayType = "fertilizer" | "pesticide" | "herbicide";
 
@@ -14,6 +15,8 @@ export type GameCommand =
   | { type: "DEMOLISH"; buildingId: number }
   | { type: "SPRAY"; fieldId: number; sprayType: SprayType }
   | { type: "SELL"; cropId: CropId; quantity: number }
+  | { type: "BUY_ANIMAL"; animalType: AnimalType }
+  | { type: "SELL_ANIMAL"; animalId: number }
   | { type: "TAKE_LOAN"; amount: number }
   | { type: "REPAY_LOAN"; amount: number }
   | { type: "PAUSE" }

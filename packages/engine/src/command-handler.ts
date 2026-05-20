@@ -7,6 +7,9 @@ import { BUILDING_CATALOG, createBuilding } from "./entities/building.js";
 import { createField } from "./entities/field.js";
 import { tileIndex } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
+import type { AnimalType } from "./entities/animal.js";
+import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
+import { computeLivestockCapacity } from "./systems/livestock.js";
 
 export interface CommandResult {
   state: GameState;
@@ -427,6 +430,45 @@ function handleSell(state: GameState, cropId: CropId, quantity: number): Command
   };
 }
 
+function handleBuyAnimal(state: GameState, animalType: AnimalType): CommandResult {
+  const def = ANIMAL_CATALOG[animalType];
+  const capacity = computeLivestockCapacity(state);
+  if (capacity === 0) return fail(state, "Build a barn to house livestock first");
+  if (state.animals.length >= capacity) {
+    return fail(state, "No barn space. Build another barn.");
+  }
+  if (state.money < def.cost) {
+    return fail(state, `Not enough money. Need $${def.cost}, have $${state.money}`);
+  }
+  const animal = createAnimal(state.nextAnimalId, animalType);
+  return {
+    state: {
+      ...state,
+      money: state.money - def.cost,
+      animals: [...state.animals, animal],
+      nextAnimalId: state.nextAnimalId + 1,
+    },
+    success: true,
+    notifications: [{ type: "success", message: `Bought a ${def.name.toLowerCase()} for $${def.cost}` }],
+  };
+}
+
+function handleSellAnimal(state: GameState, animalId: number): CommandResult {
+  const animal = state.animals.find((a) => a.id === animalId);
+  if (!animal) return fail(state, "Animal not found");
+  const value = animalValue(animal);
+  const def = ANIMAL_CATALOG[animal.type];
+  return {
+    state: {
+      ...state,
+      money: state.money + value,
+      animals: state.animals.filter((a) => a.id !== animalId),
+    },
+    success: true,
+    notifications: [{ type: "success", message: `Sold a ${def.name.toLowerCase()} for $${value}` }],
+  };
+}
+
 function handleTakeLoan(state: GameState, amount: number): CommandResult {
   if (amount <= 0) return fail(state, "Loan amount must be positive");
   const available = LOAN_LIMIT - state.loan;
@@ -477,6 +519,10 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleSpray(state, command.fieldId, command.sprayType);
     case "SELL":
       return handleSell(state, command.cropId, command.quantity);
+    case "BUY_ANIMAL":
+      return handleBuyAnimal(state, command.animalType);
+    case "SELL_ANIMAL":
+      return handleSellAnimal(state, command.animalId);
     case "TAKE_LOAN":
       return handleTakeLoan(state, command.amount);
     case "REPAY_LOAN":

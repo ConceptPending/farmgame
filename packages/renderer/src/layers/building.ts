@@ -8,6 +8,7 @@ type SpriteKey = keyof typeof SPRITES;
 
 const BUILDING_SPRITE_MAP: Record<BuildingType, SpriteKey> = {
   silo: "silo",
+  barn: "barn",
   water_pump: "water_pump",
   windmill: "windmill",
   irrigation_ditch: "irrigation",

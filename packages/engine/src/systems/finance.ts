@@ -1,6 +1,7 @@
 import type { GameState, Notification } from "../state.js";
 import { LOAN_LIMIT } from "../state.js";
 import { BUILDING_CATALOG } from "../entities/building.js";
+import { animalValue } from "../entities/animal.js";
 import { CROP_CATALOG, getCropDef } from "../data/crops.js";
 
 // Seasonal cost tuning.
@@ -66,6 +67,10 @@ export function computeNetWorth(state: GameState): number {
 
   for (const b of state.buildings) {
     total += BUILDING_CATALOG[b.type].cost;
+  }
+
+  for (const a of state.animals) {
+    total += animalValue(a);
   }
 
   for (const [cropId, qty] of Object.entries(state.inventory)) {
