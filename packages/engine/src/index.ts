@@ -82,6 +82,9 @@ export { computeLivestockCapacity } from "./systems/livestock.js";
 
 // Data
 export { CROP_CATALOG, ALL_CROP_IDS, getCropDef } from "./data/crops.js";
+export type { ProductType, ProductDefinition } from "./data/products.js";
+export { PRODUCT_CATALOG, ALL_PRODUCT_IDS, getProductDef } from "./data/products.js";
+export { getGoodInfo } from "./data/goods.js";
 
 // RNG
 export {

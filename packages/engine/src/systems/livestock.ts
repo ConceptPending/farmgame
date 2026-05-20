@@ -2,6 +2,7 @@ import type { GameState, Notification } from "../state.js";
 import type { Animal } from "../entities/animal.js";
 import { ANIMAL_CATALOG, BARN_CAPACITY } from "../entities/animal.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
+import { PRODUCT_CATALOG } from "../data/products.js";
 import { nextBool } from "../rng.js";
 
 /** Total livestock the player's barns can house. */
@@ -84,6 +85,36 @@ export function livestockSystem(state: GameState): {
         type: "warning",
         message: "Livestock are underfed — grow or buy more grain.",
       });
+    }
+
+    // Products: mature, well-fed animals yield eggs/milk/wool into inventory.
+    if (fedRatio >= 1) {
+      const produced: Record<string, number> = {};
+      for (const a of animals) {
+        const def = ANIMAL_CATALOG[a.type];
+        if (def.product && def.yieldPerSeason && a.maturity >= 1 && a.health > 0) {
+          const amt = Math.round(def.yieldPerSeason * a.health);
+          if (amt > 0) produced[def.product] = (produced[def.product] ?? 0) + amt;
+        }
+      }
+      const totalProduced = Object.values(produced).reduce((s, n) => s + n, 0);
+      if (totalProduced > 0) {
+        inventory = { ...inventory };
+        const used = Object.values(inventory).reduce((s, n) => s + n, 0);
+        let free = state.inventoryCapacity - used;
+        const parts: string[] = [];
+        for (const [pid, amt] of Object.entries(produced)) {
+          const add = Math.max(0, Math.min(amt, free));
+          if (add > 0) {
+            inventory[pid] = (inventory[pid] ?? 0) + add;
+            free -= add;
+            parts.push(`${add} ${PRODUCT_CATALOG[pid as keyof typeof PRODUCT_CATALOG].name.toLowerCase()}`);
+          }
+        }
+        if (parts.length > 0) {
+          notifications.push({ type: "success", message: `Your animals produced ${parts.join(", ")}.` });
+        }
+      }
     }
 
     // Breeding: well-fed, mature, healthy animals, limited by barn capacity.

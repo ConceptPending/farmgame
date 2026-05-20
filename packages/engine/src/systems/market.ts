@@ -1,6 +1,7 @@
 import type { GameState, Notification } from "../state.js";
 import type { PriceSnapshot } from "../entities/market.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
+import { PRODUCT_CATALOG, ALL_PRODUCT_IDS } from "../data/products.js";
 import { nextFloat, nextBool } from "../rng.js";
 
 const MAX_HISTORY = 100;
@@ -39,6 +40,17 @@ export function marketSystem(state: GameState): {
     // Clamp price to [30% .. 300%] of base price
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[cropId] = Math.round(newPrice * 100) / 100;
+  }
+
+  // Animal products: priced off demand only (no RNG walk), so the random
+  // stream stays identical whether or not the player keeps livestock.
+  for (const productId of ALL_PRODUCT_IDS) {
+    const def = PRODUCT_CATALOG[productId];
+    const demand = newDemand[productId] ?? 1.0;
+    newDemand[productId] = demand + (1.0 - demand) * 0.02; // drift back to 1.0
+    let newPrice = def.basePrice * (0.9 + newDemand[productId] * 0.2);
+    newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
+    newPrices[productId] = Math.round(newPrice * 100) / 100;
   }
 
   // Occasional market events (~2% chance per tick)

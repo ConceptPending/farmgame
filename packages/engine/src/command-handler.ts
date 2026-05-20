@@ -7,6 +7,7 @@ import { BUILDING_CATALOG, createBuilding } from "./entities/building.js";
 import { createField } from "./entities/field.js";
 import { tileIndex } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
+import { getGoodInfo } from "./data/goods.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
 import { computeLivestockCapacity } from "./systems/livestock.js";
@@ -389,28 +390,28 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
   };
 }
 
-function handleSell(state: GameState, cropId: CropId, quantity: number): CommandResult {
-  const def = getCropDef(cropId);
-  if (!def) return fail(state, `Unknown crop: ${cropId}`);
+function handleSell(state: GameState, goodId: string, quantity: number): CommandResult {
+  const def = getGoodInfo(goodId);
+  if (!def) return fail(state, `Unknown good: ${goodId}`);
 
-  const available = state.inventory[cropId] ?? 0;
+  const available = state.inventory[goodId] ?? 0;
   if (available < quantity) {
     return fail(state, `Not enough ${def.name}. Have ${available}, want to sell ${quantity}`);
   }
 
-  const price = state.market.prices[cropId] ?? def.basePrice;
+  const price = state.market.prices[goodId] ?? def.basePrice;
   const revenue = Math.round(quantity * price);
 
   const newInventory = { ...state.inventory };
-  newInventory[cropId] = available - quantity;
-  if (newInventory[cropId] === 0) delete newInventory[cropId];
+  newInventory[goodId] = available - quantity;
+  if (newInventory[goodId] === 0) delete newInventory[goodId];
 
   // Selling depresses price slightly
   const newPrices = { ...state.market.prices };
-  newPrices[cropId] = Math.max(1, (newPrices[cropId] ?? def.basePrice) * (1 - quantity * 0.005));
+  newPrices[goodId] = Math.max(1, (newPrices[goodId] ?? def.basePrice) * (1 - quantity * 0.005));
 
   const newDemand = { ...state.market.demand };
-  newDemand[cropId] = Math.max(0.5, (newDemand[cropId] ?? 1) - quantity * 0.01);
+  newDemand[goodId] = Math.max(0.5, (newDemand[goodId] ?? 1) - quantity * 0.01);
 
   return {
     state: {

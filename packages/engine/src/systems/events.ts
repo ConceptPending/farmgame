@@ -1,7 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { Field } from "../entities/field.js";
 import { getCropDef } from "../data/crops.js";
-import type { RngState } from "../rng.js";
 import { nextBool, nextFloat, nextInt } from "../rng.js";
 
 /** Per-tick chance that a random event fires (~1 every ~33 days on average). */

@@ -2,7 +2,7 @@ import type { GameState, Notification } from "../state.js";
 import { LOAN_LIMIT } from "../state.js";
 import { BUILDING_CATALOG } from "../entities/building.js";
 import { animalValue } from "../entities/animal.js";
-import { CROP_CATALOG, getCropDef } from "../data/crops.js";
+import { getCropDef } from "../data/crops.js";
 
 // Seasonal cost tuning.
 export const LAND_TAX_PER_PLOT = 40;

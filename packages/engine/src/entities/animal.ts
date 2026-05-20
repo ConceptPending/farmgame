@@ -1,3 +1,5 @@
+import type { ProductType } from "../data/products.js";
+
 export type AnimalType = "chicken" | "pig" | "sheep" | "cow";
 
 export interface AnimalDefinition {
@@ -13,6 +15,10 @@ export interface AnimalDefinition {
   growthTicks: number;
   /** Per-season chance a mature, well-fed animal produces offspring. */
   breedChance: number;
+  /** Product yielded each season by a mature, well-fed animal (if any). */
+  product?: ProductType;
+  /** Units of product produced per season at full health. */
+  yieldPerSeason?: number;
 }
 
 export interface Animal {
@@ -32,6 +38,8 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     feedPerSeason: 4,
     growthTicks: 18,
     breedChance: 0.35,
+    product: "eggs",
+    yieldPerSeason: 8,
   },
   pig: {
     type: "pig",
@@ -50,6 +58,8 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     feedPerSeason: 10,
     growthTicks: 36,
     breedChance: 0.14,
+    product: "wool",
+    yieldPerSeason: 5,
   },
   cow: {
     type: "cow",
@@ -59,6 +69,8 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     feedPerSeason: 20,
     growthTicks: 48,
     breedChance: 0.1,
+    product: "milk",
+    yieldPerSeason: 10,
   },
 };
 

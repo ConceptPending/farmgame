@@ -9,7 +9,7 @@ import type { RngState } from "./rng.js";
 import { createRng } from "./rng.js";
 import { createWeatherState } from "./entities/weather.js";
 import { createMarketState } from "./entities/market.js";
-import { ALL_CROP_IDS, CROP_CATALOG } from "./data/crops.js";
+import { allBasePrices } from "./data/goods.js";
 import { generateWorld } from "./data/world-gen.js";
 
 export type GameStatus = "playing" | "won" | "lost";
@@ -85,10 +85,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
   const worldResult = generateWorld(rng);
   rng = worldResult.rng;
 
-  const basePrices: Record<string, number> = {};
-  for (const def of Object.values(CROP_CATALOG)) {
-    basePrices[def.id] = def.basePrice;
-  }
+  const basePrices = allBasePrices();
 
   return {
     tick: 0,
@@ -108,7 +105,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     animals: [],
     inventory: {},
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
-    market: createMarketState(ALL_CROP_IDS, basePrices),
+    market: createMarketState(Object.keys(basePrices), basePrices),
     weather: createWeatherState(),
     nextFieldId: 1,
     nextBuildingId: 1,
