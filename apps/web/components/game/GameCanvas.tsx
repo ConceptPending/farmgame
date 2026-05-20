@@ -178,6 +178,12 @@ export function GameCanvas() {
       });
 
       rendererRef.current = renderer;
+
+      // Draw the current state immediately. The state-change effect below only
+      // fires on subsequent updates, so without this the world stays blank
+      // until the next tick — which never comes in turn-based (paused) mode.
+      const current = useGameStore.getState().state;
+      if (current) renderer.update(current);
     }
 
     setup();
