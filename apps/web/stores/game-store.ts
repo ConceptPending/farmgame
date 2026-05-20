@@ -73,7 +73,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   notifications: [],
   tickInterval: null,
-  autoplay: true,
+  // Turn-based by default: the player advances time with the STEP controls.
+  // Autoplay is the optional mode, toggled from the HUD.
+  autoplay: false,
   autoPauseOnEvents: true,
 
   initGame: () => {
