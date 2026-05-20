@@ -136,15 +136,18 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Notifications toast area */}
+      {/* Notifications toast area — bottom-center so it clears the weather
+          panel and info panel in the top-right corner. */}
       {notifications.length > 0 && (
         <div
           style={{
             position: "fixed",
-            top: 48,
-            right: 200,
+            bottom: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
             display: "flex",
             flexDirection: "column",
+            alignItems: "center",
             gap: 3,
             zIndex: 50,
             pointerEvents: "none",

@@ -16,6 +16,13 @@ export class InputHandler {
   private worldHeight = 48;
   private world: Container | null = null;
   private dragStartTile: number | null = null;
+  private dragStartTileX = 0;
+  private dragStartTileY = 0;
+  // True once the pointer has moved to a different tile while a drag is pending,
+  // i.e. an actual drag gesture (as opposed to a stationary click).
+  private dragActive = false;
+  // Set when a drag gesture ends, so the trailing synthetic `click` event is ignored.
+  private suppressNextClick = false;
   private dragEnabled = false;
 
   private screenToTile(e: MouseEvent): { tileX: number; tileY: number; tileIndex: number } | null {
@@ -45,6 +52,13 @@ export class InputHandler {
     if (e.button !== 0) return;
     if (!this.callback) return;
 
+    // A completed drag gesture leaves a trailing `click`; ignore it so a single
+    // drag doesn't also fire a click action on the start tile.
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false;
+      return;
+    }
+
     const tile = this.screenToTile(e);
     if (!tile) return;
 
@@ -61,17 +75,21 @@ export class InputHandler {
     if (e.button !== 0) return;
     if (!this.callback) return;
 
+    // Reset here so a click that the browser suppressed after a prior drag
+    // can't leak its suppression onto this new gesture.
+    this.suppressNextClick = false;
+
     const tile = this.screenToTile(e);
     if (!tile) return;
 
+    // Record a pending drag start, but don't emit `tile_drag_start` yet — only
+    // once the pointer actually moves to another tile. A stationary press stays
+    // a plain click.
     if (this.dragEnabled || e.shiftKey) {
       this.dragStartTile = tile.tileIndex;
-      this.callback({
-        type: "tile_drag_start",
-        tileIndex: tile.tileIndex,
-        tileX: tile.tileX,
-        tileY: tile.tileY,
-      });
+      this.dragStartTileX = tile.tileX;
+      this.dragStartTileY = tile.tileY;
+      this.dragActive = false;
     }
   };
 
@@ -79,7 +97,7 @@ export class InputHandler {
     if (e.button !== 0) return;
     if (!this.callback) return;
 
-    if (this.dragStartTile !== null) {
+    if (this.dragStartTile !== null && this.dragActive) {
       const tile = this.screenToTile(e);
       if (tile) {
         this.callback({
@@ -89,8 +107,11 @@ export class InputHandler {
           tileY: tile.tileY,
         });
       }
-      this.dragStartTile = null;
+      // A real drag occurred — swallow the trailing click.
+      this.suppressNextClick = true;
     }
+    this.dragStartTile = null;
+    this.dragActive = false;
   };
 
   private onMouseMove = (e: MouseEvent) => {
@@ -106,7 +127,20 @@ export class InputHandler {
       tileY: tile.tileY,
     });
 
-    if (this.dragStartTile !== null) {
+    if (this.dragStartTile === null) return;
+
+    // First movement onto a different tile promotes the press into a drag.
+    if (!this.dragActive && tile.tileIndex !== this.dragStartTile) {
+      this.dragActive = true;
+      this.callback({
+        type: "tile_drag_start",
+        tileIndex: this.dragStartTile,
+        tileX: this.dragStartTileX,
+        tileY: this.dragStartTileY,
+      });
+    }
+
+    if (this.dragActive) {
       this.callback({
         type: "tile_drag_move",
         tileIndex: tile.tileIndex,
