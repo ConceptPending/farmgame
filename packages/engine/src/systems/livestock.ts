@@ -15,8 +15,6 @@ const FEED_IDS = ALL_CROP_IDS.filter(
   (id) => CROP_CATALOG[id].category === "grain" || CROP_CATALOG[id].category === "forage",
 );
 
-/** Manure produced per animal per season (scaled by health). */
-export const MANURE_PER_ANIMAL = 2;
 
 /**
  * Livestock system. Each tick animals age and grow; each season they consume
@@ -94,8 +92,8 @@ export function livestockSystem(state: GameState): {
       });
     }
 
-    // Manure: every animal contributes, scaled by health. Spread on fields.
-    manure += Math.round(animals.reduce((sum, a) => sum + MANURE_PER_ANIMAL * a.health, 0));
+    // Manure: every animal contributes (bigger animals more), scaled by health.
+    manure += Math.round(animals.reduce((sum, a) => sum + ANIMAL_CATALOG[a.type].manurePerSeason * a.health, 0));
 
     // Products: mature, well-fed animals yield eggs/milk/wool into inventory.
     if (fedRatio >= 1) {

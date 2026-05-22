@@ -193,3 +193,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ notifications: [] });
   },
 }));
+
+// Debug/automation hook: lets the playtest harness drive the real game.
+if (typeof window !== "undefined") {
+  (window as unknown as { farmStore?: typeof useGameStore }).farmStore = useGameStore;
+}

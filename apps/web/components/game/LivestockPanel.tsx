@@ -72,7 +72,7 @@ export function LivestockPanel() {
         {feedShort && used > 0 && " — shortfall! animals will lose health"}
       </div>
       <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 12 }}>
-        Manure: {state.manure} · producing ≈ {used * 2}/season (spread on fields to restore soil)
+        Manure: {state.manure} · producing ≈ {state.animals.reduce((m, a) => m + ANIMAL_CATALOG[a.type].manurePerSeason, 0)}/season (spread on fields to restore soil)
       </div>
 
       {/* Buy buttons */}

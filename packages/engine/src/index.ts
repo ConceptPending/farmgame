@@ -102,7 +102,7 @@ export { TOOL_CATALOG } from "./entities/tools.js";
 
 export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
 export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, BARN_CAPACITY, animalValue } from "./entities/animal.js";
-export { computeLivestockCapacity, MANURE_PER_ANIMAL } from "./systems/livestock.js";
+export { computeLivestockCapacity } from "./systems/livestock.js";
 
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {

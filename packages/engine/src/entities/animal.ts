@@ -19,6 +19,8 @@ export interface AnimalDefinition {
   product?: ProductType;
   /** Units of product produced per season at full health. */
   yieldPerSeason?: number;
+  /** Manure produced per season at full health (bigger animals give more). */
+  manurePerSeason: number;
 }
 
 export interface Animal {
@@ -40,37 +42,41 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     breedChance: 0.35,
     product: "eggs",
     yieldPerSeason: 8,
+    manurePerSeason: 1,
   },
   pig: {
     type: "pig",
     name: "Pig",
     cost: 120,
     matureValue: 320,
-    feedPerSeason: 12,
+    feedPerSeason: 9,
     growthTicks: 28,
     breedChance: 0.18,
+    manurePerSeason: 3,
   },
   sheep: {
     type: "sheep",
     name: "Sheep",
     cost: 150,
     matureValue: 360,
-    feedPerSeason: 10,
+    feedPerSeason: 8,
     growthTicks: 36,
     breedChance: 0.14,
     product: "wool",
-    yieldPerSeason: 5,
+    yieldPerSeason: 6,
+    manurePerSeason: 3,
   },
   cow: {
     type: "cow",
     name: "Cow",
     cost: 300,
     matureValue: 850,
-    feedPerSeason: 20,
+    feedPerSeason: 12,
     growthTicks: 48,
     breedChance: 0.1,
     product: "milk",
-    yieldPerSeason: 10,
+    yieldPerSeason: 14,
+    manurePerSeason: 6,
   },
 };
 

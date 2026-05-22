@@ -5,7 +5,6 @@ import {
   nextTick,
   createBuilding,
   DAYS_PER_SEASON,
-  MANURE_PER_ANIMAL,
   ANIMAL_CATALOG,
 } from "../src/index.js";
 import type { GameState, SoilNutrients } from "../src/index.js";
@@ -62,7 +61,7 @@ describe("manure", () => {
     let s = withBarnAndAnimals(3);
     s = { ...s, inventory: { wheat: 100 }, day: DAYS_PER_SEASON }; // fed -> full health
     const after = nextTick(s).state;
-    expect(after.manure).toBe(3 * MANURE_PER_ANIMAL);
+    expect(after.manure).toBe(3 * ANIMAL_CATALOG.chicken.manurePerSeason);
   });
 
   it("SPREAD_MANURE replenishes a field's nutrients and is herd-limited", () => {
