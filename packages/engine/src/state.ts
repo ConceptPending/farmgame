@@ -3,6 +3,7 @@ import type { Field } from "./entities/field.js";
 import type { Building } from "./entities/building.js";
 import type { Animal } from "./entities/animal.js";
 import type { Equipment } from "./entities/equipment.js";
+import type { Goal } from "./entities/goal.js";
 import type { WorldState } from "./entities/world.js";
 import type { WeatherState } from "./entities/weather.js";
 import type { MarketState } from "./entities/market.js";
@@ -23,8 +24,10 @@ export interface GameState {
   money: number;
   /** Outstanding loan principal owed to the bank. */
   loan: number;
-  /** Net-worth target that wins the game. */
-  goalNetWorth: number;
+  /** The objective this game (net worth, land baron, sandbox, ...). */
+  goal: Goal;
+  /** Difficulty multiplier applied to seasonal expenses. */
+  expenseMultiplier: number;
   /** "playing" until the player wins (hits the goal) or loses (bankruptcy). */
   status: GameStatus;
   rng: RngState;
@@ -74,6 +77,10 @@ export const LOAN_LIMIT = 50000;
 export interface CreateGameOptions {
   seed?: number;
   startingMoney?: number;
+  goal?: Goal;
+  /** Scales seasonal expenses (difficulty). 1.0 = normal. */
+  expenseMultiplier?: number;
+  /** @deprecated Convenience alias for `goal: { type: "net_worth", target }`. */
   goalNetWorth?: number;
 }
 
@@ -81,8 +88,11 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
   const {
     seed = Date.now(),
     startingMoney = 500,
-    goalNetWorth = DEFAULT_GOAL_NET_WORTH,
+    expenseMultiplier = 1,
   } = options;
+  const goal: Goal =
+    options.goal ??
+    { type: "net_worth", target: options.goalNetWorth ?? DEFAULT_GOAL_NET_WORTH };
 
   let rng = createRng(seed);
   const worldResult = generateWorld(rng);
@@ -97,7 +107,8 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     year: 1,
     money: startingMoney,
     loan: 0,
-    goalNetWorth,
+    goal,
+    expenseMultiplier,
     status: "playing",
     rng,
     paused: false,

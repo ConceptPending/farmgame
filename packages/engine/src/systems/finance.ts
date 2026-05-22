@@ -1,5 +1,6 @@
-import type { GameState, Notification } from "../state.js";
+import type { GameState, GameStatus, Notification } from "../state.js";
 import { LOAN_LIMIT } from "../state.js";
+import type { GoalProgress } from "../entities/goal.js";
 import { BUILDING_CATALOG } from "../entities/building.js";
 import { EQUIPMENT_CATALOG } from "../entities/equipment.js";
 import { animalValue } from "../entities/animal.js";
@@ -25,7 +26,8 @@ function ownedPlotCount(state: GameState): number {
 
 /** What the player will be charged at the next season boundary. */
 export function computeSeasonalExpenses(state: GameState): SeasonalExpenses {
-  const landTax = ownedPlotCount(state) * LAND_TAX_PER_PLOT;
+  const mult = state.expenseMultiplier ?? 1;
+  const landTax = Math.round(ownedPlotCount(state) * LAND_TAX_PER_PLOT * mult);
 
   let buildingUpkeep = 0;
   for (const b of state.buildings) {
@@ -34,8 +36,11 @@ export function computeSeasonalExpenses(state: GameState): SeasonalExpenses {
   for (const e of state.equipment) {
     buildingUpkeep += EQUIPMENT_CATALOG[e.type].upkeepPerSeason;
   }
-  const upkeep = buildingUpkeep + state.fields.length * FIELD_OVERHEAD + BASE_OVERHEAD;
+  const upkeep = Math.round(
+    (buildingUpkeep + state.fields.length * FIELD_OVERHEAD + BASE_OVERHEAD) * mult,
+  );
 
+  // Interest is a loan term, not scaled by difficulty.
   const interest = Math.round(state.loan * SEASONAL_INTEREST_RATE);
 
   return { landTax, upkeep, interest, total: landTax + upkeep + interest };
@@ -97,6 +102,57 @@ function isBankrupt(state: GameState): boolean {
   return state.money < 0 && -state.money > LOAN_LIMIT - state.loan;
 }
 
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+/**
+ * Resolve the active goal into a status. Bankruptcy is the universal loss.
+ * (tycoon_race / market_leader gain rival comparisons in Phase B.)
+ */
+export function evaluateGoal(state: GameState): { status: GameStatus; message?: string } {
+  if (isBankrupt(state)) {
+    return { status: "lost", message: "Bankrupt! Your debts have overwhelmed the farm. Game over." };
+  }
+  const goal = state.goal;
+  const netWorth = computeNetWorth(state);
+  switch (goal.type) {
+    case "net_worth":
+    case "tycoon_race":
+      if (netWorth >= goal.target) {
+        return { status: "won", message: `You reached a net worth of $${netWorth.toLocaleString()} — you win!` };
+      }
+      break;
+    case "land_baron":
+      if (ownedPlotCount(state) >= goal.plots) {
+        return { status: "won", message: `You own ${goal.plots} plots — you're the land baron!` };
+      }
+      break;
+    case "market_leader": // Phase B (needs rival sales comparison)
+    case "sandbox":
+      break;
+  }
+  return { status: "playing" };
+}
+
+/** UI-facing progress toward the active goal. */
+export function goalProgress(state: GameState): GoalProgress {
+  const goal = state.goal;
+  const netWorth = computeNetWorth(state);
+  switch (goal.type) {
+    case "net_worth":
+      return { label: "Net worth", current: netWorth, target: goal.target, pct: clamp01(netWorth / goal.target) };
+    case "tycoon_race":
+      return { label: "Net worth (race)", current: netWorth, target: goal.target, pct: clamp01(netWorth / goal.target) };
+    case "land_baron": {
+      const plots = ownedPlotCount(state);
+      return { label: "Plots owned", current: plots, target: goal.plots, pct: clamp01(plots / goal.plots) };
+    }
+    case "market_leader":
+      return { label: `Top ${goal.good} seller`, current: 0, target: goal.seasons, pct: 0 };
+    case "sandbox":
+      return { label: "Net worth", current: netWorth, target: 0, pct: 0 };
+  }
+}
+
 /**
  * Finance system — runs last in the tick pipeline. Charges seasonal expenses
  * at each season boundary, then resolves the win/lose conditions.
@@ -121,18 +177,12 @@ export function financeSystem(state: GameState): {
   }
 
   if (current.status === "playing") {
-    const netWorth = computeNetWorth(current);
-    if (netWorth >= current.goalNetWorth) {
-      current = { ...current, status: "won" };
+    const result = evaluateGoal(current);
+    if (result.status !== "playing") {
+      current = { ...current, status: result.status };
       notifications.push({
-        type: "success",
-        message: `You reached a net worth of $${netWorth.toLocaleString()} — you win!`,
-      });
-    } else if (isBankrupt(current)) {
-      current = { ...current, status: "lost" };
-      notifications.push({
-        type: "error",
-        message: `Bankrupt! Your debts have overwhelmed the farm. Game over.`,
+        type: result.status === "won" ? "success" : "error",
+        message: result.message ?? "",
       });
     }
   }
