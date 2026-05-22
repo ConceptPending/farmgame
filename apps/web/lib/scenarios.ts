@@ -16,9 +16,9 @@ interface DiffParams {
 }
 
 const DIFF: Record<Difficulty, DiffParams> = {
-  easy: { startingMoney: 1000, expenseMultiplier: 0.7, targetScale: 0.8, rivalAggr: 0.35 },
+  easy: { startingMoney: 1000, expenseMultiplier: 0.7, targetScale: 0.8, rivalAggr: 0.45 },
   normal: { startingMoney: 500, expenseMultiplier: 1.0, targetScale: 1.0, rivalAggr: 0.6 },
-  hard: { startingMoney: 300, expenseMultiplier: 1.3, targetScale: 1.25, rivalAggr: 0.9 },
+  hard: { startingMoney: 300, expenseMultiplier: 1.3, targetScale: 1.25, rivalAggr: 0.75 },
 };
 
 const RIVAL_NAMES = ["Hollow Creek Farm", "Golden Acres", "Ridgeline Ranch", "Brms & Sons"];
