@@ -18,15 +18,23 @@ export function GameCanvas() {
     if (!canvas) return;
 
     let renderer: GameRendererType | null = null;
+    let cancelled = false;
 
     async function setup() {
       const { GameRenderer } = await import("@farmgame/renderer");
-      renderer = new GameRenderer();
-      await renderer.init({
+      const r = new GameRenderer();
+      await r.init({
         canvas: canvas!,
         width: canvas!.clientWidth,
         height: canvas!.clientHeight,
       });
+      // If this effect was torn down while initializing, throw the renderer
+      // away rather than leaving two pixi apps on one canvas.
+      if (cancelled) {
+        r.destroy();
+        return;
+      }
+      renderer = r;
 
       renderer.setInputHandler((event: InputEvent) => {
         const currentState = useGameStore.getState().state;
@@ -189,6 +197,7 @@ export function GameCanvas() {
     setup();
 
     return () => {
+      cancelled = true;
       if (renderer) {
         renderer.destroy();
         rendererRef.current = null;
