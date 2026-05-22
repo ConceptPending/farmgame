@@ -149,6 +149,17 @@ function seededRng(seed: number): () => number {
   };
 }
 
+/**
+ * Soft contact shadow: a translucent black ellipse beneath an object. Shadows
+ * are baked into the (transparent-background) sprite, so they darken whatever
+ * terrain the object sits on. A consistent light from the top-left means every
+ * shadow sits slightly low-and-right of its object for a cohesive sense of depth.
+ */
+function softShadow(g: Graphics, cx: number, cy: number, rw: number, rh: number) {
+  g.ellipse(cx, cy, rw, rh).fill({ color: 0x000000, alpha: 0.22 });
+  g.ellipse(cx, cy, rw * 0.6, rh * 0.6).fill({ color: 0x000000, alpha: 0.16 });
+}
+
 /** Scatter single-pixel noise across a tile in lighter/darker shades of base. */
 function scatterNoise(
   g: Graphics,
@@ -274,6 +285,7 @@ function drawRoad(g: Graphics, col: number, row: number) {
 function drawSeedling(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 2, 1);
   // Two tiny sprouts.
   for (const ox of [4, 10]) {
     g.rect(x + ox, y + 11, 1, 3).fill(0x2ecc71);
@@ -285,6 +297,7 @@ function drawSeedling(g: Graphics, col: number, row: number, color: number) {
 function drawYoungCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3, 1.2);
   for (const ox of [4, 10]) {
     g.rect(x + ox, y + 8, 1, 6).fill(0x27ae60);
     g.rect(x + ox - 2, y + 7, 2, 3).fill(color);
@@ -295,6 +308,7 @@ function drawYoungCrop(g: Graphics, col: number, row: number, color: number) {
 function drawMatureCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3.2, 1.3);
   for (const ox of [4, 10]) {
     g.rect(x + ox, y + 5, 2, 9).fill(0x27ae60);
     g.rect(x + ox - 2, y + 4, 3, 3).fill(color);
@@ -306,6 +320,7 @@ function drawMatureCrop(g: Graphics, col: number, row: number, color: number) {
 function drawReadyCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3.4, 1.4);
   for (const ox of [4, 10]) {
     g.rect(x + ox, y + 4, 2, 10).fill(0x1e8c4a);
     g.rect(x + ox - 2, y + 3, 3, 4).fill(color);
@@ -321,6 +336,7 @@ function drawDeadCrop(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   // Withered brown stalks (no soil fill — dead field tile shows beneath).
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 2.5, 1.1);
   for (const ox of [4, 10]) {
     g.rect(x + ox, y + 7, 2, 6).fill(0x5c3a1e);
     g.rect(x + ox - 2, y + 6, 2, 2).fill(0x6b4423);
@@ -332,6 +348,7 @@ function drawSilo(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x8b7355);
+  softShadow(g, x + 9, y + 14, 6, 2.2);
   // Silo body
   g.rect(x + 4, y + 4, 8, 10).fill(0xccccbb);
   g.rect(x + 5, y + 3, 6, 2).fill(0xbb4444);
@@ -343,6 +360,7 @@ function drawBarn(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f); // grass base
+  softShadow(g, x + 9, y + 14, 7, 2.2);
   g.rect(x + 2, y + 7, 12, 7).fill(0xb23a2e); // red wall
   g.rect(x + 1, y + 5, 14, 2).fill(0x7a2820); // roof eave
   g.rect(x + 4, y + 3, 8, 2).fill(0x7a2820); // roof peak
@@ -355,6 +373,7 @@ function drawWaterPump(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x8b7355);
+  softShadow(g, x + 8, y + 14, 5, 2);
   // Pump base
   g.rect(x + 5, y + 8, 6, 6).fill(0x666666);
   // Pump arm
@@ -366,6 +385,7 @@ function drawWindmill(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x8b7355);
+  softShadow(g, x + 8, y + 14, 5, 2);
   // Tower
   g.rect(x + 6, y + 6, 4, 8).fill(0xccccbb);
   // Blades (X shape)
@@ -388,6 +408,7 @@ function drawFence(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f);
+  softShadow(g, x + 8, y + 14, 6, 1.4);
   // Fence posts and rail
   g.rect(x + 2, y + 4, 2, 10).fill(0x8b6914);
   g.rect(x + 12, y + 4, 2, 10).fill(0x8b6914);
