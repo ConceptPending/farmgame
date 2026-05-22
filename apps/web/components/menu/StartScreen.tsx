@@ -21,6 +21,7 @@ export function StartScreen() {
   const [goalType, setGoalType] = useState<GoalType>("net_worth");
   const [target, setTarget] = useState(40000);
   const [cash, setCash] = useState(500);
+  const [rivalCount, setRivalCount] = useState(2);
   const [seedText, setSeedText] = useState("");
 
   const isCustom = selected === "custom";
@@ -35,6 +36,7 @@ export function StartScreen() {
           target,
           startingMoney: cash,
           expenseMultiplier: 1,
+          rivals: rivalCount,
           seed,
         }),
       );
@@ -96,7 +98,7 @@ export function StartScreen() {
               </div>
               <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 8, lineHeight: 1.35 }}>{s.blurb}</div>
               <div style={{ fontSize: 11, color: "#7a8a9a" }}>
-                🎯 {s.goalSummary({ startingMoney: 0, expenseMultiplier: 0, targetScale: difficultyScale(difficulty) })}
+                🎯 {s.goalSummary({ startingMoney: 0, expenseMultiplier: 0, rivalAggr: 0, targetScale: difficultyScale(difficulty) })}
               </div>
               {s.rivals > 0 && (
                 <div style={{ fontSize: 11, color: "#7a8a9a", marginTop: 2 }}>🚜 {s.rivals} rivals</div>
@@ -126,10 +128,14 @@ export function StartScreen() {
           </label>
           {goalType !== "sandbox" && (
             <label style={lbl}>
-              {goalType === "land_baron" ? "Plots" : "Net-worth target $"}
+              {goalType === "land_baron" ? "Plots" : goalType === "market_leader" ? "Seasons leading" : "Target $"}
               <input type="number" value={target} min={1} onChange={(e) => setTarget(Math.max(1, Number(e.target.value) || 0))} style={input} />
             </label>
           )}
+          <label style={lbl}>
+            Rivals
+            <input type="number" value={rivalCount} min={0} max={4} onChange={(e) => setRivalCount(Math.max(0, Math.min(4, Number(e.target.value) || 0)))} style={input} />
+          </label>
           <label style={lbl}>
             Starting cash $
             <input type="number" value={cash} min={0} onChange={(e) => setCash(Math.max(0, Number(e.target.value) || 0))} style={input} />

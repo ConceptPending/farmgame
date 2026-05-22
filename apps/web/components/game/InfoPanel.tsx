@@ -2,7 +2,7 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { tileCoords, getCropDef, CROP_CATALOG, type CropId } from "@farmgame/engine";
+import { tileCoords, getCropDef, plotOwner, CROP_CATALOG, type CropId } from "@farmgame/engine";
 
 export function InfoPanel() {
   const state = useGameStore((s) => s.state);
@@ -23,9 +23,20 @@ export function InfoPanel() {
 
   const plotSize = state.world.plotSize;
 
-  // If hovering an unowned plot, show purchase info
+  // Rival ownership of the selected tile's plot, if any.
+  let rivalOwnerName: string | null = null;
+  if (coords) {
+    const ppr = state.world.width / plotSize;
+    const plotIdx = Math.floor(coords.y / plotSize) * ppr + Math.floor(coords.x / plotSize);
+    const owner = plotOwner(state, plotIdx);
+    if (typeof owner === "number") {
+      rivalOwnerName = state.rivals.find((r) => r.id === owner)?.name ?? "a rival";
+    }
+  }
+
+  // If hovering an unowned (and un-rivaled) plot, show purchase info
   let unownedPlotInfo: { plotX: number; plotY: number } | null = null;
-  if (coords && tile && !tile.owned) {
+  if (coords && tile && !tile.owned && !rivalOwnerName) {
     unownedPlotInfo = {
       plotX: Math.floor(coords.x / plotSize),
       plotY: Math.floor(coords.y / plotSize),
@@ -57,7 +68,7 @@ export function InfoPanel() {
             <br />
             Moisture: {(tile.moisture * 100).toFixed(0)}%
             <br />
-            Owned: {tile.owned ? "Yes" : "No"}
+            Owned: {tile.owned ? "Yes" : rivalOwnerName ? `${rivalOwnerName}` : "No"}
             {tile.fieldId !== null && <><br />Field: #{tile.fieldId}</>}
           </div>
         </div>

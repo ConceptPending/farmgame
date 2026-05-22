@@ -14,6 +14,30 @@ const TERRAIN_SPRITE_MAP: Record<TerrainType, SpriteKey[]> = {
   road: ["road"],
 };
 
+const RIVAL_COLORS = [0xff8c42, 0xff6b6b, 0xb39ddb, 0xffd166];
+
+export function rivalColor(rivalId: number): number {
+  return RIVAL_COLORS[(rivalId - 1) % RIVAL_COLORS.length];
+}
+
+/** Map tile index → rival tint color for every rival-claimed plot's tiles. */
+function rivalTileColors(state: GameState): Map<number, number> {
+  const map = new Map<number, number>();
+  const { world } = state;
+  const ppr = world.width / world.plotSize;
+  for (const r of state.rivals) {
+    const color = rivalColor(r.id);
+    for (const plot of r.ownedPlots) {
+      const sx = (plot % ppr) * world.plotSize;
+      const sy = Math.floor(plot / ppr) * world.plotSize;
+      for (let dy = 0; dy < world.plotSize; dy++)
+        for (let dx = 0; dx < world.plotSize; dx++)
+          map.set((sy + dy) * world.width + (sx + dx), color);
+    }
+  }
+  return map;
+}
+
 export class TerrainLayer {
   readonly container: Container;
   private sprites: Sprite[] = [];
@@ -24,6 +48,7 @@ export class TerrainLayer {
   private lastTerrainKey = "";
   private lastOwnershipKey = "";
   private lastFieldStateKey = "";
+  private lastRivalKey = "";
 
   constructor() {
     this.container = new Container();
@@ -46,17 +71,20 @@ export class TerrainLayer {
     // Terrain changes are rare (only on buy_land or bulldoze)
     const ownershipKey = world.plotOwnership.map((o) => (o ? "1" : "0")).join("");
     const fieldStateKey = state.fields.map((f) => `${f.id}:${f.state}:${f.tileIndices.length}`).join(",");
+    const rivalKey = state.rivals.map((r) => `${r.id}:${r.ownedPlots.join(".")}`).join(",");
     const terrainChanged = this.lastTerrainKey === "";
     const ownershipChanged = ownershipKey !== this.lastOwnershipKey;
     const fieldStateChanged = fieldStateKey !== this.lastFieldStateKey;
+    const rivalChanged = rivalKey !== this.lastRivalKey;
 
-    if (terrainChanged || ownershipChanged || fieldStateChanged) {
+    if (terrainChanged || ownershipChanged || fieldStateChanged || rivalChanged) {
       // Build lookup: fieldId → state for tilled texture
       const tilledStates: Set<FieldState> = new Set(["plowed", "planted", "growing", "ready"]);
       const fieldStateMap = new Map<number, FieldState>();
       for (const field of state.fields) {
         fieldStateMap.set(field.id, field.state);
       }
+      const rivalTile = rivalTileColors(state);
 
       for (let i = 0; i < tileCount; i++) {
         const tile = world.tiles[i];
@@ -75,14 +103,22 @@ export class TerrainLayer {
           }
         }
 
-        sprite.alpha = tile.terrain === "water" ? 1.0 : tile.owned ? 1.0 : 0.5;
+        const rc = rivalTile.get(i);
+        if (rc !== undefined) {
+          sprite.tint = rc;
+          sprite.alpha = 0.85; // rival-claimed land
+        } else {
+          sprite.tint = 0xffffff;
+          sprite.alpha = tile.terrain === "water" ? 1.0 : tile.owned ? 1.0 : 0.5;
+        }
       }
       // Mark terrain as clean after first full pass
       this.lastTerrainKey = "set";
       this.lastFieldStateKey = fieldStateKey;
+      this.lastRivalKey = rivalKey;
     }
 
-    if (ownershipChanged) {
+    if (ownershipChanged || rivalChanged) {
       this.drawPlotBoundaries(state);
       this.lastOwnershipKey = ownershipKey;
     }
@@ -132,14 +168,22 @@ export class TerrainLayer {
       g.moveTo(x, 0).lineTo(x, world.height * TILE_SIZE).stroke({ width: 0.5, color: 0x000000, alpha: 0.15 });
     }
 
+    const w = plotSize * TILE_SIZE;
     for (let pi = 0; pi < world.plotOwnership.length; pi++) {
       if (!world.plotOwnership[pi]) continue;
-      const px = pi % plotsPerRow;
-      const py = Math.floor(pi / plotsPerRow);
-      const x = px * plotSize * TILE_SIZE;
-      const y = py * plotSize * TILE_SIZE;
-      const w = plotSize * TILE_SIZE;
+      const x = (pi % plotsPerRow) * plotSize * TILE_SIZE;
+      const y = Math.floor(pi / plotsPerRow) * plotSize * TILE_SIZE;
       g.rect(x, y, w, w).stroke({ width: 1, color: 0x4ecca3, alpha: 0.5 });
+    }
+
+    // Rival-claimed plots, outlined in each rival's color.
+    for (const r of state.rivals) {
+      const color = rivalColor(r.id);
+      for (const plot of r.ownedPlots) {
+        const x = (plot % plotsPerRow) * plotSize * TILE_SIZE;
+        const y = Math.floor(plot / plotsPerRow) * plotSize * TILE_SIZE;
+        g.rect(x, y, w, w).stroke({ width: 1, color, alpha: 0.6 });
+      }
     }
   }
 }

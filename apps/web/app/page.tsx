@@ -10,6 +10,7 @@ import { MarketPanel } from "../components/game/MarketPanel";
 import { FinancePanel } from "../components/game/FinancePanel";
 import { LivestockPanel } from "../components/game/LivestockPanel";
 import { EquipmentPanel } from "../components/game/EquipmentPanel";
+import { StandingsPanel } from "../components/game/StandingsPanel";
 import { GameOverOverlay } from "../components/game/GameOverOverlay";
 import { StartScreen } from "../components/menu/StartScreen";
 
@@ -30,6 +31,7 @@ export default function Home() {
           <FinancePanel />
           <LivestockPanel />
           <EquipmentPanel />
+          <StandingsPanel />
         </div>
         <InfoPanel />
       </div>

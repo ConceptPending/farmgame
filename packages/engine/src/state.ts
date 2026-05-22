@@ -4,11 +4,13 @@ import type { Building } from "./entities/building.js";
 import type { Animal } from "./entities/animal.js";
 import type { Equipment } from "./entities/equipment.js";
 import type { Goal } from "./entities/goal.js";
+import type { RivalFarm, RivalConfig } from "./entities/rival.js";
+import { createRival } from "./entities/rival.js";
 import type { WorldState } from "./entities/world.js";
 import type { WeatherState } from "./entities/weather.js";
 import type { MarketState } from "./entities/market.js";
 import type { RngState } from "./rng.js";
-import { createRng } from "./rng.js";
+import { createRng, nextInt } from "./rng.js";
 import { createWeatherState } from "./entities/weather.js";
 import { createMarketState } from "./entities/market.js";
 import { allBasePrices } from "./data/goods.js";
@@ -38,6 +40,11 @@ export interface GameState {
   buildings: Building[];
   animals: Animal[];
   equipment: Equipment[];
+  rivals: RivalFarm[];
+  /** Human's sales of each good this season (for market_leader goal). */
+  seasonSales: Record<string, number>;
+  /** Consecutive seasons leading the market_leader good. */
+  marketLeadStreak: number;
   inventory: Record<string, number>;
   inventoryCapacity: number;
   market: MarketState;
@@ -80,6 +87,8 @@ export interface CreateGameOptions {
   goal?: Goal;
   /** Scales seasonal expenses (difficulty). 1.0 = normal. */
   expenseMultiplier?: number;
+  /** Computer-run rival farms (land + market competition). */
+  rivals?: RivalConfig[];
   /** @deprecated Convenience alias for `goal: { type: "net_worth", target }`. */
   goalNetWorth?: number;
 }
@@ -97,6 +106,29 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
   let rng = createRng(seed);
   const worldResult = generateWorld(rng);
   rng = worldResult.rng;
+
+  // Rivals claim starting plots from the unclaimed grid (no RNG when none).
+  const rivals: RivalFarm[] = [];
+  const rivalConfigs = options.rivals ?? [];
+  if (rivalConfigs.length > 0) {
+    const taken = new Set<number>();
+    worldResult.world.plotOwnership.forEach((owned, i) => { if (owned) taken.add(i); });
+    const totalPlots = worldResult.world.plotOwnership.length;
+    rivalConfigs.forEach((cfg, idx) => {
+      const plots: number[] = [];
+      for (let k = 0; k < cfg.startingPlots; k++) {
+        const free: number[] = [];
+        for (let p = 0; p < totalPlots; p++) if (!taken.has(p)) free.push(p);
+        if (free.length === 0) break;
+        const pick = nextInt(rng, 0, free.length - 1);
+        rng = pick.rng;
+        const plot = free[pick.value];
+        taken.add(plot);
+        plots.push(plot);
+      }
+      rivals.push(createRival(idx + 1, cfg, plots));
+    });
+  }
 
   const basePrices = allBasePrices();
 
@@ -118,6 +150,9 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     buildings: [],
     animals: [],
     equipment: [],
+    rivals,
+    seasonSales: {},
+    marketLeadStreak: 0,
     inventory: {},
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
     market: createMarketState(Object.keys(basePrices), basePrices),
