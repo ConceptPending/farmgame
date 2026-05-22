@@ -3,7 +3,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { TOOL_CATALOG, computeNetWorth } from "@farmgame/engine";
+import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import type { WeatherCondition } from "@farmgame/engine";
 
@@ -61,8 +61,10 @@ export function HUD() {
   };
 
   const toolDef = TOOL_CATALOG[selectedTool];
-  const netWorth = computeNetWorth(state);
-  const goalPct = Math.min(100, Math.round((netWorth / state.goalNetWorth) * 100));
+  const progress = goalProgress(state);
+  const goalPct = Math.round(progress.pct * 100);
+  const goalIsMoney = state.goal.type !== "land_baron" && state.goal.type !== "market_leader";
+  const fmtGoal = (n: number) => (goalIsMoney ? `$${n.toLocaleString()}` : `${n}`);
 
   return (
     <>
@@ -83,7 +85,7 @@ export function HUD() {
           ${state.money.toLocaleString()}
         </div>
 
-        {/* Net worth vs. goal */}
+        {/* Goal progress */}
         <button
           onClick={() => setShowFinancePanel(true)}
           title="Open finances"
@@ -99,7 +101,8 @@ export function HUD() {
           }}
         >
           <span style={{ fontSize: 10, color: "#7a8a9a" }}>
-            NET WORTH <span style={{ color: "#eee" }}>${netWorth.toLocaleString()}</span>
+            {progress.label.toUpperCase()} <span style={{ color: "#eee" }}>{fmtGoal(progress.current)}</span>
+            {progress.target > 0 && <span> / {fmtGoal(progress.target)}</span>}
             {state.loan > 0 && <span style={{ color: "#ff6b6b" }}> · debt ${state.loan.toLocaleString()}</span>}
           </span>
           <div style={{ width: 120, height: 5, background: "#16213e", borderRadius: 3, overflow: "hidden" }}>

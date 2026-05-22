@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { computeNetWorth, computeSeasonalExpenses, LOAN_LIMIT } from "@farmgame/engine";
+import { computeNetWorth, computeSeasonalExpenses, goalProgress, LOAN_LIMIT } from "@farmgame/engine";
 
 function Row({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
@@ -27,8 +27,10 @@ export function FinancePanel() {
   const assets = netWorth - state.money + state.loan; // land + buildings + inventory
   const exp = computeSeasonalExpenses(state);
   const credit = LOAN_LIMIT - state.loan;
-  const progress = Math.max(0, Math.min(1, netWorth / state.goalNetWorth));
+  const progress = goalProgress(state);
+  const goalIsMoney = state.goal.type !== "land_baron" && state.goal.type !== "market_leader";
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const fmtGoal = (n: number) => (goalIsMoney ? fmt(n) : `${n}`);
 
   return (
     <div
@@ -68,21 +70,23 @@ export function FinancePanel() {
       {/* Goal progress */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ color: "#aaa" }}>Goal progress</span>
+          <span style={{ color: "#aaa" }}>{progress.label}{progress.target > 0 ? " goal" : ""}</span>
           <span style={{ color: "#4ecca3" }}>
-            {fmt(netWorth)} / {fmt(state.goalNetWorth)}
+            {progress.target > 0 ? `${fmtGoal(progress.current)} / ${fmtGoal(progress.target)}` : "sandbox"}
           </span>
         </div>
-        <div style={{ height: 10, background: "#0a1628", borderRadius: 5, overflow: "hidden" }}>
-          <div
-            style={{
-              width: `${progress * 100}%`,
-              height: "100%",
-              background: "#4ecca3",
-              transition: "width 0.3s",
-            }}
-          />
-        </div>
+        {progress.target > 0 && (
+          <div style={{ height: 10, background: "#0a1628", borderRadius: 5, overflow: "hidden" }}>
+            <div
+              style={{
+                width: `${progress.pct * 100}%`,
+                height: "100%",
+                background: "#4ecca3",
+                transition: "width 0.3s",
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Balance sheet */}

@@ -6,6 +6,7 @@ import {
   type GameState,
   type GameCommand,
   type Notification,
+  type CreateGameOptions,
 } from "@farmgame/engine";
 import { TICK_INTERVAL_MS } from "@farmgame/shared";
 
@@ -17,8 +18,13 @@ interface GameStore {
   autoplay: boolean;
   /** When auto-advancing, stop on the first noteworthy event so the player can react. */
   autoPauseOnEvents: boolean;
+  /** Config of the current/most-recent game, for "Play Again". */
+  lastConfig: CreateGameOptions | null;
 
-  initGame: () => void;
+  /** Start a new game from a scenario/difficulty config. */
+  startGame: (config: CreateGameOptions) => void;
+  /** Return to the start screen (state = null). */
+  returnToMenu: () => void;
   dispatch: (command: GameCommand) => void;
   startLoop: () => void;
   stopLoop: () => void;
@@ -79,12 +85,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // Autoplay is the optional mode, toggled from the HUD.
   autoplay: false,
   autoPauseOnEvents: true,
+  lastConfig: null,
 
-  initGame: () => {
+  startGame: (config: CreateGameOptions) => {
     get().stopLoop();
-    const state = createGameState({ seed: Date.now() });
-    set({ state, notifications: [] });
+    const state = createGameState({ seed: Date.now(), ...config });
+    set({ state, notifications: [], lastConfig: config });
     if (get().autoplay) get().startLoop();
+  },
+
+  returnToMenu: () => {
+    get().stopLoop();
+    set({ state: null, notifications: [] });
   },
 
   dispatch: (command: GameCommand) => {
