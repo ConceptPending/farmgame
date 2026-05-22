@@ -25,6 +25,8 @@ export const SPRITES = {
   grass4: { col: 10, row: 0 },
   dirt2: { col: 11, row: 0 },
   water3: { col: 12, row: 0 },
+  grass_flower: { col: 13, row: 0 },
+  grass_pebble: { col: 14, row: 0 },
 
   // Generic dead crop (any crop type). Per-crop living sprites are generated
   // dynamically into rows 6-9 (see CROP_ROWS) and keyed crop_<id>_<stage>.
@@ -75,6 +77,8 @@ export async function generateTileset(app: Application): Promise<void> {
   drawGrass(g, 10, 0, 0x4f9143, 83); // grass4
   drawDirt(g, 11, 0, 0x877052, 23); // dirt2 (kept close to dirt to avoid patchiness)
   drawWater(g, 12, 0, 0x3093cf, 37); // water3
+  drawGrassFlower(g, 13, 0, 0x4a8c3f, 101); // sparse meadow flowers
+  drawGrassPebble(g, 14, 0, 0x4a8c3f, 137); // sparse stones
 
   // --- Row 1: Dead crop (generic) ---
   drawDeadCrop(g, 0, 1);
@@ -196,6 +200,35 @@ function drawGrass(g: Graphics, col: number, row: number, color: number, seed: n
     const h = 2 + Math.floor(rnd() * 3);
     g.rect(x + bx, y + by, 1, h).fill(dark);
     g.rect(x + bx + 1, y + by - 1, 1, h).fill(light);
+  }
+}
+
+function drawGrassFlower(g: Graphics, col: number, row: number, color: number, seed: number) {
+  drawGrass(g, col, row, color, seed);
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const rnd = seededRng(seed + 911);
+  const petals = [0xffffff, 0xffe04a, 0xff7eb0, 0xb39ddb];
+  for (let i = 0; i < 3; i++) {
+    const fx = 3 + Math.floor(rnd() * 10);
+    const fy = 3 + Math.floor(rnd() * 9);
+    const c = petals[Math.floor(rnd() * petals.length)];
+    g.rect(x + fx - 1, y + fy, 3, 1).fill(c); // petals (+ shape)
+    g.rect(x + fx, y + fy - 1, 1, 3).fill(c);
+    g.rect(x + fx, y + fy, 1, 1).fill(0xffd24a); // center
+  }
+}
+
+function drawGrassPebble(g: Graphics, col: number, row: number, color: number, seed: number) {
+  drawGrass(g, col, row, color, seed);
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const rnd = seededRng(seed + 733);
+  for (let i = 0; i < 3; i++) {
+    const px = 2 + Math.floor(rnd() * 11);
+    const py = 4 + Math.floor(rnd() * 9);
+    g.rect(x + px, y + py, 2, 2).fill(0x9a9a8e); // stone
+    g.rect(x + px, y + py, 1, 1).fill(0xc4c4b6); // highlight
   }
 }
 
