@@ -68,6 +68,17 @@ export function rivalSystem(state: GameState): {
     const noise = Math.round(income * (noiseRoll.value - 0.5) * 0.3);
     const netWorth = Math.max(0, r.netWorth + income + noise);
 
+    // Race tension: warn when a rival nears the tycoon-race target.
+    if (state.goal.type === "tycoon_race") {
+      const t = state.goal.target;
+      const crossed = (frac: number) => r.netWorth < t * frac && netWorth >= t * frac;
+      if (crossed(0.75)) {
+        notifications.push({ type: "warning", message: `${r.name} is closing in on the goal — 75% of the way there!` });
+      } else if (crossed(0.5)) {
+        notifications.push({ type: "info", message: `${r.name} is halfway to the goal.` });
+      }
+    }
+
     // Record this season's focus-good output (for the market_leader race).
     const seasonSales: Record<string, number> = {};
     for (const g of r.focusGoods) {
