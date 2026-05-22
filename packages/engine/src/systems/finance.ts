@@ -104,6 +104,25 @@ function isBankrupt(state: GameState): boolean {
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
+export interface Standing {
+  name: string;
+  netWorth: number;
+  plots: number;
+  isHuman: boolean;
+}
+
+/** All farms (you + rivals) ranked by net worth, for the standings panel. */
+export function standings(state: GameState): Standing[] {
+  const list: Standing[] = state.rivals.map((r) => ({
+    name: r.name,
+    netWorth: r.netWorth,
+    plots: r.ownedPlots.length,
+    isHuman: false,
+  }));
+  list.push({ name: "You", netWorth: computeNetWorth(state), plots: ownedPlotCount(state), isHuman: true });
+  return list.sort((a, b) => b.netWorth - a.netWorth);
+}
+
 /**
  * Resolve the active goal into a status. Bankruptcy is the universal loss.
  * (tycoon_race / market_leader gain rival comparisons in Phase B.)
@@ -116,17 +135,30 @@ export function evaluateGoal(state: GameState): { status: GameStatus; message?: 
   const netWorth = computeNetWorth(state);
   switch (goal.type) {
     case "net_worth":
-    case "tycoon_race":
       if (netWorth >= goal.target) {
         return { status: "won", message: `You reached a net worth of $${netWorth.toLocaleString()} — you win!` };
       }
       break;
+    case "tycoon_race": {
+      if (netWorth >= goal.target) {
+        return { status: "won", message: `You won the race to $${goal.target.toLocaleString()}!` };
+      }
+      const leader = state.rivals.find((r) => r.netWorth >= goal.target);
+      if (leader) {
+        return { status: "lost", message: `${leader.name} reached $${goal.target.toLocaleString()} first. You lost the race.` };
+      }
+      break;
+    }
     case "land_baron":
       if (ownedPlotCount(state) >= goal.plots) {
         return { status: "won", message: `You own ${goal.plots} plots — you're the land baron!` };
       }
       break;
-    case "market_leader": // Phase B (needs rival sales comparison)
+    case "market_leader":
+      if (state.marketLeadStreak >= goal.seasons) {
+        return { status: "won", message: `You led the ${goal.good} market for ${goal.seasons} seasons — you win!` };
+      }
+      break;
     case "sandbox":
       break;
   }
@@ -147,7 +179,13 @@ export function goalProgress(state: GameState): GoalProgress {
       return { label: "Plots owned", current: plots, target: goal.plots, pct: clamp01(plots / goal.plots) };
     }
     case "market_leader":
-      return { label: `Top ${goal.good} seller`, current: 0, target: goal.seasons, pct: 0 };
+      return {
+        label: `Top ${goal.good} seller`,
+        current: state.marketLeadStreak,
+        target: goal.seasons,
+        pct: clamp01(state.marketLeadStreak / goal.seasons),
+        detail: "consecutive seasons",
+      };
     case "sandbox":
       return { label: "Net worth", current: netWorth, target: 0, pct: 0 };
   }
@@ -174,6 +212,16 @@ export function financeSystem(state: GameState): {
         message: `Seasonal expenses: $${exp.total} (tax $${exp.landTax}, upkeep $${exp.upkeep}, interest $${exp.interest})`,
       });
     }
+
+    // Update the market-leader streak from the season's sales, then reset.
+    if (current.goal.type === "market_leader") {
+      const good = current.goal.good;
+      const mine = current.seasonSales[good] ?? 0;
+      const topRival = current.rivals.reduce((m, r) => Math.max(m, r.seasonSales[good] ?? 0), 0);
+      const leading = mine > 0 && mine >= topRival;
+      current = { ...current, marketLeadStreak: leading ? current.marketLeadStreak + 1 : 0 };
+    }
+    current = { ...current, seasonSales: {} };
   }
 
   if (current.status === "playing") {

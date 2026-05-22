@@ -18,13 +18,19 @@ export {
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
 
+// Rivals
+export type { RivalFarm, RivalConfig } from "./entities/rival.js";
+export { rivalOwning, plotOwner } from "./entities/rival.js";
+
 // Finance
 export {
   computeNetWorth,
   computeSeasonalExpenses,
   evaluateGoal,
   goalProgress,
+  standings,
   type SeasonalExpenses,
+  type Standing,
 } from "./systems/finance.js";
 
 // Commands

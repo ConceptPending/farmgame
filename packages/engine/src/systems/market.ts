@@ -2,6 +2,7 @@ import type { GameState, Notification } from "../state.js";
 import type { PriceSnapshot } from "../entities/market.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG, ALL_PRODUCT_IDS } from "../data/products.js";
+import { rivalSupplyPressure } from "../entities/rival.js";
 import { nextFloat, nextBool } from "../rng.js";
 
 const MAX_HISTORY = 100;
@@ -36,9 +37,10 @@ export function marketSystem(state: GameState): {
       ? -0.01 * def.basePrice // slight downward pressure in season
       : 0.005 * def.basePrice; // slight upward pressure off-season
 
-    // Demand recovers toward 1.0; price is anchored to it (mean-reverting),
-    // so a market crashed by heavy selling climbs back only as demand heals.
-    newDemand[cropId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    // Demand recovers toward its ceiling (1.0, lowered by rival supply on this
+    // good); price is anchored to it, so rivals keep the player's prices down.
+    const target = Math.max(MIN_DEMAND, 1.0 - rivalSupplyPressure(state.rivals, cropId));
+    newDemand[cropId] = demand + (target - demand) * DEMAND_RECOVERY;
     let newPrice = def.basePrice * newDemand[cropId] + walk + seasonBias;
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[cropId] = Math.round(newPrice * 100) / 100;
@@ -49,7 +51,8 @@ export function marketSystem(state: GameState): {
   for (const productId of ALL_PRODUCT_IDS) {
     const def = PRODUCT_CATALOG[productId];
     const demand = newDemand[productId] ?? 1.0;
-    newDemand[productId] = demand + (1.0 - demand) * DEMAND_RECOVERY;
+    const target = Math.max(MIN_DEMAND, 1.0 - rivalSupplyPressure(state.rivals, productId));
+    newDemand[productId] = demand + (target - demand) * DEMAND_RECOVERY;
     let newPrice = def.basePrice * newDemand[productId];
     newPrice = Math.max(def.basePrice * 0.3, Math.min(def.basePrice * 3, newPrice));
     newPrices[productId] = Math.round(newPrice * 100) / 100;

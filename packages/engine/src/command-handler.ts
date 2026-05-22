@@ -12,6 +12,7 @@ import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
 import { computeLivestockCapacity } from "./systems/livestock.js";
+import { rivalOwning } from "./entities/rival.js";
 import type { EquipmentType } from "./entities/equipment.js";
 import {
   EQUIPMENT_CATALOG, createEquipment, workableTiles, cultivatedTiles, EQUIPMENT_SALVAGE,
@@ -41,6 +42,10 @@ function handleBuyPlot(state: GameState, plotX: number, plotY: number): CommandR
   const plotIdx = plotY * plotsPerRow + plotX;
   if (state.world.plotOwnership[plotIdx]) {
     return fail(state, "You already own this plot");
+  }
+  const owner = rivalOwning(state.rivals, plotIdx);
+  if (owner) {
+    return fail(state, `${owner.name} owns this plot`);
   }
 
   // Check adjacency to an owned plot
@@ -441,6 +446,7 @@ function handleSell(state: GameState, goodId: string, quantity: number): Command
       ...state,
       money: state.money + revenue,
       inventory: newInventory,
+      seasonSales: { ...state.seasonSales, [goodId]: (state.seasonSales[goodId] ?? 0) + quantity },
       market: {
         ...state.market,
         prices: newPrices,
