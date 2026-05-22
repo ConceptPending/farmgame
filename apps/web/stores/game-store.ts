@@ -56,7 +56,7 @@ const MAX_SKIP_DAYS = 120;
 // warnings (frost/storm/drought happen often and may not threaten crops) and
 // seasonal expense notices (every season — too noisy).
 const STOP_WORTHY =
-  /ready to harvest|killed|has died|died from|infestation|overrun|prices crashing|demand surging|has arrived|Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown|closing in on the goal/i;
+  /ready to harvest|killed|has died|died from|infestation|overrun|prices crashing|demand surging|has arrived|Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown|closing in on the goal|is running low/i;
 
 function isStopWorthy(n: Notification): boolean {
   return n.type === "error" || STOP_WORTHY.test(n.message);

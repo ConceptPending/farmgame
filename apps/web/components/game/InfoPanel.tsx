@@ -71,6 +71,12 @@ export function InfoPanel() {
             Owned: {tile.owned ? "Yes" : rivalOwnerName ? `${rivalOwnerName}` : "No"}
             {tile.fieldId !== null && <><br />Field: #{tile.fieldId}</>}
           </div>
+          {tile.terrain !== "water" && tile.terrain !== "rock" && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontSize: 10, color: "#7a8a9a", marginBottom: 2 }}>SOIL N-P-K</div>
+              <NutrientBars nutrients={tile.nutrients} />
+            </div>
+          )}
         </div>
       )}
 
@@ -158,6 +164,27 @@ export function InfoPanel() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function NutrientBars({ nutrients }: { nutrients: { n: number; p: number; k: number } }) {
+  const rows: [string, number, string][] = [
+    ["N", nutrients.n, "#4ecca3"],
+    ["P", nutrients.p, "#ffb74d"],
+    ["K", nutrients.k, "#9575cd"],
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {rows.map(([label, v, color]) => (
+        <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 12, fontSize: 10, color: "#aaa" }}>{label}</span>
+          <div style={{ flex: 1, height: 6, background: "#0a1628", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${Math.round(v * 100)}%`, height: "100%", background: color }} />
+          </div>
+          <span style={{ width: 28, fontSize: 9, color: "#7a8a9a", textAlign: "right" }}>{Math.round(v * 100)}%</span>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,8 +1,17 @@
 export type TerrainType = "dirt" | "grass" | "forest" | "water" | "rock" | "road";
 
+export interface SoilNutrients {
+  n: number;
+  p: number;
+  k: number;
+}
+
 export interface Tile {
   terrain: TerrainType;
+  /** Innate land quality (static): land cost + the nutrient recovery baseline. */
   soilQuality: number;
+  /** Dynamic N-P-K levels (0..1): drawn down/fixed by crops, slowly recover. */
+  nutrients: SoilNutrients;
   moisture: number;
   owned: boolean;
   fieldId: number | null;
@@ -21,6 +30,7 @@ export function createTile(terrain: TerrainType): Tile {
   return {
     terrain,
     soilQuality: 0.5,
+    nutrients: { n: 0.5, p: 0.5, k: 0.5 },
     moisture: terrain === "water" ? 1.0 : 0.3,
     owned: false,
     fieldId: null,

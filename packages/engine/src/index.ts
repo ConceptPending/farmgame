@@ -42,14 +42,27 @@ export type {
   CropId,
   CropDefinition,
   CropCategory,
+  NutrientProfile,
   Season,
 } from "./entities/crop.js";
 
 export type {
   TerrainType,
   Tile,
+  SoilNutrients,
   WorldState,
 } from "./entities/world.js";
+
+// Soil nutrients & rotation
+export {
+  avgNutrients,
+  nutrientYieldFactor,
+  limitingNutrient,
+  nutrientName,
+  NUTRIENT_KEYS,
+  SOIL_RECOVERY,
+  type NutrientKey,
+} from "./systems/soil.js";
 export {
   createTile,
   tileIndex,
