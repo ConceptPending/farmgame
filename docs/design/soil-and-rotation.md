@@ -170,6 +170,34 @@ match the tile's current nutrients; drop in legumes when N is low) and re-tune
       rotating pacing ≈ current and monoculture is penalized.
 - [ ] (Optional) monoculture pest buildup.
 
+## 6b. Phase 3 — Forage & manure (rotational-grazing loop)
+
+Closes a grain→herd→**manure**→soil→crops loop, so livestock become a soil
+engine and rotation can include a restorative forage break (ley farming).
+
+- **Clover (forage crop)** — a new crop that strongly *fixes* nitrogen
+  (`consumes.n` ≈ −0.18, well beyond soybeans) and yields **hay** rather than a
+  market good. Optional "plow under" (REMOVE while planted) = green manure: max
+  nitrogen restore, no yield.
+- **Hay as feed** — `livestockSystem`'s feed step accepts hay/clover in addition
+  to grain, so you can grow your own feed *and* rebuild nitrogen in one crop.
+- **Manure** — animals produce manure each season (∝ herd size × health),
+  accruing in inventory (a low/again-sellable good).
+- **`SPREAD_MANURE { fieldId }`** — spend manure from stock to add balanced
+  N-P-K to a field's tiles (reuses `addNutrients`; free of cash). The herd's
+  organic fertilizer.
+
+Net rotation example: **clover** (fix N, make hay) → spread **manure** (P/K +
+more N) → **corn** (heavy feeder thrives) → **soybeans**, etc.
+
+Phase 3 tasks
+- [ ] `clover` crop (catalog + nutrient profile + sprite/colour); hay good.
+- [ ] `livestockSystem`: accept hay as feed; produce `manure` each season.
+- [ ] `SPREAD_MANURE` command + handler (consume manure, add NPK).
+- [ ] UI: manure in Livestock/Market panels; a spread-manure field action.
+- [ ] Balance: fold forage/manure into `balance-sim`; confirm it's a viable
+      (not dominant) rotation tool.
+
 ## 7. Open decisions (current defaults)
 
 - **Recovery rate** `SOIL_RECOVERY ≈ 0.004/tick`, uniform across N/P/K (could
