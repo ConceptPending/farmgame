@@ -1,8 +1,13 @@
 import { Graphics, RenderTexture, Texture, Rectangle, type Application } from "pixi.js";
+import { ALL_CROP_IDS } from "@farmgame/engine";
+import { CROP_VISUALS, type CropVisual } from "./crop-sprites.js";
 
 export const TILE_SIZE = 16;
 const SHEET_COLS = 16;
-const SHEET_ROWS = 8;
+const SHEET_ROWS = 10;
+
+/** Sheet rows that hold per-crop sprites (4 growth stages × 4 crops per row). */
+const CROP_ROWS = [6, 7, 8, 9];
 
 /** Sprite indices in the tileset. */
 export const SPRITES = {
@@ -21,24 +26,9 @@ export const SPRITES = {
   dirt2: { col: 11, row: 0 },
   water3: { col: 12, row: 0 },
 
-  // Crop stages (row 1-2): seedling, young, mature, ready for each color
-  seedling_green: { col: 0, row: 1 },
-  young_green: { col: 1, row: 1 },
-  mature_green: { col: 2, row: 1 },
-  ready_green: { col: 3, row: 1 },
-  seedling_gold: { col: 4, row: 1 },
-  young_gold: { col: 5, row: 1 },
-  mature_gold: { col: 6, row: 1 },
-  ready_gold: { col: 7, row: 1 },
-  seedling_red: { col: 0, row: 2 },
-  young_red: { col: 1, row: 2 },
-  mature_red: { col: 2, row: 2 },
-  ready_red: { col: 3, row: 2 },
-  seedling_purple: { col: 4, row: 2 },
-  young_purple: { col: 5, row: 2 },
-  mature_purple: { col: 6, row: 2 },
-  ready_purple: { col: 7, row: 2 },
-  dead_crop: { col: 8, row: 1 },
+  // Generic dead crop (any crop type). Per-crop living sprites are generated
+  // dynamically into rows 6-9 (see CROP_ROWS) and keyed crop_<id>_<stage>.
+  dead_crop: { col: 0, row: 1 },
 
   // Buildings (row 3)
   silo: { col: 0, row: 3 },
@@ -63,8 +53,7 @@ export const SPRITES = {
   animal_cow: { col: 3, row: 5 },
 } as const;
 
-type SpriteKey = keyof typeof SPRITES;
-const textureCache = new Map<SpriteKey, Texture>();
+const textureCache = new Map<string, Texture>();
 
 /** Generate and cache all tile textures programmatically. */
 export async function generateTileset(app: Application): Promise<void> {
@@ -87,26 +76,16 @@ export async function generateTileset(app: Application): Promise<void> {
   drawDirt(g, 11, 0, 0x877052, 23); // dirt2 (kept close to dirt to avoid patchiness)
   drawWater(g, 12, 0, 0x3093cf, 37); // water3
 
-  // --- Row 1: Crop stages (green + gold) ---
-  drawSeedling(g, 0, 1, 0x2ecc71);
-  drawYoungCrop(g, 1, 1, 0x2ecc71);
-  drawMatureCrop(g, 2, 1, 0x27ae60);
-  drawReadyCrop(g, 3, 1, 0x27ae60);
-  drawSeedling(g, 4, 1, 0xdaa520);
-  drawYoungCrop(g, 5, 1, 0xdaa520);
-  drawMatureCrop(g, 6, 1, 0xd4a017);
-  drawReadyCrop(g, 7, 1, 0xd4a017);
-  drawDeadCrop(g, 8, 1);
+  // --- Row 1: Dead crop (generic) ---
+  drawDeadCrop(g, 0, 1);
 
-  // --- Row 2: Crop stages (red + purple) ---
-  drawSeedling(g, 0, 2, 0xe74c3c);
-  drawYoungCrop(g, 1, 2, 0xe74c3c);
-  drawMatureCrop(g, 2, 2, 0xc0392b);
-  drawReadyCrop(g, 3, 2, 0xc0392b);
-  drawSeedling(g, 4, 2, 0x9b59b6);
-  drawYoungCrop(g, 5, 2, 0x9b59b6);
-  drawMatureCrop(g, 6, 2, 0x8e44ad);
-  drawReadyCrop(g, 7, 2, 0x8e44ad);
+  // --- Rows 6-9: per-crop sprites, 4 growth stages each ---
+  ALL_CROP_IDS.forEach((id, k) => {
+    const v = CROP_VISUALS[id];
+    const row = CROP_ROWS[Math.floor(k / 4)];
+    const colBase = (k % 4) * 4;
+    for (let stage = 0; stage < 4; stage++) drawCrop(g, colBase + stage, row, stage, v);
+  });
 
   // --- Row 3: Buildings ---
   drawSilo(g, 0, 3);
@@ -134,17 +113,27 @@ export async function generateTileset(app: Application): Promise<void> {
   const rt = RenderTexture.create({ width: w, height: h });
   app.renderer.render({ container: g, target: rt });
 
-  // Cut individual textures
+  // Cut individual textures (static sprites)
   for (const [key, pos] of Object.entries(SPRITES)) {
     const frame = new Rectangle(pos.col * TILE_SIZE, pos.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     const tex = new Texture({ source: rt.source, frame });
-    textureCache.set(key as SpriteKey, tex);
+    textureCache.set(key, tex);
   }
+
+  // Cut per-crop textures, keyed crop_<id>_<stage>.
+  ALL_CROP_IDS.forEach((id, k) => {
+    const row = CROP_ROWS[Math.floor(k / 4)];
+    const colBase = (k % 4) * 4;
+    for (let stage = 0; stage < 4; stage++) {
+      const frame = new Rectangle((colBase + stage) * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      textureCache.set(`crop_${id}_${stage}`, new Texture({ source: rt.source, frame }));
+    }
+  });
 
   g.destroy();
 }
 
-export function getTileTexture(key: SpriteKey): Texture {
+export function getTileTexture(key: string): Texture {
   return textureCache.get(key) ?? Texture.WHITE;
 }
 
@@ -291,57 +280,144 @@ function drawRoad(g: Graphics, col: number, row: number) {
 
 // Crop sprites are drawn with transparent backgrounds (no soil fill) so the
 // tilled-soil furrows of the field tile beneath show through — planted rows
-// then read as crops growing in worked earth rather than flat brown squares.
-// Two staggered plants per tile give fuller, row-like coverage.
+// then read as crops growing in worked earth. Two staggered plants per tile
+// give row-like coverage, and each crop has its own silhouette + ripening
+// payoff (golden heads, cobs, gourds, berries, …) via an archetype dispatcher.
+// stage: 0 seedling · 1 young · 2 mature · 3 ready.
 
-function drawSeedling(g: Graphics, col: number, row: number, color: number) {
+const STEM = 0x4f9a3e;
+const STEM_DARK = 0x3c7a2f;
+
+function drawCrop(g: Graphics, col: number, row: number, stage: number, v: CropVisual) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 2, 1);
-  // Two tiny sprouts.
-  for (const ox of [4, 10]) {
-    g.rect(x + ox, y + 11, 1, 3).fill(0x2ecc71);
-    g.rect(x + ox - 1, y + 10, 1, 2).fill(color);
-    g.rect(x + ox + 1, y + 10, 1, 2).fill(color);
+  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 2.8 + stage * 0.2, 1.1 + stage * 0.1);
+  if (stage === 0) {
+    // Seedlings look alike for every crop: two tiny sprouts.
+    for (const ox of [4, 10]) {
+      g.rect(x + ox, y + 11, 1, 3).fill(STEM);
+      g.rect(x + ox - 1, y + 10, 1, 2).fill(0x6cc659);
+      g.rect(x + ox + 1, y + 10, 1, 2).fill(0x6cc659);
+    }
+    return;
   }
+  for (const ox of [4, 10]) drawPlant(g, x, y, ox, stage, v);
 }
 
-function drawYoungCrop(g: Graphics, col: number, row: number, color: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3, 1.2);
-  for (const ox of [4, 10]) {
-    g.rect(x + ox, y + 8, 1, 6).fill(0x27ae60);
-    g.rect(x + ox - 2, y + 7, 2, 3).fill(color);
-    g.rect(x + ox + 1, y + 6, 2, 3).fill(color);
+/** One plant of a crop at column offset `ox`, branching on the crop archetype. */
+function drawPlant(g: Graphics, x: number, y: number, ox: number, stage: number, v: CropVisual) {
+  const p = v.primary;
+  const leaf = v.accent;
+  switch (v.kind) {
+    case "grain": {
+      const top = stage === 1 ? y + 8 : y + 4;
+      g.rect(x + ox, top, 1, y + 14 - top).fill(STEM);
+      g.rect(x + ox - 2, top + 4, 2, 1).fill(STEM);
+      if (stage === 2) g.rect(x + ox - 1, top - 1, 3, 3).fill(lighten(p, 0.2));
+      if (stage === 3) {
+        g.rect(x + ox - 1, top - 2, 3, 5).fill(p);
+        g.rect(x + ox, top - 3, 1, 2).fill(p);
+        g.rect(x + ox - 2, top, 1, 1).fill(lighten(p, 0.25));
+        g.rect(x + ox + 2, top + 1, 1, 1).fill(lighten(p, 0.25));
+      }
+      break;
+    }
+    case "corn": {
+      const top = stage === 1 ? y + 8 : y + 3;
+      g.rect(x + ox, top, 2, y + 14 - top).fill(STEM);
+      g.rect(x + ox - 2, top + 4, 2, 1).fill(STEM);
+      g.rect(x + ox + 2, top + 6, 2, 1).fill(STEM);
+      if (stage >= 2) g.rect(x + ox + 2, top + 2, 2, 4).fill(stage === 3 ? p : 0xbfd98a); // cob
+      if (stage === 3) g.rect(x + ox, top - 2, 2, 2).fill(0xe8d97a); // tassel
+      break;
+    }
+    case "sunflower": {
+      const top = stage === 1 ? y + 8 : y + 3;
+      g.rect(x + ox, top, 1, y + 14 - top).fill(STEM);
+      g.rect(x + ox - 2, top + 5, 2, 1).fill(STEM);
+      if (stage === 2) g.circle(x + ox, top, 2).fill(0x8fbf5a);
+      if (stage === 3) {
+        g.circle(x + ox, top - 1, 3).fill(p);
+        g.circle(x + ox, top - 1, 1.4).fill(0x6b4a2c);
+      }
+      break;
+    }
+    case "leafy": {
+      const cy = stage === 1 ? y + 11 : y + 9;
+      const r = stage === 1 ? 2 : stage === 2 ? 2.8 : 3.3;
+      g.circle(x + ox, cy, r).fill(p);
+      g.circle(x + ox - 1, cy - 1, r * 0.55).fill(leaf);
+      if (stage === 3) g.circle(x + ox + 1, cy + 1, r * 0.5).fill(leaf);
+      break;
+    }
+    case "cover": {
+      const cy = y + 12;
+      g.circle(x + ox, cy, stage >= 2 ? 2.2 : 1.6).fill(p);
+      g.rect(x + ox - 1, cy - 1, 1, 1).fill(leaf);
+      if (stage === 3) g.rect(x + ox, cy - 3, 1, 1).fill(leaf); // tiny flower
+      break;
+    }
+    case "cotton": {
+      const cy = stage === 1 ? y + 11 : y + 9;
+      const r = stage === 1 ? 2 : 3;
+      g.circle(x + ox, cy, r).fill(leaf); // green bush
+      if (stage >= 2) g.circle(x + ox - 1, cy - 1, 1.4).fill(p); // white boll
+      if (stage === 3) {
+        g.circle(x + ox + 1, cy, 1.4).fill(p);
+        g.circle(x + ox, cy - 2, 1.2).fill(p);
+      }
+      break;
+    }
+    case "fruitbush": {
+      const cy = stage === 1 ? y + 11 : y + 9;
+      const r = stage === 1 ? 2 : 3.2;
+      g.circle(x + ox, cy, r).fill(leaf);
+      if (stage >= 2) g.circle(x + ox - 1, cy, 1.3).fill(stage === 3 ? p : lighten(p, 0.28));
+      if (stage === 3) {
+        g.circle(x + ox + 1, cy + 1, 1.3).fill(p);
+        g.circle(x + ox + 1, cy - 2, 1.2).fill(p);
+      }
+      break;
+    }
+    case "strawberry": {
+      const cy = y + 12;
+      g.circle(x + ox, cy, stage === 1 ? 1.8 : 2.4).fill(leaf);
+      if (stage === 3) {
+        g.circle(x + ox - 1, cy + 1, 1.2).fill(p);
+        g.circle(x + ox + 1, cy, 1).fill(p);
+      } else if (stage === 2) {
+        g.circle(x + ox, cy, 1).fill(lighten(p, 0.35));
+      }
+      break;
+    }
+    case "gourd": {
+      g.circle(x + ox, y + 10, stage === 1 ? 2 : 3).fill(leaf); // sprawling leaves
+      if (stage === 3) {
+        g.ellipse(x + ox, y + 13, 3, 2.4).fill(p); // orange gourd
+        g.rect(x + ox, y + 10, 1, 2).fill(STEM_DARK);
+      } else if (stage === 2) {
+        g.circle(x + ox + 1, y + 12, 1.5).fill(lighten(p, 0.25));
+      }
+      break;
+    }
+    case "vine": {
+      const top = stage === 1 ? y + 9 : y + 5;
+      g.rect(x + ox, top, 1, y + 13 - top).fill(STEM_DARK); // woody stem
+      // Leafy foliage down the vine so it reads green/alive, not like dead twigs.
+      g.circle(x + ox - 1, top, 2).fill(leaf);
+      g.circle(x + ox + 1, top + 3, 1.6).fill(leaf);
+      g.circle(x + ox - 1, top + 6, 1.6).fill(leaf);
+      if (stage === 3) {
+        g.circle(x + ox, top + 4, 1.2).fill(p);
+        g.circle(x + ox + 2, top + 4, 1.2).fill(p);
+        g.circle(x + ox + 1, top + 6, 1.2).fill(p);
+        g.circle(x + ox + 1, top + 8, 1).fill(p);
+      } else if (stage === 2) {
+        g.circle(x + ox + 1, top + 5, 1).fill(lighten(p, 0.25));
+      }
+      break;
+    }
   }
-}
-
-function drawMatureCrop(g: Graphics, col: number, row: number, color: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3.2, 1.3);
-  for (const ox of [4, 10]) {
-    g.rect(x + ox, y + 5, 2, 9).fill(0x27ae60);
-    g.rect(x + ox - 2, y + 4, 3, 3).fill(color);
-    g.rect(x + ox + 1, y + 3, 3, 3).fill(color);
-    g.rect(x + ox - 1, y + 2, 3, 3).fill(color);
-  }
-}
-
-function drawReadyCrop(g: Graphics, col: number, row: number, color: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  for (const ox of [4, 10]) softShadow(g, x + ox + 1, y + 14, 3.4, 1.4);
-  for (const ox of [4, 10]) {
-    g.rect(x + ox, y + 4, 2, 10).fill(0x1e8c4a);
-    g.rect(x + ox - 2, y + 3, 3, 4).fill(color);
-    g.rect(x + ox + 1, y + 2, 3, 4).fill(color);
-    g.rect(x + ox - 1, y + 1, 3, 3).fill(lighten(color, 0.2));
-  }
-  // Ready sparkles.
-  g.rect(x + 2, y + 1, 1, 1).fill(0xffff00);
-  g.rect(x + 13, y + 2, 1, 1).fill(0xffff00);
 }
 
 function drawDeadCrop(g: Graphics, col: number, row: number) {
