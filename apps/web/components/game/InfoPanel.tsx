@@ -129,6 +129,29 @@ export function InfoPanel() {
               </div>
             </div>
           )}
+          {(() => {
+            const cost = 2 * selectedField.tileIndices.length;
+            const disabled = state.manure < cost;
+            return (
+              <button
+                onClick={() => dispatch({ type: "SPREAD_MANURE", fieldId: selectedField.id })}
+                disabled={disabled}
+                title={`Spend ${cost} manure to restore this field's N-P-K (have ${state.manure})`}
+                style={{
+                  marginTop: 6,
+                  padding: "3px 8px",
+                  fontSize: 11,
+                  border: "1px solid #9db4d0",
+                  borderRadius: 3,
+                  background: disabled ? "#222" : "#1a3050",
+                  color: disabled ? "#667" : "#9db4d0",
+                  cursor: disabled ? "default" : "pointer",
+                }}
+              >
+                Spread Manure ({state.manure})
+              </button>
+            );
+          })()}
         </div>
       )}
 
