@@ -10,11 +10,12 @@ export type CropId =
   | "peppers"
   | "lettuce"
   | "pumpkins"
-  | "grapes";
+  | "grapes"
+  | "clover";
 
 export type Season = "spring" | "summer" | "fall" | "winter";
 
-export type CropCategory = "grain" | "vegetable" | "fruit" | "fiber";
+export type CropCategory = "grain" | "vegetable" | "fruit" | "fiber" | "forage";
 
 export interface NutrientProfile {
   n: number;

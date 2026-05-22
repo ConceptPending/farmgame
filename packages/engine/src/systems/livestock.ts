@@ -10,7 +10,13 @@ export function computeLivestockCapacity(state: GameState): number {
   return state.buildings.filter((b) => b.type === "barn").length * BARN_CAPACITY;
 }
 
-const GRAIN_IDS = ALL_CROP_IDS.filter((id) => CROP_CATALOG[id].category === "grain");
+// Animals eat grain and forage (e.g. hay/clover).
+const FEED_IDS = ALL_CROP_IDS.filter(
+  (id) => CROP_CATALOG[id].category === "grain" || CROP_CATALOG[id].category === "forage",
+);
+
+/** Manure produced per animal per season (scaled by health). */
+export const MANURE_PER_ANIMAL = 2;
 
 /**
  * Livestock system. Each tick animals age and grow; each season they consume
@@ -38,17 +44,18 @@ export function livestockSystem(state: GameState): {
 
   let inventory = state.inventory;
   let nextAnimalId = state.nextAnimalId;
+  let manure = state.manure;
 
   if (state.day === 1) {
-    // Feed consumption from grain stocks.
+    // Feed consumption from grain + forage stocks.
     const needed = animals.reduce((sum, a) => sum + ANIMAL_CATALOG[a.type].feedPerSeason, 0);
-    const available = GRAIN_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
+    const available = FEED_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
     const consumed = Math.min(needed, available);
 
     if (consumed > 0) {
       inventory = { ...inventory };
       let toConsume = consumed;
-      for (const id of GRAIN_IDS) {
+      for (const id of FEED_IDS) {
         if (toConsume <= 0) break;
         const have = inventory[id] ?? 0;
         const take = Math.min(have, toConsume);
@@ -83,9 +90,12 @@ export function livestockSystem(state: GameState): {
     if (fedRatio < 1 && animals.length > 0) {
       notifications.push({
         type: "warning",
-        message: "Livestock are underfed — grow or buy more grain.",
+        message: "Livestock are underfed — grow or buy more feed.",
       });
     }
+
+    // Manure: every animal contributes, scaled by health. Spread on fields.
+    manure += Math.round(animals.reduce((sum, a) => sum + MANURE_PER_ANIMAL * a.health, 0));
 
     // Products: mature, well-fed animals yield eggs/milk/wool into inventory.
     if (fedRatio >= 1) {
@@ -138,7 +148,7 @@ export function livestockSystem(state: GameState): {
   }
 
   return {
-    state: { ...state, animals, inventory, rng, nextAnimalId },
+    state: { ...state, animals, inventory, rng, nextAnimalId, manure },
     notifications,
   };
 }
