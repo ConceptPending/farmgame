@@ -1,4 +1,4 @@
-import type { CreateGameOptions, Goal, GoalType } from "@farmgame/engine";
+import type { CreateGameOptions, Goal, GoalType, RivalConfig } from "@farmgame/engine";
 
 export type Difficulty = "easy" | "normal" | "hard";
 
@@ -12,13 +12,26 @@ interface DiffParams {
   startingMoney: number;
   expenseMultiplier: number;
   targetScale: number;
+  rivalAggr: number;
 }
 
 const DIFF: Record<Difficulty, DiffParams> = {
-  easy: { startingMoney: 1000, expenseMultiplier: 0.7, targetScale: 0.8 },
-  normal: { startingMoney: 500, expenseMultiplier: 1.0, targetScale: 1.0 },
-  hard: { startingMoney: 300, expenseMultiplier: 1.3, targetScale: 1.25 },
+  easy: { startingMoney: 1000, expenseMultiplier: 0.7, targetScale: 0.8, rivalAggr: 0.35 },
+  normal: { startingMoney: 500, expenseMultiplier: 1.0, targetScale: 1.0, rivalAggr: 0.6 },
+  hard: { startingMoney: 300, expenseMultiplier: 1.3, targetScale: 1.25, rivalAggr: 0.9 },
 };
+
+const RIVAL_NAMES = ["Hollow Creek Farm", "Golden Acres", "Ridgeline Ranch", "Brms & Sons"];
+const RIVAL_FOCUS = [["wheat", "corn"], ["tomato", "peppers"], ["soybeans", "potatoes"], ["strawberries", "grapes"]];
+
+function makeRivals(count: number, aggressiveness: number): RivalConfig[] {
+  return Array.from({ length: count }, (_, i) => ({
+    name: RIVAL_NAMES[i % RIVAL_NAMES.length],
+    aggressiveness,
+    startingPlots: 2,
+    focusGoods: RIVAL_FOCUS[i % RIVAL_FOCUS.length],
+  }));
+}
 
 export interface Scenario {
   id: string;
@@ -57,9 +70,9 @@ export const SCENARIOS: Scenario[] = [
   {
     id: "land_baron",
     name: "Land Baron",
-    blurb: "Claim the valley, plot by plot.",
+    blurb: "Claim the valley, plot by plot — before rivals do.",
     available: true,
-    rivals: 0,
+    rivals: 2,
     buildGoal: (d) => ({ type: "land_baron", plots: Math.round(LAND_BARON_BASE * d.targetScale) }),
     goalSummary: (d) => `Own ${Math.round(LAND_BARON_BASE * d.targetScale)} plots`,
   },
@@ -67,19 +80,19 @@ export const SCENARIOS: Scenario[] = [
     id: "tycoon_rush",
     name: "Tycoon Rush",
     blurb: "Outrace rival farms to a fortune.",
-    available: false,
+    available: true,
     rivals: 3,
     buildGoal: (d) => ({ type: "tycoon_race", target: Math.round(NET_WORTH_BASE * d.targetScale) }),
-    goalSummary: () => "First to the target — rivals coming soon",
+    goalSummary: (d) => `First to ${money(Math.round(NET_WORTH_BASE * d.targetScale))}`,
   },
   {
     id: "market_mogul",
     name: "Market Mogul",
-    blurb: "Out-produce rivals to corner a crop's market.",
-    available: false,
+    blurb: "Out-produce rivals to corner the wheat market.",
+    available: true,
     rivals: 2,
     buildGoal: () => ({ type: "market_leader", good: "wheat", seasons: 4 }),
-    goalSummary: () => "Top seller for 4 seasons — rivals coming soon",
+    goalSummary: () => "Top wheat seller for 4 seasons",
   },
 ];
 
@@ -94,14 +107,17 @@ export function buildConfig(
     startingMoney: d.startingMoney,
     expenseMultiplier: d.expenseMultiplier,
     goal: scenario.buildGoal(d),
+    rivals: makeRivals(scenario.rivals, d.rivalAggr),
   };
 }
 
 // --- Custom game ---
 
 export const CUSTOM_GOAL_TYPES: { type: GoalType; name: string }[] = [
-  { type: "net_worth", name: "Net worth" },
+  { type: "net_worth", name: "Net worth ($)" },
+  { type: "tycoon_race", name: "Tycoon race ($, vs rivals)" },
   { type: "land_baron", name: "Land baron (plots)" },
+  { type: "market_leader", name: "Market leader (seasons)" },
   { type: "sandbox", name: "Sandbox" },
 ];
 
@@ -110,6 +126,7 @@ export function buildCustomConfig(opts: {
   target: number;
   startingMoney: number;
   expenseMultiplier: number;
+  rivals: number;
   seed?: number;
 }): CreateGameOptions {
   let goal: Goal;
@@ -120,6 +137,12 @@ export function buildCustomConfig(opts: {
     case "sandbox":
       goal = { type: "sandbox" };
       break;
+    case "tycoon_race":
+      goal = { type: "tycoon_race", target: opts.target };
+      break;
+    case "market_leader":
+      goal = { type: "market_leader", good: "wheat", seasons: opts.target };
+      break;
     default:
       goal = { type: "net_worth", target: opts.target };
   }
@@ -128,5 +151,6 @@ export function buildCustomConfig(opts: {
     startingMoney: opts.startingMoney,
     expenseMultiplier: opts.expenseMultiplier,
     goal,
+    rivals: makeRivals(opts.rivals, 0.6),
   };
 }
