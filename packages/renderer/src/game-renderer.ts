@@ -3,6 +3,7 @@ import type { GameState } from "@farmgame/engine";
 import { TerrainLayer } from "./layers/terrain.js";
 import { CropLayer } from "./layers/crop.js";
 import { BuildingLayer } from "./layers/building.js";
+import { AnimalLayer } from "./layers/animal.js";
 import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
 import { Camera } from "./camera.js";
@@ -21,6 +22,7 @@ export class GameRenderer {
   private terrainLayer: TerrainLayer;
   private cropLayer: CropLayer;
   private buildingLayer: BuildingLayer;
+  private animalLayer: AnimalLayer;
   private gridOverlay: GridOverlay;
   private weatherEffects: WeatherEffects;
   private camera: Camera;
@@ -39,6 +41,7 @@ export class GameRenderer {
     this.terrainLayer = new TerrainLayer();
     this.cropLayer = new CropLayer();
     this.buildingLayer = new BuildingLayer();
+    this.animalLayer = new AnimalLayer();
     this.gridOverlay = new GridOverlay();
     this.weatherEffects = new WeatherEffects();
     this.camera = new Camera();
@@ -62,6 +65,7 @@ export class GameRenderer {
     this.world.addChild(this.terrainLayer.container);
     this.world.addChild(this.cropLayer.container);
     this.world.addChild(this.buildingLayer.container);
+    this.world.addChild(this.animalLayer.container);
     this.world.addChild(this.gridOverlay.container);
     this.world.addChild(this.weatherEffects.container);
 
@@ -127,6 +131,7 @@ export class GameRenderer {
     this.terrainLayer.update(state);
     this.cropLayer.update(state);
     this.buildingLayer.update(state);
+    this.animalLayer.update(state);
     this.gridOverlay.update(state);
     this.weatherEffects.updateState(state);
 

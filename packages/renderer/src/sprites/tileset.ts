@@ -55,6 +55,12 @@ export const SPRITES = {
   weather_storm: { col: 3, row: 4 },
   weather_frost: { col: 4, row: 4 },
   weather_drought: { col: 5, row: 4 },
+
+  // Animals (row 5)
+  animal_chicken: { col: 0, row: 5 },
+  animal_pig: { col: 1, row: 5 },
+  animal_sheep: { col: 2, row: 5 },
+  animal_cow: { col: 3, row: 5 },
 } as const;
 
 type SpriteKey = keyof typeof SPRITES;
@@ -117,6 +123,12 @@ export async function generateTileset(app: Application): Promise<void> {
   drawWeatherStorm(g, 3, 4);
   drawWeatherFrost(g, 4, 4);
   drawWeatherDrought(g, 5, 4);
+
+  // --- Row 5: Animals ---
+  drawChicken(g, 0, 5);
+  drawPig(g, 1, 5);
+  drawSheep(g, 2, 5);
+  drawCow(g, 3, 5);
 
   // Render to texture
   const rt = RenderTexture.create({ width: w, height: h });
@@ -482,6 +494,64 @@ function drawWeatherDrought(g: Graphics, col: number, row: number) {
   // Heat waves
   g.rect(x + 3, y + 12, 4, 1).fill(0xff8800);
   g.rect(x + 9, y + 13, 4, 1).fill(0xff8800);
+}
+
+// --- Animals (side view, bottom-aligned in the cell, with a contact shadow) ---
+
+function drawChicken(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  softShadow(g, x + 8, y + 14, 3, 1.1);
+  g.rect(x + 3, y + 7, 3, 4).fill(0xf0f0f0); // tail
+  g.ellipse(x + 8, y + 10, 3.6, 3).fill(0xffffff); // body
+  g.circle(x + 11, y + 7, 2).fill(0xffffff); // head
+  g.rect(x + 11, y + 4, 2, 2).fill(0xe74c3c); // comb
+  g.rect(x + 13, y + 7, 2, 1).fill(0xf39c12); // beak
+  g.rect(x + 11, y + 6, 1, 1).fill(0x222222); // eye
+  g.rect(x + 7, y + 13, 1, 2).fill(0xf39c12); // legs
+  g.rect(x + 10, y + 13, 1, 2).fill(0xf39c12);
+}
+
+function drawPig(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const pink = 0xe79ab0;
+  const dark = 0xcf7e96;
+  softShadow(g, x + 8, y + 14, 4.5, 1.4);
+  g.ellipse(x + 8, y + 10, 5, 3.2).fill(pink); // body
+  g.circle(x + 12, y + 9, 2.6).fill(pink); // head
+  g.rect(x + 11, y + 5, 2, 2).fill(dark); // ear
+  g.rect(x + 14, y + 9, 2, 2).fill(dark); // snout
+  g.rect(x + 12, y + 8, 1, 1).fill(0x222222); // eye
+  g.rect(x + 4, y + 6, 2, 2).fill(pink); // rump curl/tail
+  for (const lx of [5, 8, 11]) g.rect(x + lx, y + 12, 1, 2).fill(dark); // legs
+}
+
+function drawSheep(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const wool = 0xf5f5ef;
+  softShadow(g, x + 8, y + 14, 4.5, 1.4);
+  for (const lx of [6, 9]) g.rect(x + lx, y + 12, 1, 2).fill(0x4a4a4a); // legs
+  g.circle(x + 5, y + 10, 3).fill(wool); // fluffy body (overlapping puffs)
+  g.circle(x + 8, y + 8, 3.4).fill(wool);
+  g.circle(x + 10, y + 10, 3).fill(wool);
+  g.circle(x + 12, y + 10, 2).fill(0x4a4a4a); // head
+  g.rect(x + 13, y + 9, 1, 1).fill(0xffffff); // eye glint
+}
+
+function drawCow(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  softShadow(g, x + 8, y + 14, 5.5, 1.6);
+  for (const lx of [5, 8, 11]) g.rect(x + lx, y + 12, 1.5, 3).fill(0x33271c); // legs
+  g.ellipse(x + 8, y + 9, 5.5, 3.4).fill(0xfafafa); // body
+  g.ellipse(x + 6, y + 8, 1.8, 1.6).fill(0x2b2b2b); // patches
+  g.ellipse(x + 10, y + 10, 1.6, 1.4).fill(0x2b2b2b);
+  g.circle(x + 13, y + 8, 2.4).fill(0xfafafa); // head
+  g.rect(x + 11, y + 4, 1, 2).fill(0x2b2b2b); // horn/ear
+  g.rect(x + 14, y + 8, 2, 2).fill(0xe79ab0); // snout
+  g.rect(x + 13, y + 7, 1, 1).fill(0x222222); // eye
 }
 
 function darken(color: number, amount: number): number {
