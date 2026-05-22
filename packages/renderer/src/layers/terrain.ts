@@ -118,8 +118,14 @@ export class TerrainLayer {
         const hash = tileHash(tx, ty);
 
         const variants = TERRAIN_SPRITE_MAP[tile.terrain] ?? ["grass1"];
-        const variantIdx = hash % variants.length;
-        sprite.texture = getTileTexture(variants[variantIdx]);
+        let texKey: string = variants[hash % variants.length];
+        // Sparse meadow decoration so grass expanses feel alive (deterministic).
+        if (tile.terrain === "grass") {
+          const deco = (hash >>> 16) % 100;
+          if (deco < 6) texKey = "grass_flower";
+          else if (deco < 11) texKey = "grass_pebble";
+        }
+        sprite.texture = getTileTexture(texKey);
 
         // Override dirt tiles in plowed+ fields with tilled texture
         let tilled = false;

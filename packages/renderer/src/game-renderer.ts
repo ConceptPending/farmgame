@@ -1,5 +1,5 @@
-import { Application, Container } from "pixi.js";
-import type { GameState } from "@farmgame/engine";
+import { Application, Container, Graphics } from "pixi.js";
+import type { GameState, Season } from "@farmgame/engine";
 import { TerrainLayer } from "./layers/terrain.js";
 import { CropLayer } from "./layers/crop.js";
 import { BuildingLayer } from "./layers/building.js";
@@ -27,6 +27,8 @@ export class GameRenderer {
   private weatherEffects: WeatherEffects;
   private camera: Camera;
   private inputHandler: InputHandler;
+  private ambient: Graphics;
+  private lastSeason: Season | null = null;
   private initialized = false;
   private onInput: ((event: InputEvent) => void) | null = null;
   private animationTickerId: number | null = null;
@@ -46,6 +48,7 @@ export class GameRenderer {
     this.weatherEffects = new WeatherEffects();
     this.camera = new Camera();
     this.inputHandler = new InputHandler();
+    this.ambient = new Graphics();
   }
 
   async init(options: RendererOptions): Promise<void> {
@@ -68,6 +71,11 @@ export class GameRenderer {
     this.world.addChild(this.animalLayer.container);
     this.world.addChild(this.gridOverlay.container);
     this.world.addChild(this.weatherEffects.container);
+
+    // Seasonal color grade sits in screen space (on the stage, not the world)
+    // so it tints the whole viewport without panning/zooming. Never eats input.
+    this.app.stage.addChild(this.ambient);
+    this.ambient.eventMode = "none";
 
     this.camera.attach(this.world, options.canvas);
     this.inputHandler.attach(options.canvas, (event: InputEvent) => {
@@ -137,6 +145,25 @@ export class GameRenderer {
 
     this.inputHandler.updateGrid(state.world.width, state.world.height, this.world);
     this.camera.setWorldSize(state.world.width, state.world.height);
+
+    if (state.season !== this.lastSeason) {
+      this.lastSeason = state.season;
+      this.drawAmbient(state.season);
+    }
+  }
+
+  /** Repaint the screen-space seasonal tint (a low-alpha full-viewport wash). */
+  private drawAmbient(season: Season): void {
+    // [color, alpha] per season — subtle so it grades mood without muddying art.
+    const grade: Record<Season, [number, number]> = {
+      spring: [0x8fd16f, 0.05],
+      summer: [0xffd24a, 0.07],
+      fall: [0xe07a2e, 0.1],
+      winter: [0x9fc3e8, 0.13],
+    };
+    const [color, alpha] = grade[season];
+    this.ambient.clear();
+    this.ambient.rect(0, 0, this.app.screen.width, this.app.screen.height).fill({ color, alpha });
   }
 
   destroy(): void {
