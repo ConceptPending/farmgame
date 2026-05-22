@@ -8,6 +8,7 @@ import {
   createGameState, nextTick, applyCommand, computeNetWorth, standings,
   CROP_CATALOG, ALL_CROP_IDS,
   EQUIPMENT_CATALOG, workableTiles, cultivatedTiles,
+  avgNutrients, nutrientYieldFactor,
 } from "../packages/engine/dist/index.js";
 
 const MAX_DAYS = 2000;
@@ -58,11 +59,15 @@ function makePlayer() {
       if (f.state === "fallow") apply({ type: "PLOW_FIELD", fieldId: f.id });
       else if (f.state === "dead") apply({ type: "REMOVE_FIELD", fieldId: f.id });
       else if (f.state === "plowed") {
+        // Rotate crops across fields/replants (a competent rotating player),
+        // skipping ones whose key nutrient this field can't currently support.
+        const avg = avgNutrients(s.world.tiles, f.tileIndices);
         for (let k = 0; k < ranked.length; k++) {
           const c = ranked[(cropIdx + k) % ranked.length];
           const def = CROP_CATALOG[c];
           if (!def.plantSeasons.includes(s.season)) continue;
           if (s.money < def.seedCost * f.tileIndices.length) continue;
+          if (nutrientYieldFactor(avg, def.needs) < 0.55) continue; // poor fit — let it rotate
           if (apply({ type: "PLANT_FIELD", fieldId: f.id, cropId: c }).success) { cropIdx++; break; }
         }
       }

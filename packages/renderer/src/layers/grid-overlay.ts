@@ -107,7 +107,8 @@ export class GridOverlay {
           alpha = tile.moisture * 0.4;
           break;
         case "soil_quality": {
-          const q = tile.soilQuality;
+          // Live fertility: the limiting (scarcest) nutrient. Red = depleted.
+          const q = Math.min(tile.nutrients.n, tile.nutrients.p, tile.nutrients.k);
           color = (Math.round(255 * (1 - q)) << 16) | (Math.round(255 * q) << 8);
           alpha = 0.35;
           break;
