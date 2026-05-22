@@ -62,6 +62,7 @@ export class TerrainLayer {
   readonly container: Container;
   private sprites: Sprite[] = [];
   private plotOverlay: Graphics;
+  private edgeOverlay: Graphics;
   private created = false;
   private lastTileCount = 0;
   // Dirty tracking
@@ -73,6 +74,7 @@ export class TerrainLayer {
   constructor() {
     this.container = new Container();
     this.plotOverlay = new Graphics();
+    this.edgeOverlay = new Graphics();
   }
 
   update(state: GameState): void {
@@ -181,7 +183,68 @@ export class TerrainLayer {
       }
     }
 
+    // Shoreline edges sit above the tiles but below the plot boundary lines.
+    // Terrain is static after world-gen, so draw the edges just once here.
+    this.container.addChild(this.edgeOverlay);
     this.container.addChild(this.plotOverlay);
+    this.drawTerrainEdges(state);
+  }
+
+  /**
+   * Soften hard terrain seams where water meets land into a beach: grass → sand
+   * → foam → water. The sand band's outer edge is feathered pixel-by-pixel with
+   * a depth that varies along the shore (hashed from the absolute coordinate so
+   * the ripple is continuous across tiles), which breaks up the blocky tile
+   * staircase. Terrain is static, so this overlay is painted once in rebuild().
+   */
+  private drawTerrainEdges(state: GameState) {
+    const g = this.edgeOverlay;
+    g.clear();
+
+    const { world } = state;
+    const W = world.width;
+    const H = world.height;
+    const S = TILE_SIZE;
+    const FOAM = 0xcfeaf7;
+    const SAND_WET = 0xc4ac6e;
+    const SAND_DRY = 0xd8c389;
+
+    const isWater = (x: number, y: number) =>
+      x >= 0 && y >= 0 && x < W && y < H && world.tiles[y * W + x].terrain === "water";
+    const hash = (c: number) => {
+      let h = Math.imul(c | 0, 2654435761) >>> 0;
+      h ^= h >>> 13;
+      return h >>> 0;
+    };
+    const sandDepth = (c: number) => 2 + (hash(c) % 3); // 2..4 px
+    const foamDepth = (c: number) => 1 + (hash(c * 7 + 1) % 2); // 1..2 px
+
+    // Paint one shore column: `coord` is the position along the shore (used for
+    // the ripple), and step(d) walks outward — negative d into land (sand),
+    // d >= 0 into water (foam).
+    const paintColumn = (coord: number, plot: (d: number, color: number) => void) => {
+      const sd = sandDepth(coord);
+      const fd = foamDepth(coord);
+      for (let d = 0; d < fd; d++) plot(d, FOAM);
+      for (let d = 1; d <= sd; d++) plot(-d, d === 1 ? SAND_WET : SAND_DRY);
+    };
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (!isWater(x, y)) continue;
+        const px = x * S;
+        const py = y * S;
+        for (let t = 0; t < S; t++) {
+          const ax = px + t;
+          const ay = py + t;
+          // Outward = away from the water tile into the land neighbor.
+          if (!isWater(x, y - 1)) paintColumn(ax, (d, c) => g.rect(ax, py + d, 1, 1).fill(c));
+          if (!isWater(x, y + 1)) paintColumn(ax + 9973, (d, c) => g.rect(ax, py + S - 1 - d, 1, 1).fill(c));
+          if (!isWater(x - 1, y)) paintColumn(ay + 555, (d, c) => g.rect(px + d, ay, 1, 1).fill(c));
+          if (!isWater(x + 1, y)) paintColumn(ay + 7777, (d, c) => g.rect(px + S - 1 - d, ay, 1, 1).fill(c));
+        }
+      }
+    }
   }
 
   private drawPlotBoundaries(state: GameState) {
