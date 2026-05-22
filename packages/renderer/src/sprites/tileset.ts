@@ -17,6 +17,9 @@ export const SPRITES = {
   forest: { col: 7, row: 0 },
   rock: { col: 8, row: 0 },
   road: { col: 9, row: 0 },
+  grass4: { col: 10, row: 0 },
+  dirt2: { col: 11, row: 0 },
+  water3: { col: 12, row: 0 },
 
   // Crop stages (row 1-2): seedling, young, mature, ready for each color
   seedling_green: { col: 0, row: 1 },
@@ -63,17 +66,20 @@ export async function generateTileset(app: Application): Promise<void> {
   const h = SHEET_ROWS * TILE_SIZE;
   const g = new Graphics();
 
-  // --- Row 0: Terrain ---
-  drawGrass(g, 0, 0, 0x4a8c3f); // grass1
-  drawGrass(g, 1, 0, 0x3d7a34); // grass2
-  drawGrass(g, 2, 0, 0x56994a); // grass3
-  drawSolidTile(g, 3, 0, 0x8b7355); // dirt
+  // --- Row 0: Terrain (seed varies the noise pattern per variant) ---
+  drawGrass(g, 0, 0, 0x4a8c3f, 11); // grass1
+  drawGrass(g, 1, 0, 0x3d7a34, 29); // grass2
+  drawGrass(g, 2, 0, 0x56994a, 47); // grass3
+  drawDirt(g, 3, 0, 0x8b7355, 7); // dirt
   drawTilledSoil(g, 4, 0);
-  drawWater(g, 5, 0, 0x3498db);
-  drawWater(g, 6, 0, 0x2980b9);
+  drawWater(g, 5, 0, 0x3498db, 5); // water1
+  drawWater(g, 6, 0, 0x2980b9, 13); // water2
   drawForest(g, 7, 0);
   drawRock(g, 8, 0);
   drawRoad(g, 9, 0);
+  drawGrass(g, 10, 0, 0x4f9143, 83); // grass4
+  drawDirt(g, 11, 0, 0x877052, 23); // dirt2 (kept close to dirt to avoid patchiness)
+  drawWater(g, 12, 0, 0x3093cf, 37); // water3
 
   // --- Row 1: Crop stages (green + gold) ---
   drawSeedling(g, 0, 1, 0x2ecc71);
@@ -131,41 +137,102 @@ export function getTileTexture(key: SpriteKey): Texture {
 }
 
 // --- Drawing helpers ---
-function drawSolidTile(g: Graphics, col: number, row: number, color: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(color);
+
+/** Tiny deterministic RNG so each tile variant scatters its noise repeatably. */
+function seededRng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function drawGrass(g: Graphics, col: number, row: number, color: number) {
+/** Scatter single-pixel noise across a tile in lighter/darker shades of base. */
+function scatterNoise(
+  g: Graphics,
+  x: number,
+  y: number,
+  rnd: () => number,
+  base: number,
+  count: number,
+  lightAmt: number,
+  darkAmt: number,
+) {
+  for (let i = 0; i < count; i++) {
+    const px = Math.floor(rnd() * TILE_SIZE);
+    const py = Math.floor(rnd() * TILE_SIZE);
+    const shade = rnd() < 0.5 ? lighten(base, lightAmt) : darken(base, darkAmt);
+    g.rect(x + px, y + py, 1, 1).fill(shade);
+  }
+}
+
+function drawGrass(g: Graphics, col: number, row: number, color: number, seed: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  const rnd = seededRng(seed);
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(color);
-  // Small blade details
-  const dark = darken(color, 0.2);
-  for (let i = 2; i < 14; i += 3) {
-    g.rect(x + i, y + 10, 1, 3).fill(dark);
-    g.rect(x + i + 1, y + 8, 1, 4).fill(dark);
+  // Tonal noise so a field of grass isn't one flat color.
+  scatterNoise(g, x, y, rnd, color, 26, 0.1, 0.14);
+  // A handful of scattered blade tufts at varied positions/heights.
+  const dark = darken(color, 0.28);
+  const light = lighten(color, 0.16);
+  for (let i = 0; i < 7; i++) {
+    const bx = 1 + Math.floor(rnd() * 14);
+    const by = 6 + Math.floor(rnd() * 7);
+    const h = 2 + Math.floor(rnd() * 3);
+    g.rect(x + bx, y + by, 1, h).fill(dark);
+    g.rect(x + bx + 1, y + by - 1, 1, h).fill(light);
+  }
+}
+
+function drawDirt(g: Graphics, col: number, row: number, color: number, seed: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const rnd = seededRng(seed);
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(color);
+  // Fine speckle so bare soil reads as earth, not a flat brown block.
+  scatterNoise(g, x, y, rnd, color, 40, 0.09, 0.16);
+  // A few small clods (2x2) and pebbles for surface relief.
+  for (let i = 0; i < 5; i++) {
+    const cx = Math.floor(rnd() * (TILE_SIZE - 2));
+    const cy = Math.floor(rnd() * (TILE_SIZE - 2));
+    g.rect(x + cx, y + cy, 2, 2).fill(darken(color, 0.22));
+    g.rect(x + cx, y + cy, 1, 1).fill(lighten(color, 0.14));
   }
 }
 
 function drawTilledSoil(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321);
-  // Furrow lines
-  for (let i = 2; i < TILE_SIZE; i += 3) {
-    g.rect(x, y + i, TILE_SIZE, 1).fill(0x4a3018);
+  const base = 0x6b4a2c;
+  const rnd = seededRng(3);
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(base);
+  // Raised furrow ridges with shaded troughs between them.
+  for (let i = 1; i < TILE_SIZE; i += 3) {
+    g.rect(x, y + i, TILE_SIZE, 1).fill(lighten(base, 0.12)); // ridge top
+    g.rect(x, y + i + 1, TILE_SIZE, 1).fill(darken(base, 0.2)); // shadow trough
   }
+  scatterNoise(g, x, y, rnd, base, 14, 0.08, 0.18);
 }
 
-function drawWater(g: Graphics, col: number, row: number, color: number) {
+function drawWater(g: Graphics, col: number, row: number, color: number, seed: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
+  const rnd = seededRng(seed);
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(color);
-  // Wave highlight
-  g.rect(x + 3, y + 5, 4, 1).fill(lighten(color, 0.3));
-  g.rect(x + 9, y + 10, 4, 1).fill(lighten(color, 0.3));
+  // Subtle depth banding.
+  g.rect(x, y + 6, TILE_SIZE, 4).fill(darken(color, 0.1));
+  g.rect(x, y + 12, TILE_SIZE, 4).fill(darken(color, 0.16));
+  // Scattered wave highlights (short light dashes at varied rows).
+  const hi = lighten(color, 0.32);
+  for (let i = 0; i < 4; i++) {
+    const wx = 1 + Math.floor(rnd() * 10);
+    const wy = 2 + Math.floor(rnd() * 12);
+    const len = 2 + Math.floor(rnd() * 3);
+    g.rect(x + wx, y + wy, len, 1).fill(hi);
+  }
 }
 
 function drawForest(g: Graphics, col: number, row: number) {
@@ -199,47 +266,53 @@ function drawRoad(g: Graphics, col: number, row: number) {
   g.rect(x + 7, y + 13, 2, 3).fill(0x999978);
 }
 
+// Crop sprites are drawn with transparent backgrounds (no soil fill) so the
+// tilled-soil furrows of the field tile beneath show through — planted rows
+// then read as crops growing in worked earth rather than flat brown squares.
+// Two staggered plants per tile give fuller, row-like coverage.
+
 function drawSeedling(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321); // soil base
-  // Tiny sprout
-  g.rect(x + 7, y + 10, 2, 3).fill(0x2ecc71);
-  g.rect(x + 6, y + 9, 1, 2).fill(color);
-  g.rect(x + 9, y + 9, 1, 2).fill(color);
+  // Two tiny sprouts.
+  for (const ox of [4, 10]) {
+    g.rect(x + ox, y + 11, 1, 3).fill(0x2ecc71);
+    g.rect(x + ox - 1, y + 10, 1, 2).fill(color);
+    g.rect(x + ox + 1, y + 10, 1, 2).fill(color);
+  }
 }
 
 function drawYoungCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321);
-  // Small plant
-  g.rect(x + 7, y + 7, 2, 6).fill(0x27ae60);
-  g.rect(x + 5, y + 6, 2, 3).fill(color);
-  g.rect(x + 9, y + 5, 2, 3).fill(color);
+  for (const ox of [4, 10]) {
+    g.rect(x + ox, y + 8, 1, 6).fill(0x27ae60);
+    g.rect(x + ox - 2, y + 7, 2, 3).fill(color);
+    g.rect(x + ox + 1, y + 6, 2, 3).fill(color);
+  }
 }
 
 function drawMatureCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321);
-  // Larger plant
-  g.rect(x + 7, y + 5, 2, 8).fill(0x27ae60);
-  g.rect(x + 4, y + 4, 3, 3).fill(color);
-  g.rect(x + 9, y + 3, 3, 3).fill(color);
-  g.rect(x + 6, y + 2, 4, 3).fill(color);
+  for (const ox of [4, 10]) {
+    g.rect(x + ox, y + 5, 2, 9).fill(0x27ae60);
+    g.rect(x + ox - 2, y + 4, 3, 3).fill(color);
+    g.rect(x + ox + 1, y + 3, 3, 3).fill(color);
+    g.rect(x + ox - 1, y + 2, 3, 3).fill(color);
+  }
 }
 
 function drawReadyCrop(g: Graphics, col: number, row: number, color: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321);
-  // Full plant with fruit/grain indicators
-  g.rect(x + 7, y + 4, 2, 9).fill(0x1e8c4a);
-  g.rect(x + 3, y + 3, 4, 4).fill(color);
-  g.rect(x + 9, y + 2, 4, 4).fill(color);
-  g.rect(x + 5, y + 1, 6, 3).fill(lighten(color, 0.2));
-  // Ready sparkle
+  for (const ox of [4, 10]) {
+    g.rect(x + ox, y + 4, 2, 10).fill(0x1e8c4a);
+    g.rect(x + ox - 2, y + 3, 3, 4).fill(color);
+    g.rect(x + ox + 1, y + 2, 3, 4).fill(color);
+    g.rect(x + ox - 1, y + 1, 3, 3).fill(lighten(color, 0.2));
+  }
+  // Ready sparkles.
   g.rect(x + 2, y + 1, 1, 1).fill(0xffff00);
   g.rect(x + 13, y + 2, 1, 1).fill(0xffff00);
 }
@@ -247,11 +320,12 @@ function drawReadyCrop(g: Graphics, col: number, row: number, color: number) {
 function drawDeadCrop(g: Graphics, col: number, row: number) {
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x654321);
-  // Withered brown stalks
-  g.rect(x + 7, y + 7, 2, 6).fill(0x5c3a1e);
-  g.rect(x + 5, y + 6, 2, 2).fill(0x6b4423);
-  g.rect(x + 9, y + 5, 2, 2).fill(0x6b4423);
+  // Withered brown stalks (no soil fill — dead field tile shows beneath).
+  for (const ox of [4, 10]) {
+    g.rect(x + ox, y + 7, 2, 6).fill(0x5c3a1e);
+    g.rect(x + ox - 2, y + 6, 2, 2).fill(0x6b4423);
+    g.rect(x + ox + 1, y + 5, 2, 2).fill(0x6b4423);
+  }
 }
 
 function drawSilo(g: Graphics, col: number, row: number) {

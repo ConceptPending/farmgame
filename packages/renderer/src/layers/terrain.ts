@@ -6,13 +6,33 @@ import type { SPRITES } from "../sprites/tileset.js";
 type SpriteKey = keyof typeof SPRITES;
 
 const TERRAIN_SPRITE_MAP: Record<TerrainType, SpriteKey[]> = {
-  grass: ["grass1", "grass2", "grass3"],
-  dirt: ["dirt"],
+  grass: ["grass1", "grass2", "grass3", "grass4"],
+  dirt: ["dirt", "dirt2"],
   forest: ["forest"],
-  water: ["water1", "water2"],
+  water: ["water1", "water2", "water3"],
   rock: ["rock"],
   road: ["road"],
 };
+
+/** Terrain that gets subtle per-tile brightness variation to avoid flat blocks. */
+const VARY_TINT: Set<TerrainType> = new Set(["grass", "dirt"]);
+
+/**
+ * Scatter-friendly hash of a tile's grid position. Plain `i % n` stripes badly
+ * when the world width shares a factor with the variant count (48 % 3 == 0),
+ * so mix the x/y coordinates with large primes instead.
+ */
+function tileHash(x: number, y: number): number {
+  let h = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  h ^= h >>> 13;
+  return h >>> 0;
+}
+
+/** Greyscale tint (0xRRGGBB with R=G=B) for a 0..1 brightness factor. */
+function brightnessTint(factor: number): number {
+  const v = Math.max(0, Math.min(255, Math.round(255 * factor)));
+  return (v << 16) | (v << 8) | v;
+}
 
 const RIVAL_COLORS = [0xff8c42, 0xff6b6b, 0xb39ddb, 0xffd166];
 
@@ -91,15 +111,21 @@ export class TerrainLayer {
         const sprite = this.sprites[i];
         if (!sprite) continue;
 
+        const tx = i % world.width;
+        const ty = Math.floor(i / world.width);
+        const hash = tileHash(tx, ty);
+
         const variants = TERRAIN_SPRITE_MAP[tile.terrain] ?? ["grass1"];
-        const variantIdx = i % variants.length;
+        const variantIdx = hash % variants.length;
         sprite.texture = getTileTexture(variants[variantIdx]);
 
         // Override dirt tiles in plowed+ fields with tilled texture
+        let tilled = false;
         if (tile.fieldId !== null && tile.terrain === "dirt") {
           const fState = fieldStateMap.get(tile.fieldId);
           if (fState && tilledStates.has(fState)) {
             sprite.texture = getTileTexture("tilled");
+            tilled = true;
           }
         }
 
@@ -108,7 +134,14 @@ export class TerrainLayer {
           sprite.tint = rc;
           sprite.alpha = 0.85; // rival-claimed land
         } else {
-          sprite.tint = 0xffffff;
+          // Subtle deterministic brightness variation breaks up large expanses
+          // of one terrain so they don't read as a single flat color block.
+          if (!tilled && VARY_TINT.has(tile.terrain)) {
+            const factor = 0.95 + (((hash >>> 8) % 1000) / 1000) * 0.05; // 0.95–1.00
+            sprite.tint = brightnessTint(factor);
+          } else {
+            sprite.tint = 0xffffff;
+          }
           sprite.alpha = tile.terrain === "water" ? 1.0 : tile.owned ? 1.0 : 0.5;
         }
       }
