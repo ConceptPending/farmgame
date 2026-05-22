@@ -123,10 +123,14 @@ function makeStrategy() {
   };
 }
 
+const HEADFUL = process.env.HEADFUL === "1" || process.env.WATCH === "1";
 const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: true,
+  executablePath: CHROME, headless: !HEADFUL,
   args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-gl=angle", "--use-angle=swiftshader", "--window-size=1440,900"],
-  defaultViewport: { width: 1440, height: 900 },
+  // Headful: defaultViewport:null lets the page use the real window size.
+  // A fixed viewport here enables device-metrics emulation, which fights the
+  // window and causes periodic relayout/resize flicker while watching.
+  defaultViewport: HEADFUL ? null : { width: 1440, height: 900 },
 });
 const page = await browser.newPage();
 const errs = [];
@@ -158,13 +162,15 @@ for (let cycle = 0; cycle < 400; cycle++) {
       `Y${s.year} ${s.season.padEnd(6)} d${s.day}  nw=$${nw}  cash=$${s.money}  plots=${s.world.plotOwnership.filter(Boolean).length}` +
       `  fields=${s.fields.length}  equip=${s.equipment.length}  animals=${s.animals.length}  manure=${s.manure}  inv=[${inv}]`,
     );
-    await page.screenshot({ path: `${OUT}/play-${String(shot).padStart(2, "0")}-y${s.year}${s.season}.png` });
+    // Skip the filmstrip while watching live — each capture forces a repaint
+    // in the visible window, which reads as a flash every season.
+    if (!HEADFUL) await page.screenshot({ path: `${OUT}/play-${String(shot).padStart(2, "0")}-y${s.year}${s.season}.png` });
     shot++;
   }
 
   await dispatchAll(decide(s));
   await advance();
-  await sleep(120);
+  await sleep(HEADFUL ? 600 : 120);
 }
 
 if (final) {
