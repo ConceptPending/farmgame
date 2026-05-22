@@ -2,6 +2,7 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
+import { PanelModal } from "./PanelModal";
 import {
   ANIMAL_CATALOG,
   ALL_ANIMAL_TYPES,
@@ -14,10 +15,10 @@ import {
 export function LivestockPanel() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
-  const show = useUIStore((s) => s.showLivestockPanel);
-  const setShow = useUIStore((s) => s.setShowLivestockPanel);
+  const open = useUIStore((s) => s.activePanel === "livestock");
+  const closePanel = useUIStore((s) => s.closePanel);
 
-  if (!state || !show) return null;
+  if (!state || !open) return null;
 
   const capacity = computeLivestockCapacity(state);
   const used = state.animals.length;
@@ -31,34 +32,8 @@ export function LivestockPanel() {
   const herd = [...state.animals].sort((a, b) => b.maturity - a.maturity);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "#16213e",
-        border: "2px solid #0f3460",
-        borderRadius: 8,
-        padding: 16,
-        zIndex: 100,
-        width: 420,
-        maxHeight: "80vh",
-        overflowY: "auto",
-        fontSize: 13,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <h3 style={{ margin: 0, color: "#4ecca3" }}>
-          Livestock <span style={{ color: "#888", fontWeight: 400, fontSize: 12 }}>· {used} / {capacity} housed</span>
-        </h3>
-        <button
-          onClick={() => setShow(false)}
-          style={{ background: "none", border: "1px solid #555", borderRadius: 4, color: "#aaa", cursor: "pointer", padding: "2px 8px" }}
-        >
-          X
-        </button>
-      </div>
+    <PanelModal title="Livestock" onClose={closePanel} width={420} accent="#e0a96d">
+      <div style={{ color: "#888", fontSize: 12, marginBottom: 10 }}>{used} / {capacity} housed</div>
 
       {capacity === 0 && (
         <div style={{ color: "#ffdd57", fontSize: 12, marginBottom: 10 }}>
@@ -149,6 +124,6 @@ export function LivestockPanel() {
           })}
         </div>
       )}
-    </div>
+    </PanelModal>
   );
 }

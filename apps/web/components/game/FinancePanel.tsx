@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
+import { PanelModal } from "./PanelModal";
 import { computeNetWorth, computeSeasonalExpenses, goalProgress, LOAN_LIMIT } from "@farmgame/engine";
 
 function Row({ label, value, color }: { label: string; value: string; color?: string }) {
@@ -17,11 +18,11 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
 export function FinancePanel() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
-  const show = useUIStore((s) => s.showFinancePanel);
-  const setShow = useUIStore((s) => s.setShowFinancePanel);
+  const open = useUIStore((s) => s.activePanel === "finance");
+  const closePanel = useUIStore((s) => s.closePanel);
   const [amount, setAmount] = useState(1000);
 
-  if (!state || !show) return null;
+  if (!state || !open) return null;
 
   const netWorth = computeNetWorth(state);
   const assets = netWorth - state.money + state.loan; // land + buildings + inventory
@@ -33,40 +34,7 @@ export function FinancePanel() {
   const fmtGoal = (n: number) => (goalIsMoney ? fmt(n) : `${n}`);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "#16213e",
-        border: "2px solid #0f3460",
-        borderRadius: 8,
-        padding: 16,
-        zIndex: 100,
-        width: 380,
-        maxHeight: "80vh",
-        overflowY: "auto",
-        fontSize: 13,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ margin: 0, color: "#4ecca3" }}>Finances</h3>
-        <button
-          onClick={() => setShow(false)}
-          style={{
-            background: "none",
-            border: "1px solid #555",
-            borderRadius: 4,
-            color: "#aaa",
-            cursor: "pointer",
-            padding: "2px 8px",
-          }}
-        >
-          X
-        </button>
-      </div>
-
+    <PanelModal title="Finances" onClose={closePanel} width={380}>
       {/* Goal progress */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
@@ -161,6 +129,6 @@ export function FinancePanel() {
           </button>
         </div>
       </div>
-    </div>
+    </PanelModal>
   );
 }

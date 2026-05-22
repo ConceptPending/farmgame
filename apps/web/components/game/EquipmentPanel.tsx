@@ -2,6 +2,7 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
+import { PanelModal } from "./PanelModal";
 import {
   EQUIPMENT_CATALOG,
   ALL_EQUIPMENT_TYPES,
@@ -13,43 +14,17 @@ import {
 export function EquipmentPanel() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
-  const show = useUIStore((s) => s.showEquipmentPanel);
-  const setShow = useUIStore((s) => s.setShowEquipmentPanel);
+  const open = useUIStore((s) => s.activePanel === "equipment");
+  const closePanel = useUIStore((s) => s.closePanel);
 
-  if (!state || !show) return null;
+  if (!state || !open) return null;
 
   const capacity = workableTiles(state.equipment);
   const used = cultivatedTiles(state.fields);
   const pct = Math.min(100, Math.round((used / capacity) * 100));
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "#16213e",
-        border: "2px solid #0f3460",
-        borderRadius: 8,
-        padding: 16,
-        zIndex: 100,
-        width: 420,
-        maxHeight: "80vh",
-        overflowY: "auto",
-        fontSize: 13,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <h3 style={{ margin: 0, color: "#4ecca3" }}>Equipment</h3>
-        <button
-          onClick={() => setShow(false)}
-          style={{ background: "none", border: "1px solid #555", borderRadius: 4, color: "#aaa", cursor: "pointer", padding: "2px 8px" }}
-        >
-          X
-        </button>
-      </div>
-
+    <PanelModal title="Equipment" onClose={closePanel} width={420} accent="#9db4d0">
       {/* Workable-land gauge */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
@@ -117,6 +92,6 @@ export function EquipmentPanel() {
           })}
         </div>
       )}
-    </div>
+    </PanelModal>
   );
 }
