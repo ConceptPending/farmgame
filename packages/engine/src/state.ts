@@ -46,6 +46,8 @@ export interface GameState {
   /** Consecutive seasons leading the market_leader good. */
   marketLeadStreak: number;
   inventory: Record<string, number>;
+  /** Manure stock from livestock, spread on fields as organic fertilizer. */
+  manure: number;
   inventoryCapacity: number;
   market: MarketState;
   weather: WeatherState;
@@ -154,6 +156,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     seasonSales: {},
     marketLeadStreak: 0,
     inventory: {},
+    manure: 0,
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
     market: createMarketState(Object.keys(basePrices), basePrices),
     weather: createWeatherState(),

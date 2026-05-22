@@ -17,6 +17,7 @@ const CROP_COLOR_MAP: Record<CropId, "green" | "gold" | "red" | "purple"> = {
   strawberries: "red",
   pumpkins: "purple",
   grapes: "purple",
+  clover: "green",
 };
 
 /** Get the sprite key for a crop at a given growth stage. */

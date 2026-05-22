@@ -217,6 +217,26 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     consumes: { n: 0.03, p: 0.05, k: 0.07 },
     needs: { n: 0.3, p: 0.5, k: 0.7 },
   },
+  clover: {
+    id: "clover",
+    name: "Clover",
+    category: "forage",
+    plantSeasons: ["spring", "summer", "fall"],
+    growthTicks: 6,
+    basePrice: 6,
+    seedCost: 4,
+    baseYield: 6,
+    idealTempMin: 45,
+    idealTempMax: 85,
+    waterNeed: 0.4,
+    frostTolerance: 0.5,
+    droughtTolerance: 0.5,
+    pestVulnerability: 0.3,
+    // A hardy legume cover crop: thrives on nitrogen-poor soil and fixes a lot
+    // of nitrogen; its harvest is hay (forage feed) rather than a cash crop.
+    consumes: { n: -0.18, p: 0.03, k: 0.03 },
+    needs: { n: 0.1, p: 0.3, k: 0.3 },
+  },
 };
 
 export const ALL_CROP_IDS = Object.keys(CROP_CATALOG) as CropId[];

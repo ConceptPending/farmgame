@@ -439,6 +439,33 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
   };
 }
 
+/** Manure consumed per tile when spreading. */
+const MANURE_PER_TILE = 2;
+
+function handleSpreadManure(state: GameState, fieldId: number): CommandResult {
+  const field = state.fields.find((f) => f.id === fieldId);
+  if (!field) return fail(state, "Field not found");
+  const cost = MANURE_PER_TILE * field.tileIndices.length;
+  if (state.manure < cost) {
+    return fail(state, `Not enough manure. Need ${cost}, have ${state.manure}. Keep livestock to produce more.`);
+  }
+
+  const newTiles = [...state.world.tiles];
+  for (const idx of field.tileIndices) {
+    newTiles[idx] = { ...newTiles[idx], nutrients: addNutrients(newTiles[idx].nutrients, 0.15) };
+  }
+
+  return {
+    state: {
+      ...state,
+      manure: state.manure - cost,
+      world: { ...state.world, tiles: newTiles },
+    },
+    success: true,
+    notifications: [{ type: "info", message: `Spread manure on field #${fieldId} (used ${cost})` }],
+  };
+}
+
 function handleSell(state: GameState, goodId: string, quantity: number): CommandResult {
   const def = getGoodInfo(goodId);
   if (!def) return fail(state, `Unknown good: ${goodId}`);
@@ -614,6 +641,8 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleDemolish(state, command.buildingId);
     case "SPRAY":
       return handleSpray(state, command.fieldId, command.sprayType);
+    case "SPREAD_MANURE":
+      return handleSpreadManure(state, command.fieldId);
     case "SELL":
       return handleSell(state, command.cropId, command.quantity);
     case "BUY_ANIMAL":

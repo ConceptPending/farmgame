@@ -16,6 +16,7 @@ export type GameCommand =
   | { type: "BUILD"; buildingType: BuildingType; tileIndex: number }
   | { type: "DEMOLISH"; buildingId: number }
   | { type: "SPRAY"; fieldId: number; sprayType: SprayType }
+  | { type: "SPREAD_MANURE"; fieldId: number }
   | { type: "SELL"; cropId: CropId | ProductType; quantity: number }
   | { type: "BUY_ANIMAL"; animalType: AnimalType }
   | { type: "SELL_ANIMAL"; animalId: number }

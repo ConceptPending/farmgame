@@ -22,11 +22,11 @@ export function LivestockPanel() {
   const capacity = computeLivestockCapacity(state);
   const used = state.animals.length;
   const feedNeeded = state.animals.reduce((s, a) => s + ANIMAL_CATALOG[a.type].feedPerSeason, 0);
-  const grainStock = Object.entries(state.inventory).reduce(
-    (s, [id, qty]) => s + (CROP_CATALOG[id as keyof typeof CROP_CATALOG]?.category === "grain" ? qty : 0),
-    0,
-  );
-  const feedShort = feedNeeded > grainStock;
+  const feedStock = Object.entries(state.inventory).reduce((s, [id, qty]) => {
+    const cat = CROP_CATALOG[id as keyof typeof CROP_CATALOG]?.category;
+    return s + (cat === "grain" || cat === "forage" ? qty : 0);
+  }, 0);
+  const feedShort = feedNeeded > feedStock;
 
   const herd = [...state.animals].sort((a, b) => b.maturity - a.maturity);
 
@@ -66,10 +66,13 @@ export function LivestockPanel() {
         </div>
       )}
 
-      {/* Feed status */}
-      <div style={{ fontSize: 12, color: feedShort ? "#ff6b6b" : "#aaa", marginBottom: 12 }}>
-        Feed per season: {feedNeeded} grain · In stock: {grainStock} grain
+      {/* Feed + manure status */}
+      <div style={{ fontSize: 12, color: feedShort ? "#ff6b6b" : "#aaa", marginBottom: 4 }}>
+        Feed per season: {feedNeeded} (grain or hay) · In stock: {feedStock}
         {feedShort && used > 0 && " — shortfall! animals will lose health"}
+      </div>
+      <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 12 }}>
+        Manure: {state.manure} · producing ≈ {used * 2}/season (spread on fields to restore soil)
       </div>
 
       {/* Buy buttons */}
