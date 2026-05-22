@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CropId, BuildingType, ToolId } from "@farmgame/engine";
+import type { CropId, BuildingType, ToolId, AnimalType } from "@farmgame/engine";
 import type { OverlayMode } from "@farmgame/renderer";
 import type { SprayType } from "@farmgame/engine";
 
@@ -10,6 +10,7 @@ interface UIStore {
   selectedTool: ToolId;
   selectedCrop: CropId;
   selectedBuildingType: BuildingType;
+  selectedAnimalType: AnimalType;
   selectedSprayType: SprayType;
   selectedOverlay: OverlayMode;
   hoveredTileIndex: number;
@@ -23,6 +24,7 @@ interface UIStore {
   setSelectedTool: (tool: ToolId) => void;
   setSelectedCrop: (cropId: CropId) => void;
   setSelectedBuildingType: (type: BuildingType) => void;
+  setSelectedAnimalType: (type: AnimalType) => void;
   setSelectedSprayType: (type: SprayType) => void;
   setSelectedOverlay: (mode: OverlayMode) => void;
   setHoveredTileIndex: (idx: number) => void;
@@ -39,6 +41,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedTool: "pointer",
   selectedCrop: "wheat",
   selectedBuildingType: "silo",
+  selectedAnimalType: "chicken",
   selectedSprayType: "herbicide",
   selectedOverlay: "none",
   hoveredTileIndex: -1,
@@ -51,6 +54,7 @@ export const useUIStore = create<UIStore>((set) => ({
   setSelectedTool: (tool) => set({ selectedTool: tool }),
   setSelectedCrop: (cropId) => set({ selectedCrop: cropId }),
   setSelectedBuildingType: (type) => set({ selectedBuildingType: type }),
+  setSelectedAnimalType: (type) => set({ selectedAnimalType: type }),
   setSelectedSprayType: (type) => set({ selectedSprayType: type }),
   setSelectedOverlay: (mode) => set({ selectedOverlay: mode }),
   setHoveredTileIndex: (idx) => set({ hoveredTileIndex: idx }),

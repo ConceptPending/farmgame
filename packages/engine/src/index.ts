@@ -101,8 +101,8 @@ export type { ToolId, ToolDefinition } from "./entities/tools.js";
 export { TOOL_CATALOG } from "./entities/tools.js";
 
 export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
-export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, BARN_CAPACITY, animalValue } from "./entities/animal.js";
-export { computeLivestockCapacity } from "./systems/livestock.js";
+export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, animalValue, createAnimal } from "./entities/animal.js";
+export { pennedTiles, FENCE_BREACH, FENCE_DECAY } from "./systems/pen.js";
 
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {

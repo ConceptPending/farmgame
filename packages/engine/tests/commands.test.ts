@@ -330,7 +330,9 @@ describe("BUILD / DEMOLISH", () => {
   it("rejects building on occupied tile", () => {
     const state = stateWithSeed();
     const tileIdx = findOwnedDirtTile(state);
-    const s1 = applyCommand(state, { type: "BUILD", buildingType: "fence", tileIndex: tileIdx }).state;
+    const s1 = applyCommand(state, { type: "BUILD", buildingType: "silo", tileIndex: tileIdx }).state;
+    // A different building can't share the tile (re-applying the fence tool to a
+    // fence is a special repair case, covered in pen.test.ts).
     const result = applyCommand(s1, { type: "BUILD", buildingType: "fence", tileIndex: tileIdx });
     expect(result.success).toBe(false);
     expect(result.error).toContain("already has a building");

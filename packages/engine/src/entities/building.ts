@@ -43,7 +43,7 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     type: "barn",
     name: "Barn",
     cost: 600,
-    description: "Houses up to 8 livestock",
+    description: "Shelters livestock and forms part of a pen wall",
   },
   water_pump: {
     type: "water_pump",
@@ -73,6 +73,6 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     type: "fence",
     name: "Fence",
     cost: 15,
-    description: "Decorative boundary marker",
+    description: "Pen wall — enclose livestock. Wears down over time; repair to keep it sound",
   },
 };

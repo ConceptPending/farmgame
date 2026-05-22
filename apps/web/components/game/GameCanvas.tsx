@@ -54,26 +54,30 @@ export function GameCanvas() {
         if (event.type === "tile_drag_end") {
           const dragStart = useUIStore.getState().dragStartTile;
           const selectedTool = useUIStore.getState().selectedTool;
-          if (dragStart !== null && selectedTool === "designate_field") {
-            // Calculate rectangle of tiles from drag
-            const startCoords = {
-              x: dragStart % currentState.world.width,
-              y: Math.floor(dragStart / currentState.world.width),
-            };
+          const w = currentState.world.width;
+          if (dragStart !== null && (selectedTool === "designate_field" || selectedTool === "build")) {
+            const startCoords = { x: dragStart % w, y: Math.floor(dragStart / w) };
             const endCoords = { x: event.tileX, y: event.tileY };
             const minX = Math.min(startCoords.x, endCoords.x);
             const maxX = Math.max(startCoords.x, endCoords.x);
             const minY = Math.min(startCoords.y, endCoords.y);
             const maxY = Math.max(startCoords.y, endCoords.y);
 
-            const indices: number[] = [];
-            for (let y = minY; y <= maxY; y++) {
-              for (let x = minX; x <= maxX; x++) {
-                indices.push(tileIndex(x, y, currentState.world.width));
+            if (selectedTool === "designate_field") {
+              const indices: number[] = [];
+              for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) indices.push(tileIndex(x, y, w));
               }
-            }
-            if (indices.length > 0) {
-              dispatch({ type: "DESIGNATE_FIELD", tileIndices: indices });
+              if (indices.length > 0) dispatch({ type: "DESIGNATE_FIELD", tileIndices: indices });
+            } else if (useUIStore.getState().selectedBuildingType === "fence") {
+              // Drag to fence the perimeter of the rectangle — build a pen in one stroke.
+              for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                  if (x === minX || x === maxX || y === minY || y === maxY) {
+                    dispatch({ type: "BUILD", buildingType: "fence", tileIndex: tileIndex(x, y, w) });
+                  }
+                }
+              }
             }
           }
           useUIStore.getState().setDragStartTile(null);
@@ -164,6 +168,11 @@ export function GameCanvas() {
             dispatch({ type: "BUILD", buildingType, tileIndex: event.tileIndex });
             break;
           }
+          case "place_animal": {
+            const animalType = useUIStore.getState().selectedAnimalType;
+            dispatch({ type: "BUY_ANIMAL", animalType, tileIndex: event.tileIndex });
+            break;
+          }
           case "spray": {
             if (tile.fieldId !== null) {
               const sprayType = useUIStore.getState().selectedSprayType;
@@ -220,13 +229,15 @@ export function GameCanvas() {
     }
   }, [selectedOverlay]);
 
-  // Enable drag when designate_field tool is selected
+  // Enable drag for marking fields and for dragging fence pens.
   const selectedTool = useUIStore((s) => s.selectedTool);
+  const selectedBuildingType = useUIStore((s) => s.selectedBuildingType);
   useEffect(() => {
     if (rendererRef.current) {
-      rendererRef.current.setDragEnabled(selectedTool === "designate_field");
+      const dragForFence = selectedTool === "build" && selectedBuildingType === "fence";
+      rendererRef.current.setDragEnabled(selectedTool === "designate_field" || dragForFence);
     }
-  }, [selectedTool]);
+  }, [selectedTool, selectedBuildingType]);
 
   return (
     <canvas

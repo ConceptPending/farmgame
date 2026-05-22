@@ -40,7 +40,14 @@ export class BuildingLayer {
       sprite.width = TILE_SIZE;
       sprite.height = TILE_SIZE;
       sprite.visible = true;
-      sprite.alpha = building.active ? 1.0 : 0.5;
+      if (building.type === "fence") {
+        // Worn fences look weathered (browner) and fade once breached.
+        sprite.tint = building.condition > 0.7 ? 0xffffff : building.condition > 0.35 ? 0xcaa98a : 0x9a7a5a;
+        sprite.alpha = building.condition <= 0.35 ? 0.5 : 1;
+      } else {
+        sprite.tint = 0xffffff;
+        sprite.alpha = building.active ? 1.0 : 0.5;
+      }
       spriteIdx++;
     }
 

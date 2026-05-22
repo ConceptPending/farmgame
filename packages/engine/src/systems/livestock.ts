@@ -1,14 +1,12 @@
 import type { GameState, Notification } from "../state.js";
 import type { Animal } from "../entities/animal.js";
-import { ANIMAL_CATALOG, BARN_CAPACITY } from "../entities/animal.js";
+import { ANIMAL_CATALOG } from "../entities/animal.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG } from "../data/products.js";
 import { nextBool } from "../rng.js";
 
-/** Total livestock the player's barns can house. */
-export function computeLivestockCapacity(state: GameState): number {
-  return state.buildings.filter((b) => b.type === "barn").length * BARN_CAPACITY;
-}
+/** Soft ceiling on herd size; feed economics are the real limiter below this. */
+const MAX_HERD = 40;
 
 // Animals eat grain and forage (e.g. hay/clover).
 const FEED_IDS = ALL_CROP_IDS.filter(
@@ -125,18 +123,19 @@ export function livestockSystem(state: GameState): {
       }
     }
 
-    // Breeding: well-fed, mature, healthy animals, limited by barn capacity.
+    // Breeding: well-fed, mature, healthy animals. Feed economics limit the
+    // herd; a soft cap just prevents runaway growth. Calves join their parent's
+    // tile (so they're born inside the same pen).
     if (fedRatio >= 1) {
-      const capacity = computeLivestockCapacity(state);
       const babies: Animal[] = [];
       for (const a of animals) {
-        if (animals.length + babies.length >= capacity) break;
+        if (animals.length + babies.length >= MAX_HERD) break;
         const def = ANIMAL_CATALOG[a.type];
         if (a.maturity >= 1 && a.health >= 0.8) {
           const roll = nextBool(rng, def.breedChance);
           rng = roll.rng;
           if (roll.value) {
-            babies.push({ id: nextAnimalId++, type: a.type, age: 0, maturity: 0, health: 1 });
+            babies.push({ id: nextAnimalId++, type: a.type, age: 0, maturity: 0, health: 1, tileIndex: a.tileIndex });
             notifications.push({ type: "success", message: `A ${def.name.toLowerCase()} was born!` });
           }
         }

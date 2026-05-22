@@ -18,8 +18,9 @@ export type GameCommand =
   | { type: "SPRAY"; fieldId: number; sprayType: SprayType }
   | { type: "SPREAD_MANURE"; fieldId: number }
   | { type: "SELL"; cropId: CropId | ProductType; quantity: number }
-  | { type: "BUY_ANIMAL"; animalType: AnimalType }
+  | { type: "BUY_ANIMAL"; animalType: AnimalType; tileIndex?: number }
   | { type: "SELL_ANIMAL"; animalId: number }
+  | { type: "REPAIR_FENCES" }
   | { type: "BUY_EQUIPMENT"; equipmentType: EquipmentType }
   | { type: "SELL_EQUIPMENT"; equipmentId: number }
   | { type: "TAKE_LOAN"; amount: number }

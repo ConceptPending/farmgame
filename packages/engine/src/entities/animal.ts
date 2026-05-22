@@ -29,6 +29,7 @@ export interface Animal {
   age: number; // ticks lived
   maturity: number; // 0..1 toward fully grown
   health: number; // 0..1, falls when underfed
+  tileIndex: number; // the tile the animal currently occupies / grazes on
 }
 
 export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
@@ -82,11 +83,8 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
 
 export const ALL_ANIMAL_TYPES = Object.keys(ANIMAL_CATALOG) as AnimalType[];
 
-/** Animals each barn can house. */
-export const BARN_CAPACITY = 8;
-
-export function createAnimal(id: number, type: AnimalType): Animal {
-  return { id, type, age: 0, maturity: 0, health: 1 };
+export function createAnimal(id: number, type: AnimalType, tileIndex: number): Animal {
+  return { id, type, age: 0, maturity: 0, health: 1, tileIndex };
 }
 
 /** Current resale / asset value of an animal (scales with maturity and health). */
