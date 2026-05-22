@@ -37,6 +37,11 @@ export function generateWorld(rng: RngState): WorldGenResult {
   // Set initial moisture (higher near water)
   setInitialMoisture(tiles);
 
+  // Seed N-P-K from soil quality (deterministic; no RNG).
+  for (const tile of tiles) {
+    tile.nutrients = { n: tile.soilQuality, p: tile.soilQuality, k: tile.soilQuality };
+  }
+
   // Plot ownership: 36 plots (6x6 grid of 8x8 tile plots)
   const plotOwnership = new Array(PLOTS_PER_ROW * PLOTS_PER_ROW).fill(false);
 

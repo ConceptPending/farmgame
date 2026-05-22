@@ -9,6 +9,9 @@ import { tileIndex } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
 import { getGoodInfo } from "./data/goods.js";
 import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
+import {
+  avgNutrients, nutrientYieldFactor, limitingNutrient, applyConsumption, addNutrients, nutrientName,
+} from "./systems/soil.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
 import { computeLivestockCapacity } from "./systems/livestock.js";
@@ -231,10 +234,12 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
   const def = getCropDef(field.cropId);
   if (!def) return fail(state, "Unknown crop");
 
-  // Yield based on field size, health, and weeds
+  // Yield based on field size, health, weeds, and soil nutrients (Liebig).
   const healthMod = Math.max(0.2, field.health);
   const weedMod = Math.max(0.3, 1 - field.weeds * 0.7);
-  const quantity = Math.round(def.baseYield * field.tileIndices.length * healthMod * weedMod);
+  const avg = avgNutrients(state.world.tiles, field.tileIndices);
+  const soilMod = nutrientYieldFactor(avg, def.needs);
+  const quantity = Math.round(def.baseYield * field.tileIndices.length * healthMod * weedMod * soilMod);
 
   // Check inventory capacity
   const currentTotal = totalInventory(state);
@@ -248,10 +253,28 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
   const newInventory = { ...state.inventory };
   newInventory[field.cropId] = (newInventory[field.cropId] ?? 0) + quantity;
 
+  // Crops draw down (and legumes fix) nutrients in the field's tiles.
+  const newTiles = [...state.world.tiles];
+  for (const idx of field.tileIndices) {
+    newTiles[idx] = { ...newTiles[idx], nutrients: applyConsumption(newTiles[idx].nutrients, def.consumes) };
+  }
+
+  const notifications: Notification[] = [
+    { type: "success", message: `Harvested ${quantity} ${def.name} from field #${fieldId}` },
+  ];
+  if (soilMod < 0.7) {
+    const lim = limitingNutrient(avg, def.needs);
+    notifications.push({
+      type: "warning",
+      message: `Field #${fieldId}'s ${nutrientName(lim)} is running low — rotate crops or fertilize.`,
+    });
+  }
+
   return {
     state: {
       ...state,
       inventory: newInventory,
+      world: { ...state.world, tiles: newTiles },
       fields: state.fields.map((f) =>
         f.id === fieldId
           ? {
@@ -268,9 +291,7 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
       ),
     },
     success: true,
-    notifications: [
-      { type: "success", message: `Harvested ${quantity} ${def.name} from field #${fieldId}` },
-    ],
+    notifications,
   };
 }
 
@@ -380,10 +401,17 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
   let updates: Partial<typeof field> = {};
   let message = "";
 
+  // Fertilizer also replenishes soil nutrients in the field's tiles.
+  let newTiles = state.world.tiles;
+
   switch (sprayType) {
     case "fertilizer":
       updates = { health: Math.min(1, field.health + 0.3) };
       message = `Applied fertilizer to field #${fieldId}`;
+      newTiles = [...state.world.tiles];
+      for (const idx of field.tileIndices) {
+        newTiles[idx] = { ...newTiles[idx], nutrients: addNutrients(newTiles[idx].nutrients, 0.2) };
+      }
       break;
     case "pesticide":
       updates = { pests: Math.max(0, field.pests - 0.6) };
@@ -399,6 +427,7 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
     state: {
       ...state,
       money: state.money - cost,
+      world: { ...state.world, tiles: newTiles },
       fields: state.fields.map((f) =>
         f.id === fieldId ? { ...f, ...updates } : f,
       ),

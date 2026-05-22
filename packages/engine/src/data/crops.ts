@@ -16,6 +16,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.6,
     droughtTolerance: 0.7,
     pestVulnerability: 0.3,
+    consumes: { n: 0.06, p: 0.02, k: 0.02 },
+    needs: { n: 0.6, p: 0.2, k: 0.3 },
   },
   corn: {
     id: "corn",
@@ -32,6 +34,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.1,
     droughtTolerance: 0.4,
     pestVulnerability: 0.5,
+    consumes: { n: 0.1, p: 0.02, k: 0.03 },
+    needs: { n: 0.9, p: 0.3, k: 0.4 },
   },
   tomato: {
     id: "tomato",
@@ -48,6 +52,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.0,
     droughtTolerance: 0.3,
     pestVulnerability: 0.6,
+    consumes: { n: 0.04, p: 0.07, k: 0.06 },
+    needs: { n: 0.4, p: 0.7, k: 0.6 },
   },
   soybeans: {
     id: "soybeans",
@@ -64,6 +70,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.2,
     droughtTolerance: 0.5,
     pestVulnerability: 0.4,
+    consumes: { n: -0.1, p: 0.03, k: 0.03 },
+    needs: { n: 0.2, p: 0.4, k: 0.4 },
   },
   potatoes: {
     id: "potatoes",
@@ -80,6 +88,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.4,
     droughtTolerance: 0.4,
     pestVulnerability: 0.5,
+    consumes: { n: 0.04, p: 0.03, k: 0.09 },
+    needs: { n: 0.4, p: 0.3, k: 0.8 },
   },
   strawberries: {
     id: "strawberries",
@@ -96,6 +106,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.1,
     droughtTolerance: 0.2,
     pestVulnerability: 0.7,
+    consumes: { n: 0.03, p: 0.07, k: 0.06 },
+    needs: { n: 0.3, p: 0.7, k: 0.6 },
   },
   cotton: {
     id: "cotton",
@@ -112,6 +124,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.0,
     droughtTolerance: 0.6,
     pestVulnerability: 0.6,
+    consumes: { n: 0.08, p: 0.04, k: 0.06 },
+    needs: { n: 0.7, p: 0.4, k: 0.6 },
   },
   sunflowers: {
     id: "sunflowers",
@@ -128,6 +142,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.1,
     droughtTolerance: 0.6,
     pestVulnerability: 0.3,
+    consumes: { n: 0.05, p: 0.02, k: 0.04 },
+    needs: { n: 0.5, p: 0.3, k: 0.5 },
   },
   peppers: {
     id: "peppers",
@@ -144,6 +160,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.0,
     droughtTolerance: 0.3,
     pestVulnerability: 0.5,
+    consumes: { n: 0.04, p: 0.06, k: 0.06 },
+    needs: { n: 0.4, p: 0.6, k: 0.6 },
   },
   lettuce: {
     id: "lettuce",
@@ -160,6 +178,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.5,
     droughtTolerance: 0.1,
     pestVulnerability: 0.6,
+    consumes: { n: 0.06, p: 0.01, k: 0.02 },
+    needs: { n: 0.7, p: 0.2, k: 0.3 },
   },
   pumpkins: {
     id: "pumpkins",
@@ -176,6 +196,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.0,
     droughtTolerance: 0.4,
     pestVulnerability: 0.4,
+    consumes: { n: 0.08, p: 0.05, k: 0.06 },
+    needs: { n: 0.7, p: 0.5, k: 0.6 },
   },
   grapes: {
     id: "grapes",
@@ -192,6 +214,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     frostTolerance: 0.2,
     droughtTolerance: 0.5,
     pestVulnerability: 0.5,
+    consumes: { n: 0.03, p: 0.05, k: 0.07 },
+    needs: { n: 0.3, p: 0.5, k: 0.7 },
   },
 };
 

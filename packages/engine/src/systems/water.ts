@@ -1,5 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import { tileCoords, tileIndex } from "../entities/world.js";
+import { recoverNutrients } from "./soil.js";
 
 export function waterSystem(state: GameState): {
   state: GameState;
@@ -88,7 +89,11 @@ export function waterSystem(state: GameState): {
         }
       }
 
-      newTiles[idx] = { ...tile, moisture: Math.max(0, Math.min(1, moisture)) };
+      newTiles[idx] = {
+        ...tile,
+        moisture: Math.max(0, Math.min(1, moisture)),
+        nutrients: recoverNutrients(tile),
+      };
     }
   }
 
