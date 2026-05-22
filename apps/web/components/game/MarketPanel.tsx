@@ -2,52 +2,21 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
+import { PanelModal } from "./PanelModal";
 import { CROP_CATALOG, PRODUCT_CATALOG, ALL_PRODUCT_IDS, type CropId } from "@farmgame/engine";
 
 export function MarketPanel() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
-  const showMarketPanel = useUIStore((s) => s.showMarketPanel);
-  const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
+  const open = useUIStore((s) => s.activePanel === "market");
+  const closePanel = useUIStore((s) => s.closePanel);
 
-  if (!state || !showMarketPanel) return null;
+  if (!state || !open) return null;
 
   const cropIds = Object.keys(CROP_CATALOG) as CropId[];
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "#16213e",
-        border: "2px solid #0f3460",
-        borderRadius: 8,
-        padding: 16,
-        zIndex: 100,
-        minWidth: 500,
-        maxHeight: "80vh",
-        overflowY: "auto",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ margin: 0, color: "#4ecca3" }}>Market Prices</h3>
-        <button
-          onClick={() => setShowMarketPanel(false)}
-          style={{
-            background: "none",
-            border: "1px solid #555",
-            borderRadius: 4,
-            color: "#aaa",
-            cursor: "pointer",
-            padding: "2px 8px",
-          }}
-        >
-          X
-        </button>
-      </div>
-
+    <PanelModal title="Market Prices" onClose={closePanel} width={520} accent="#ffdd57">
       {/* Price table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
@@ -159,7 +128,7 @@ export function MarketPanel() {
           />
         </div>
       )}
-    </div>
+    </PanelModal>
   );
 }
 

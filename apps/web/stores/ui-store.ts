@@ -3,6 +3,9 @@ import type { CropId, BuildingType, ToolId } from "@farmgame/engine";
 import type { OverlayMode } from "@farmgame/renderer";
 import type { SprayType } from "@farmgame/engine";
 
+/** Modal panels — only one may be open at a time. */
+export type PanelId = "market" | "finance" | "livestock" | "equipment" | "standings";
+
 interface UIStore {
   selectedTool: ToolId;
   selectedCrop: CropId;
@@ -12,11 +15,8 @@ interface UIStore {
   hoveredTileIndex: number;
   selectedTileIndex: number;
   selectedFieldId: number | null;
-  showMarketPanel: boolean;
-  showFinancePanel: boolean;
-  showLivestockPanel: boolean;
-  showEquipmentPanel: boolean;
-  showStandingsPanel: boolean;
+  /** The single open modal panel, or null when none is open. */
+  activePanel: PanelId | null;
   showInfoPanel: boolean;
   dragStartTile: number | null;
 
@@ -28,11 +28,9 @@ interface UIStore {
   setHoveredTileIndex: (idx: number) => void;
   setSelectedTileIndex: (idx: number) => void;
   setSelectedFieldId: (id: number | null) => void;
-  setShowMarketPanel: (show: boolean) => void;
-  setShowFinancePanel: (show: boolean) => void;
-  setShowLivestockPanel: (show: boolean) => void;
-  setShowEquipmentPanel: (show: boolean) => void;
-  setShowStandingsPanel: (show: boolean) => void;
+  /** Open a modal panel (closing any other), or toggle it shut if already open. */
+  openPanel: (panel: PanelId) => void;
+  closePanel: () => void;
   setShowInfoPanel: (show: boolean) => void;
   setDragStartTile: (idx: number | null) => void;
 }
@@ -46,11 +44,7 @@ export const useUIStore = create<UIStore>((set) => ({
   hoveredTileIndex: -1,
   selectedTileIndex: -1,
   selectedFieldId: null,
-  showMarketPanel: false,
-  showFinancePanel: false,
-  showLivestockPanel: false,
-  showEquipmentPanel: false,
-  showStandingsPanel: false,
+  activePanel: null,
   showInfoPanel: true,
   dragStartTile: null,
 
@@ -62,11 +56,8 @@ export const useUIStore = create<UIStore>((set) => ({
   setHoveredTileIndex: (idx) => set({ hoveredTileIndex: idx }),
   setSelectedTileIndex: (idx) => set({ selectedTileIndex: idx }),
   setSelectedFieldId: (id) => set({ selectedFieldId: id }),
-  setShowMarketPanel: (show) => set({ showMarketPanel: show }),
-  setShowFinancePanel: (show) => set({ showFinancePanel: show }),
-  setShowLivestockPanel: (show) => set({ showLivestockPanel: show }),
-  setShowEquipmentPanel: (show) => set({ showEquipmentPanel: show }),
-  setShowStandingsPanel: (show) => set({ showStandingsPanel: show }),
+  openPanel: (panel) => set((s) => ({ activePanel: s.activePanel === panel ? null : panel })),
+  closePanel: () => set({ activePanel: null }),
   setShowInfoPanel: (show) => set({ showInfoPanel: show }),
   setDragStartTile: (idx) => set({ dragStartTile: idx }),
 }));

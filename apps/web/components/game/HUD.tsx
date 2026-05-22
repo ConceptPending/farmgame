@@ -40,11 +40,8 @@ export function HUD() {
   const advanceDays = useGameStore((s) => s.advanceDays);
   const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
-  const setShowMarketPanel = useUIStore((s) => s.setShowMarketPanel);
-  const setShowFinancePanel = useUIStore((s) => s.setShowFinancePanel);
-  const setShowLivestockPanel = useUIStore((s) => s.setShowLivestockPanel);
-  const setShowEquipmentPanel = useUIStore((s) => s.setShowEquipmentPanel);
-  const setShowStandingsPanel = useUIStore((s) => s.setShowStandingsPanel);
+  const openPanel = useUIStore((s) => s.openPanel);
+  const activePanel = useUIStore((s) => s.activePanel);
 
   useEffect(() => {
     if (notifications.length > 8) {
@@ -79,6 +76,10 @@ export function HUD() {
           borderBottom: "2px solid #0f3460",
           flexShrink: 0,
           fontSize: 13,
+          // Sit above the panel scrim so its buttons stay live — lets you
+          // switch panels or close directly without the scrim eating the click.
+          position: "relative",
+          zIndex: 200,
         }}
       >
         {/* Money */}
@@ -88,7 +89,7 @@ export function HUD() {
 
         {/* Goal progress */}
         <button
-          onClick={() => setShowFinancePanel(true)}
+          onClick={() => openPanel("finance")}
           title="Open finances"
           style={{
             display: "flex",
@@ -209,79 +210,16 @@ export function HUD() {
 
           <div style={divider} />
 
-          {/* Finance + Market buttons */}
-          <button
-            onClick={() => setShowFinancePanel(true)}
-            style={{
-              padding: "2px 10px",
-              fontSize: 11,
-              border: "1px solid #555",
-              borderRadius: 3,
-              background: "#222",
-              color: "#4ecca3",
-              cursor: "pointer",
-            }}
-          >
-            Finance
-          </button>
-          <button
-            onClick={() => setShowLivestockPanel(true)}
-            style={{
-              padding: "2px 10px",
-              fontSize: 11,
-              border: "1px solid #555",
-              borderRadius: 3,
-              background: "#222",
-              color: "#e0a96d",
-              cursor: "pointer",
-            }}
-          >
-            Animals
-          </button>
-          <button
-            onClick={() => setShowEquipmentPanel(true)}
-            style={{
-              padding: "2px 10px",
-              fontSize: 11,
-              border: "1px solid #555",
-              borderRadius: 3,
-              background: "#222",
-              color: "#9db4d0",
-              cursor: "pointer",
-            }}
-          >
-            Equipment
-          </button>
-          {state.rivals.length > 0 && (
-            <button
-              onClick={() => setShowStandingsPanel(true)}
-              style={{
-                padding: "2px 10px",
-                fontSize: 11,
-                border: "1px solid #555",
-                borderRadius: 3,
-                background: "#222",
-                color: "#ff8c42",
-                cursor: "pointer",
-              }}
-            >
-              Rivals
-            </button>
-          )}
-          <button
-            onClick={() => setShowMarketPanel(true)}
-            style={{
-              padding: "2px 10px",
-              fontSize: 11,
-              border: "1px solid #555",
-              borderRadius: 3,
-              background: "#222",
-              color: "#ffdd57",
-              cursor: "pointer",
-            }}
-          >
-            Market
-          </button>
+          {/* Panel buttons — open one modal at a time; active one is highlighted. */}
+          <div style={{ display: "flex", gap: 4 }}>
+            <PanelButton label="Finance" color="#4ecca3" active={activePanel === "finance"} onClick={() => openPanel("finance")} />
+            <PanelButton label="Animals" color="#e0a96d" active={activePanel === "livestock"} onClick={() => openPanel("livestock")} />
+            <PanelButton label="Equipment" color="#9db4d0" active={activePanel === "equipment"} onClick={() => openPanel("equipment")} />
+            {state.rivals.length > 0 && (
+              <PanelButton label="Rivals" color="#ff8c42" active={activePanel === "standings"} onClick={() => openPanel("standings")} />
+            )}
+            <PanelButton label="Market" color="#ffdd57" active={activePanel === "market"} onClick={() => openPanel("market")} />
+          </div>
         </div>
       </div>
 
@@ -334,5 +272,35 @@ export function HUD() {
         </div>
       )}
     </>
+  );
+}
+
+/** Compact HUD button that opens a modal panel; highlights when its panel is open. */
+function PanelButton({
+  label,
+  color,
+  active,
+  onClick,
+}: {
+  label: string;
+  color: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "2px 10px",
+        fontSize: 11,
+        borderRadius: 3,
+        cursor: "pointer",
+        border: `1px solid ${active ? color : "#555"}`,
+        background: active ? "#1a4040" : "#222",
+        color,
+      }}
+    >
+      {label}
+    </button>
   );
 }
