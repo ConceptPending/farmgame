@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useGameStore } from "../stores/game-store";
 import { HUD } from "../components/game/HUD";
 import { GameCanvas } from "../components/game/GameCanvas";
@@ -12,17 +11,12 @@ import { FinancePanel } from "../components/game/FinancePanel";
 import { LivestockPanel } from "../components/game/LivestockPanel";
 import { EquipmentPanel } from "../components/game/EquipmentPanel";
 import { GameOverOverlay } from "../components/game/GameOverOverlay";
+import { StartScreen } from "../components/menu/StartScreen";
 
 export default function Home() {
-  const initialized = useRef(false);
-  const initGame = useGameStore((s) => s.initGame);
+  const hasGame = useGameStore((s) => s.state !== null);
 
-  useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
-      initGame();
-    }
-  }, [initGame]);
+  if (!hasGame) return <StartScreen />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>

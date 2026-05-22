@@ -5,7 +5,9 @@ import { computeNetWorth } from "@farmgame/engine";
 
 export function GameOverOverlay() {
   const state = useGameStore((s) => s.state);
-  const initGame = useGameStore((s) => s.initGame);
+  const startGame = useGameStore((s) => s.startGame);
+  const returnToMenu = useGameStore((s) => s.returnToMenu);
+  const lastConfig = useGameStore((s) => s.lastConfig);
 
   if (!state || state.status === "playing") return null;
 
@@ -50,21 +52,38 @@ export function GameOverOverlay() {
             Year {state.year}, {state.season.charAt(0).toUpperCase() + state.season.slice(1)} Day {state.day}
           </span>
         </p>
-        <button
-          onClick={() => initGame()}
-          style={{
-            padding: "8px 24px",
-            fontSize: 14,
-            border: "1px solid #4ecca3",
-            borderRadius: 5,
-            background: "#1a4040",
-            color: "#4ecca3",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
-        >
-          New Game
-        </button>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={() => startGame(lastConfig ?? {})}
+            style={{
+              padding: "8px 24px",
+              fontSize: 14,
+              border: "1px solid #4ecca3",
+              borderRadius: 5,
+              background: "#1a4040",
+              color: "#4ecca3",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Play Again
+          </button>
+          <button
+            onClick={() => returnToMenu()}
+            style={{
+              padding: "8px 24px",
+              fontSize: 14,
+              border: "1px solid #555",
+              borderRadius: 5,
+              background: "#222",
+              color: "#ccc",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Main Menu
+          </button>
+        </div>
       </div>
     </div>
   );

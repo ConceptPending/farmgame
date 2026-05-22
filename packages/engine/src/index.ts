@@ -15,10 +15,15 @@ export {
   type CreateGameOptions,
 } from "./state.js";
 
+// Goals
+export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
+
 // Finance
 export {
   computeNetWorth,
   computeSeasonalExpenses,
+  evaluateGoal,
+  goalProgress,
   type SeasonalExpenses,
 } from "./systems/finance.js";
 
