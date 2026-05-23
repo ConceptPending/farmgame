@@ -23,7 +23,15 @@ export function pennedFarm(money = 100_000): { state: GameState; pen: number } {
   const fences = [pen - 1, pen + 1, pen - W, pen + W].map((idx, k) =>
     createBuilding(500 + k, "fence", idx),
   );
-  s = { ...s, buildings: [...s.buildings, ...fences], nextBuildingId: 600 };
+  // Make the pen tile dirt — keeps feed-baseline tests free of incidental
+  // pasture bonuses, since the chosen tile might otherwise have been grass.
+  const tiles = s.world.tiles.map((t, i) => (i === pen ? { ...t, terrain: "dirt" as const } : t));
+  s = {
+    ...s,
+    world: { ...s.world, tiles },
+    buildings: [...s.buildings, ...fences],
+    nextBuildingId: 600,
+  };
   return { state: s, pen };
 }
 

@@ -5,7 +5,9 @@ export type BuildingType =
   | "windmill"
   | "irrigation_ditch"
   | "road"
-  | "fence";
+  | "fence"
+  | "water_trough"
+  | "feed_trough";
 
 export interface BuildingDefinition {
   type: BuildingType;
@@ -74,5 +76,17 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     name: "Fence",
     cost: 15,
     description: "Pen wall — enclose livestock. Wears down over time; repair to keep it sound",
+  },
+  water_trough: {
+    type: "water_trough",
+    name: "Water Trough",
+    cost: 120,
+    description: "Place in a pen. Must be near water or a pump. Lifts breeding chance for the herd",
+  },
+  feed_trough: {
+    type: "feed_trough",
+    name: "Feed Trough",
+    cost: 90,
+    description: "Place in a pen — animals eat from it efficiently, cutting feed use by ~25%",
   },
 };
