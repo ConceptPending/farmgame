@@ -7,6 +7,7 @@ export type ToolId =
   | "harvest"
   | "bulldoze"
   | "build"
+  | "place_animal"
   | "spray";
 
 export interface ToolDefinition {
@@ -55,6 +56,11 @@ export const TOOL_CATALOG: Record<ToolId, ToolDefinition> = {
     id: "build",
     name: "Build",
     description: "Construct buildings on owned land",
+  },
+  place_animal: {
+    id: "place_animal",
+    name: "Livestock",
+    description: "Place animals on open owned land — pen them in with fences",
   },
   spray: {
     id: "spray",

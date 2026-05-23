@@ -4,6 +4,8 @@ import { useUIStore } from "../../stores/ui-store";
 import {
   CROP_CATALOG,
   BUILDING_CATALOG,
+  ANIMAL_CATALOG,
+  ALL_ANIMAL_TYPES,
   type CropId,
   type BuildingType,
   type ToolId,
@@ -18,6 +20,7 @@ const TOOLS: { id: ToolId; label: string; icon: string }[] = [
   { id: "plant", label: "Plant", icon: "🌱" },
   { id: "harvest", label: "Harvest", icon: "🫘" },
   { id: "build", label: "Build", icon: "🏗️" },
+  { id: "place_animal", label: "Animals", icon: "🐄" },
   { id: "spray", label: "Spray", icon: "💧" },
   { id: "bulldoze", label: "Remove", icon: "🗑️" },
 ];
@@ -29,7 +32,8 @@ const TOOL_HINTS: Record<ToolId, string> = {
   plow: "Click a field to plow",
   plant: "Click a plowed field",
   harvest: "Click a ready field",
-  build: "Click to place",
+  build: "Click, or drag fences",
+  place_animal: "Click pen to place",
   spray: "Click a field to spray",
   bulldoze: "Click to remove",
 };
@@ -68,6 +72,8 @@ export function ToolPalette() {
   const setSelectedCrop = useUIStore((s) => s.setSelectedCrop);
   const selectedBuildingType = useUIStore((s) => s.selectedBuildingType);
   const setSelectedBuildingType = useUIStore((s) => s.setSelectedBuildingType);
+  const selectedAnimalType = useUIStore((s) => s.selectedAnimalType);
+  const setSelectedAnimalType = useUIStore((s) => s.setSelectedAnimalType);
   const selectedSprayType = useUIStore((s) => s.selectedSprayType);
   const setSelectedSprayType = useUIStore((s) => s.setSelectedSprayType);
 
@@ -156,6 +162,31 @@ export function ToolPalette() {
             >
               {BUILDING_CATALOG[type].name}
               <span style={{ color: "#888" }}> ${BUILDING_CATALOG[type].cost}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedTool === "place_animal" && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            marginTop: 8,
+            borderTop: "1px solid #333",
+            paddingTop: 6,
+          }}
+        >
+          <div style={{ fontSize: 9, color: "#888", textAlign: "center" }}>ANIMAL</div>
+          {ALL_ANIMAL_TYPES.map((type) => (
+            <button
+              key={type}
+              onClick={() => setSelectedAnimalType(type)}
+              style={subButtonStyle(selectedAnimalType === type)}
+            >
+              {ANIMAL_CATALOG[type].name}
+              <span style={{ color: "#888" }}> ${ANIMAL_CATALOG[type].cost}</span>
             </button>
           ))}
         </div>

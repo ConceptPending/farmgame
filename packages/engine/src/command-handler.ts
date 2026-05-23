@@ -14,7 +14,7 @@ import {
 } from "./systems/soil.js";
 import type { AnimalType } from "./entities/animal.js";
 import { ANIMAL_CATALOG, createAnimal, animalValue } from "./entities/animal.js";
-import { computeLivestockCapacity } from "./systems/livestock.js";
+import { pennedTiles } from "./systems/pen.js";
 import { rivalOwning } from "./entities/rival.js";
 import type { EquipmentType } from "./entities/equipment.js";
 import {
@@ -322,6 +322,26 @@ function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: numb
 
   const tile = state.world.tiles[tileIdx];
   if (!tile.owned) return fail(state, "Must build on owned land");
+
+  // Re-applying the fence tool to an existing fence repairs it in place.
+  if (buildingType === "fence" && tile.buildingId !== null) {
+    const existing = state.buildings.find((b) => b.id === tile.buildingId);
+    if (existing?.type === "fence") {
+      if (existing.condition >= 1) return fail(state, "This fence is already in good repair.");
+      const repairCost = Math.max(1, Math.round(BUILDING_CATALOG.fence.cost * (1 - existing.condition)));
+      if (state.money < repairCost) return fail(state, `Repair costs $${repairCost}.`);
+      return {
+        state: {
+          ...state,
+          money: state.money - repairCost,
+          buildings: state.buildings.map((b) => (b.id === existing.id ? { ...b, condition: 1 } : b)),
+        },
+        success: true,
+        notifications: [{ type: "success", message: `Repaired a fence for $${repairCost}` }],
+      };
+    }
+  }
+
   if (tile.buildingId !== null) return fail(state, "Tile already has a building");
   if (tile.fieldId !== null) return fail(state, "Cannot build on a field tile");
   if (tile.terrain === "water") return fail(state, "Cannot build on water");
@@ -516,17 +536,52 @@ function handleSell(state: GameState, goodId: string, quantity: number): Command
   };
 }
 
-function handleBuyAnimal(state: GameState, animalType: AnimalType): CommandResult {
+/** Open owned ground an animal can stand on (no water, field, or building). */
+function isGrazeable(state: GameState, idx: number): boolean {
+  if (idx < 0 || idx >= state.world.tiles.length) return false;
+  const t = state.world.tiles[idx];
+  return t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null;
+}
+
+function handleBuyAnimal(state: GameState, animalType: AnimalType, tileIndex?: number): CommandResult {
   const def = ANIMAL_CATALOG[animalType];
-  const capacity = computeLivestockCapacity(state);
-  if (capacity === 0) return fail(state, "Build a barn to house livestock first");
-  if (state.animals.length >= capacity) {
-    return fail(state, "No barn space. Build another barn.");
-  }
   if (state.money < def.cost) {
     return fail(state, `Not enough money. Need $${def.cost}, have $${state.money}`);
   }
-  const animal = createAnimal(state.nextAnimalId, animalType);
+
+  // Resolve placement: an explicit tile (from the place tool) must be valid;
+  // otherwise auto-place — preferring a penned spot — for one-click buying.
+  let placeAt: number;
+  let penned = false;
+  if (tileIndex !== undefined) {
+    if (!isGrazeable(state, tileIndex)) {
+      return fail(state, "Place livestock on open owned ground (not water, fields, or buildings).");
+    }
+    placeAt = tileIndex;
+    penned = pennedTiles(state).has(tileIndex);
+  } else {
+    const pens = pennedTiles(state);
+    const pennedSpot = [...pens].find((i) => isGrazeable(state, i));
+    if (pennedSpot !== undefined) {
+      placeAt = pennedSpot;
+      penned = true;
+    } else {
+      const open = state.world.tiles.findIndex((_, i) => isGrazeable(state, i));
+      if (open < 0) return fail(state, "No open owned land to place livestock. Buy land first.");
+      placeAt = open;
+    }
+  }
+
+  const animal = createAnimal(state.nextAnimalId, animalType, placeAt);
+  const notifications: Notification[] = [
+    { type: "success", message: `Bought a ${def.name.toLowerCase()} for $${def.cost}` },
+  ];
+  if (!penned) {
+    notifications.push({
+      type: "warning",
+      message: "Not inside a fenced pen — it may wander off. Build fences to pen it in.",
+    });
+  }
   return {
     state: {
       ...state,
@@ -535,7 +590,26 @@ function handleBuyAnimal(state: GameState, animalType: AnimalType): CommandResul
       nextAnimalId: state.nextAnimalId + 1,
     },
     success: true,
-    notifications: [{ type: "success", message: `Bought a ${def.name.toLowerCase()} for $${def.cost}` }],
+    notifications,
+  };
+}
+
+function handleRepairFences(state: GameState): CommandResult {
+  const fenceCost = BUILDING_CATALOG.fence.cost;
+  let cost = 0;
+  const repaired = state.buildings.map((b) => {
+    if (b.type === "fence" && b.condition < 1) {
+      cost += Math.max(1, Math.round(fenceCost * (1 - b.condition)));
+      return { ...b, condition: 1 };
+    }
+    return b;
+  });
+  if (cost === 0) return fail(state, "Your pens are in good repair.");
+  if (state.money < cost) return fail(state, `Repairs cost $${cost}, but you have $${state.money}.`);
+  return {
+    state: { ...state, money: state.money - cost, buildings: repaired },
+    success: true,
+    notifications: [{ type: "success", message: `Repaired pen fences for $${cost}` }],
   };
 }
 
@@ -646,9 +720,11 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
     case "SELL":
       return handleSell(state, command.cropId, command.quantity);
     case "BUY_ANIMAL":
-      return handleBuyAnimal(state, command.animalType);
+      return handleBuyAnimal(state, command.animalType, command.tileIndex);
     case "SELL_ANIMAL":
       return handleSellAnimal(state, command.animalId);
+    case "REPAIR_FENCES":
+      return handleRepairFences(state);
     case "BUY_EQUIPMENT":
       return handleBuyEquipment(state, command.equipmentType);
     case "SELL_EQUIPMENT":

@@ -44,32 +44,26 @@ export class AnimalLayer {
   }
 
   update(state: GameState): void {
-    const barns = state.buildings.filter((b) => b.type === "barn");
     let idx = 0;
+    for (const a of state.animals) {
+      const { x: tx, y: ty } = tileCoords(a.tileIndex, state.world.width);
+      const h = hashId(a.id);
+      // A stable sub-tile offset so several animals sharing a tile don't stack.
+      const ox = ((h % 1000) / 1000 - 0.5) * TILE_SIZE * 0.55;
+      const oy = (((h >>> 10) % 1000) / 1000 - 0.5) * TILE_SIZE * 0.45;
+      const cx = (tx + 0.5) * TILE_SIZE + ox;
+      const cy = (ty + 0.6) * TILE_SIZE + oy;
 
-    if (barns.length > 0) {
-      for (const a of state.animals) {
-        const barn = barns[idx % barns.length];
-        const { x: bx, y: by } = tileCoords(barn.tileIndex, state.world.width);
-        const h = hashId(a.id);
-
-        // Scatter within a small radius around (and mostly in front of) the barn.
-        const angle = (h % 628) / 100; // 0..2π
-        const radius = (0.7 + ((h >>> 9) % 100) / 100 * 1.5) * TILE_SIZE;
-        const cx = (bx + 0.5) * TILE_SIZE + Math.cos(angle) * radius;
-        const cy = (by + 1.1) * TILE_SIZE + Math.sin(angle) * radius * 0.7;
-
-        const size = BASE_SIZE[a.type] * (0.55 + 0.45 * a.maturity);
-        const sprite = this.getOrCreate(idx);
-        sprite.texture = getTileTexture(SPRITE_KEY[a.type]);
-        sprite.width = size;
-        sprite.height = size;
-        sprite.x = cx - size / 2;
-        sprite.y = cy - size * 0.8; // anchor feet near the ground point
-        sprite.visible = true;
-        sprite.tint = a.health < 0.5 ? 0xc98a8a : 0xffffff;
-        idx++;
-      }
+      const size = BASE_SIZE[a.type] * (0.55 + 0.45 * a.maturity);
+      const sprite = this.getOrCreate(idx);
+      sprite.texture = getTileTexture(SPRITE_KEY[a.type]);
+      sprite.width = size;
+      sprite.height = size;
+      sprite.x = cx - size / 2;
+      sprite.y = cy - size * 0.8; // anchor feet near the ground point
+      sprite.visible = true;
+      sprite.tint = a.health < 0.5 ? 0xc98a8a : 0xffffff;
+      idx++;
     }
 
     for (let i = idx; i < this.activeCount; i++) {

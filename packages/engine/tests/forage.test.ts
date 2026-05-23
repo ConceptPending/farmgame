@@ -3,11 +3,11 @@ import {
   createGameState,
   applyCommand,
   nextTick,
-  createBuilding,
   DAYS_PER_SEASON,
   ANIMAL_CATALOG,
 } from "../src/index.js";
 import type { GameState, SoilNutrients } from "../src/index.js";
+import { withPenned } from "./helpers.js";
 
 function dirtTiles(state: GameState, n: number): number[] {
   const out: number[] = [];
@@ -31,13 +31,6 @@ function plowedField(nutrients: SoilNutrients) {
   return { s, fieldId, idx };
 }
 
-function withBarnAndAnimals(count: number) {
-  let s = createGameState({ seed: 1, startingMoney: 1_000_000, goal: { type: "sandbox" } });
-  s = { ...s, buildings: [createBuilding(1, "barn", 0)] };
-  for (let i = 0; i < count; i++) s = applyCommand(s, { type: "BUY_ANIMAL", animalType: "chicken" }).state;
-  return s;
-}
-
 describe("clover (forage cover crop)", () => {
   it("fixes a large amount of nitrogen when harvested", () => {
     const { s, fieldId, idx } = plowedField({ n: 0.3, p: 0.9, k: 0.9 });
@@ -48,7 +41,7 @@ describe("clover (forage cover crop)", () => {
   });
 
   it("can be fed to animals like grain", () => {
-    let s = withBarnAndAnimals(2);
+    let s = withPenned("chicken", 2);
     s = { ...s, inventory: { clover: 100 }, day: DAYS_PER_SEASON };
     const after = nextTick(s).state;
     expect(after.inventory.clover).toBe(100 - 2 * ANIMAL_CATALOG.chicken.feedPerSeason);
@@ -58,7 +51,7 @@ describe("clover (forage cover crop)", () => {
 
 describe("manure", () => {
   it("is produced by the herd each season (scaled by health)", () => {
-    let s = withBarnAndAnimals(3);
+    let s = withPenned("chicken", 3);
     s = { ...s, inventory: { wheat: 100 }, day: DAYS_PER_SEASON }; // fed -> full health
     const after = nextTick(s).state;
     expect(after.manure).toBe(3 * ANIMAL_CATALOG.chicken.manurePerSeason);
