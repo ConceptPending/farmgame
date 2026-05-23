@@ -4,6 +4,7 @@ import { TerrainLayer } from "./layers/terrain.js";
 import { CropLayer } from "./layers/crop.js";
 import { BuildingLayer } from "./layers/building.js";
 import { AnimalLayer } from "./layers/animal.js";
+import { SeasonOverlay } from "./layers/season-overlay.js";
 import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
 import { Camera } from "./camera.js";
@@ -23,6 +24,7 @@ export class GameRenderer {
   private cropLayer: CropLayer;
   private buildingLayer: BuildingLayer;
   private animalLayer: AnimalLayer;
+  private seasonOverlay: SeasonOverlay;
   private gridOverlay: GridOverlay;
   private weatherEffects: WeatherEffects;
   private camera: Camera;
@@ -44,6 +46,7 @@ export class GameRenderer {
     this.cropLayer = new CropLayer();
     this.buildingLayer = new BuildingLayer();
     this.animalLayer = new AnimalLayer();
+    this.seasonOverlay = new SeasonOverlay();
     this.gridOverlay = new GridOverlay();
     this.weatherEffects = new WeatherEffects();
     this.camera = new Camera();
@@ -66,6 +69,9 @@ export class GameRenderer {
 
     this.app.stage.addChild(this.world);
     this.world.addChild(this.terrainLayer.container);
+    // Season overlay sits just above the terrain so its dusting/flowers/etc.
+    // appear on the ground but below any crops, buildings, or animals.
+    this.world.addChild(this.seasonOverlay.container);
     this.world.addChild(this.cropLayer.container);
     this.world.addChild(this.buildingLayer.container);
     this.world.addChild(this.animalLayer.container);
@@ -155,6 +161,7 @@ export class GameRenderer {
     if (state.season !== this.lastSeason) {
       this.lastSeason = state.season;
       this.drawAmbient(state.season);
+      this.seasonOverlay.setSeason(state.season, state.world.width, state.world.height);
     }
   }
 
