@@ -12,7 +12,6 @@ const BUILDING_SPRITE_MAP: Record<BuildingType, SpriteKey> = {
   water_pump: "water_pump",
   windmill: "windmill",
   irrigation_ditch: "irrigation",
-  road: "road",
   fence: "fence",
   water_trough: "water_trough",
   feed_trough: "feed_trough",

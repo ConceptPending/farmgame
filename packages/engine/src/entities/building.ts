@@ -4,7 +4,6 @@ export type BuildingType =
   | "water_pump"
   | "windmill"
   | "irrigation_ditch"
-  | "road"
   | "fence"
   | "water_trough"
   | "feed_trough";
@@ -64,12 +63,6 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     name: "Irrigation Ditch",
     cost: 100,
     description: "Propagates moisture from water pumps along its path",
-  },
-  road: {
-    type: "road",
-    name: "Road",
-    cost: 25,
-    description: "Adjacent fields cost 1 less labor per heavy/light action (min 1).",
   },
   fence: {
     type: "fence",

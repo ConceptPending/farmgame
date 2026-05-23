@@ -22,7 +22,6 @@ export {
   type CreateGameOptions,
 } from "./state.js";
 export { laborCost, canAfford, minLaborCost } from "./entities/labor.js";
-export { isFieldRoadConnected } from "./entities/road.js";
 
 // Causal feedback layer — structured records of why things happened.
 export type { Cause, CauseCategory } from "./entities/cause.js";

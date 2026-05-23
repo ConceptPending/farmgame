@@ -19,9 +19,13 @@
 
 import type { GameState } from "@farmgame/engine";
 
-/** Bumped from 1 to 2 when the engine pivoted to monthly turns (PR L).
- *  v1 saves used per-day timing and `growthTicks`; they cannot be loaded. */
-export const SAVE_VERSION = 2;
+/** Save schema versions:
+ *  - v1: original per-day timing model.
+ *  - v2 (PR L): monthly turns; `growthTicks` → `growthMonths`. v1 orphaned.
+ *  - v3 (PR O): "road" removed from BuildingType. Old saves with road
+ *    buildings would carry dead entries the renderer doesn't know to skip;
+ *    bumping orphans them cleanly. */
+export const SAVE_VERSION = 3;
 
 const STORAGE_PREFIX = "farmgame.save.";
 
