@@ -2,12 +2,14 @@ import { create } from "zustand";
 import {
   createGameState,
   applyCommand,
+  takeSnapshot,
   type GameState,
   type GameCommand,
   type Notification,
   type Season,
   type CreateGameOptions,
   type Cause,
+  type TurnSnapshot,
 } from "@farmgame/engine";
 import { playSound } from "../lib/sounds";
 
@@ -39,6 +41,9 @@ interface GameStore {
   /** Causes from the most recent End Turn — drives the TurnSummaryPanel.
    *  Cleared when the panel is dismissed. Empty between turns. */
   lastTurnCauses: Cause[];
+  /** Per-turn telemetry snapshots — drives the Debug panel's run trace.
+   *  Reset on new game / load; appended after every END_TURN. */
+  turnSnapshots: TurnSnapshot[];
   /** Config of the current/most-recent game, for "Play Again". */
   lastConfig: CreateGameOptions | null;
 
@@ -235,19 +240,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextNotificationId: 1,
   fxEvents: [],
   lastTurnCauses: [],
+  turnSnapshots: [],
   lastConfig: null,
 
   startGame: (config: CreateGameOptions) => {
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [], lastConfig: config });
   },
 
   loadGameState: (state: GameState) => {
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [] });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [] });
   },
 
   returnToMenu: () => {
-    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [] });
+    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [] });
   },
 
   dispatch: (command: GameCommand) => {
@@ -272,6 +278,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ? result.causes
           : [...get().lastTurnCauses, ...result.causes];
         set({ lastTurnCauses: next });
+      }
+      // Telemetry snapshot after each END_TURN — feeds the Debug panel's
+      // per-turn trace. Stored unconditionally; cost is one struct per turn.
+      if (command.type === "END_TURN") {
+        const snap = takeSnapshot(result.state, result.causes ?? []);
+        set({ turnSnapshots: [...get().turnSnapshots, snap] });
       }
     } else {
       pushStamped(get, set, [{ type: "error", message: result.error ?? "Command failed" }]);

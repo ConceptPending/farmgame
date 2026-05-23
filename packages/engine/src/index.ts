@@ -27,6 +27,12 @@ export { laborCost, canAfford, minLaborCost } from "./entities/labor.js";
 export type { Cause, CauseCategory } from "./entities/cause.js";
 export { causeCategory, causePriority, causeCopy } from "./entities/cause.js";
 
+// Telemetry + headless simulator (dev/balance tooling).
+export type { TurnSnapshot, RunReport, RunReportInput } from "./telemetry.js";
+export { takeSnapshot, aggregateRun } from "./telemetry.js";
+export type { Policy, SimulateOptions, BatchReport, BatchOptions } from "./sim-harness.js";
+export { simulateGame, simulateBatch, greedyWheatPolicy } from "./sim-harness.js";
+
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
 
