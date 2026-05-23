@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { PanelModal } from "./PanelModal";
@@ -203,6 +204,10 @@ export function LivestockPanel() {
           {herd.map((a) => {
             const def = ANIMAL_CATALOG[a.type];
             const value = animalValue(a);
+            const productName = def.product ? PRODUCT_CATALOG[def.product].name.toLowerCase() : null;
+            const lifetimeNote = productName && a.lifetime.products > 0
+              ? ` · ${a.lifetime.products} ${productName}`
+              : "";
             return (
               <div
                 key={a.id}
@@ -212,12 +217,13 @@ export function LivestockPanel() {
                   justifyContent: "space-between",
                   borderBottom: "1px solid #222",
                   padding: "3px 0",
+                  gap: 6,
                 }}
               >
-                <span style={{ color: "#ccc" }}>
-                  {def.name} #{a.id}
+                <span style={{ color: "#ccc", minWidth: 0, flex: 1 }}>
+                  <RenameableName id={a.id} name={a.name} onRename={(name) => dispatch({ type: "RENAME_ANIMAL", animalId: a.id, name })} />
                   <span style={{ color: "#888" }}>
-                    {" "}· {Math.round(a.maturity * 100)}% grown · health {Math.round(a.health * 100)}%
+                    {" "}· {def.name.toLowerCase()} · {Math.round(a.health * 100)}% hp{lifetimeNote}
                   </span>
                 </span>
                 <button
@@ -230,6 +236,7 @@ export function LivestockPanel() {
                     background: "#1a4040",
                     color: "#4ecca3",
                     cursor: "pointer",
+                    flexShrink: 0,
                   }}
                 >
                   Sell ${value}
@@ -240,5 +247,63 @@ export function LivestockPanel() {
         </div>
       )}
     </PanelModal>
+  );
+}
+
+/** Animal name that becomes editable on click. Commits on Enter or blur, cancels on Escape. */
+function RenameableName({ id, name, onRename }: { id: number; name: string; onRename: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  // Reset the draft if the canonical name changes from elsewhere.
+  useEffect(() => setDraft(name), [name, id]);
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        title="Click to rename"
+        style={{
+          background: "none",
+          border: "none",
+          color: "#4ecca3",
+          cursor: "text",
+          padding: 0,
+          fontSize: 12,
+          fontWeight: 600,
+        }}
+      >
+        {name}
+      </button>
+    );
+  }
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed.length > 0 && trimmed !== name) onRename(trimmed);
+    setEditing(false);
+  };
+  return (
+    <input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        else if (e.key === "Escape") {
+          setDraft(name);
+          setEditing(false);
+        }
+      }}
+      maxLength={24}
+      style={{
+        width: 110,
+        padding: "1px 4px",
+        fontSize: 12,
+        fontWeight: 600,
+        background: "#0a1628",
+        border: "1px solid #4ecca3",
+        borderRadius: 3,
+        color: "#4ecca3",
+      }}
+    />
   );
 }

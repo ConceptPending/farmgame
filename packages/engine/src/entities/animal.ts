@@ -23,6 +23,15 @@ export interface AnimalDefinition {
   manurePerSeason: number;
 }
 
+export interface AnimalLifetime {
+  /** Total product (eggs/milk/wool) produced over the animal's life. */
+  products: number;
+  /** Total manure attributed to this animal. */
+  manure: number;
+  /** Days the animal has been alive. */
+  daysAlive: number;
+}
+
 export interface Animal {
   id: number;
   type: AnimalType;
@@ -30,6 +39,8 @@ export interface Animal {
   maturity: number; // 0..1 toward fully grown
   health: number; // 0..1, falls when underfed
   tileIndex: number; // the tile the animal currently occupies / grazes on
+  name: string;
+  lifetime: AnimalLifetime;
 }
 
 export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
@@ -83,8 +94,31 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
 
 export const ALL_ANIMAL_TYPES = Object.keys(ANIMAL_CATALOG) as AnimalType[];
 
+/** Per-type name pool — deterministic by id so a herd keeps the same names. */
+const ANIMAL_NAMES: Record<AnimalType, readonly string[]> = {
+  cow: ["Bessie", "Daisy", "Bossy", "Buttercup", "Clover", "Brownie", "Pepper", "Patches", "Belle", "Moo", "Hazel", "Maggie"],
+  pig: ["Wilbur", "Babe", "Hamlet", "Truffle", "Porky", "Rosie", "Petunia", "Snort", "Oinky", "Curly", "Squeaky", "Pickles"],
+  sheep: ["Wooly", "Lambchop", "Cotton", "Cloud", "Snowy", "Fluffy", "Curly", "Baa", "Marshmallow", "Nimbus", "Pebbles", "Mochi"],
+  chicken: ["Henrietta", "Cluck", "Foghorn", "Pecky", "Drumstick", "Yolko", "Coco", "Nugget", "Goldie", "Plucky", "Biscuit", "Roxy"],
+};
+
+/** Pick a name for `type` deterministically from `id`. */
+export function pickAnimalName(type: AnimalType, id: number): string {
+  const pool = ANIMAL_NAMES[type];
+  return pool[Math.abs(id) % pool.length];
+}
+
 export function createAnimal(id: number, type: AnimalType, tileIndex: number): Animal {
-  return { id, type, age: 0, maturity: 0, health: 1, tileIndex };
+  return {
+    id,
+    type,
+    age: 0,
+    maturity: 0,
+    health: 1,
+    tileIndex,
+    name: pickAnimalName(type, id),
+    lifetime: { products: 0, manure: 0, daysAlive: 0 },
+  };
 }
 
 /** Current resale / asset value of an animal (scales with maturity and health). */

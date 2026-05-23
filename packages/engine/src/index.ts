@@ -100,8 +100,8 @@ export { createMarketState } from "./entities/market.js";
 export type { ToolId, ToolDefinition } from "./entities/tools.js";
 export { TOOL_CATALOG } from "./entities/tools.js";
 
-export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
-export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, animalValue, createAnimal } from "./entities/animal.js";
+export type { AnimalType, AnimalDefinition, Animal, AnimalLifetime } from "./entities/animal.js";
+export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, animalValue, createAnimal, pickAnimalName } from "./entities/animal.js";
 export {
   pennedTiles,
   findPen,

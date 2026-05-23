@@ -1,6 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { Animal } from "../entities/animal.js";
-import { ANIMAL_CATALOG } from "../entities/animal.js";
+import { ANIMAL_CATALOG, createAnimal } from "../entities/animal.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG } from "../data/products.js";
 import { nextBool } from "../rng.js";
@@ -39,10 +39,15 @@ export function livestockSystem(state: GameState): {
   const notifications: Notification[] = [];
   let rng = state.rng;
 
-  // Per-tick growth.
+  // Per-tick growth + lifetime counters.
   let animals: Animal[] = state.animals.map((a) => {
     const def = ANIMAL_CATALOG[a.type];
-    return { ...a, age: a.age + 1, maturity: Math.min(1, a.maturity + 1 / def.growthTicks) };
+    return {
+      ...a,
+      age: a.age + 1,
+      maturity: Math.min(1, a.maturity + 1 / def.growthTicks),
+      lifetime: { ...a.lifetime, daysAlive: a.lifetime.daysAlive + 1 },
+    };
   });
 
   let inventory = state.inventory;
@@ -118,20 +123,42 @@ export function livestockSystem(state: GameState): {
       });
     }
 
-    // Manure: every animal contributes (bigger animals more), scaled by health.
-    manure += Math.round(animals.reduce((sum, a) => sum + ANIMAL_CATALOG[a.type].manurePerSeason * a.health, 0));
+    // Manure: per-animal contribution (bigger animals more), credit each to its lifetime tally.
+    const manureByAnimal = new Map<number, number>();
+    let manureTotal = 0;
+    for (const a of animals) {
+      const m = ANIMAL_CATALOG[a.type].manurePerSeason * a.health;
+      manureByAnimal.set(a.id, m);
+      manureTotal += m;
+    }
+    manure += Math.round(manureTotal);
+    animals = animals.map((a) => ({
+      ...a,
+      lifetime: { ...a.lifetime, manure: a.lifetime.manure + (manureByAnimal.get(a.id) ?? 0) },
+    }));
 
     // Products: mature, well-fed animals yield eggs/milk/wool into inventory.
     // Crowded pens cut yield; cozy pens nudge it up.
     if (fedRatio >= 1) {
       const produced: Record<string, number> = {};
+      const yieldByAnimal = new Map<number, number>();
       for (const a of animals) {
         const def = ANIMAL_CATALOG[a.type];
         if (def.product && def.yieldPerSeason && a.maturity >= 1 && a.health > 0) {
           const mult = comfort.get(a.id)?.productMult ?? 1;
           const amt = Math.round(def.yieldPerSeason * a.health * mult);
-          if (amt > 0) produced[def.product] = (produced[def.product] ?? 0) + amt;
+          if (amt > 0) {
+            produced[def.product] = (produced[def.product] ?? 0) + amt;
+            yieldByAnimal.set(a.id, amt);
+          }
         }
+      }
+      if (yieldByAnimal.size > 0) {
+        animals = animals.map((a) =>
+          yieldByAnimal.has(a.id)
+            ? { ...a, lifetime: { ...a.lifetime, products: a.lifetime.products + yieldByAnimal.get(a.id)! } }
+            : a,
+        );
       }
       const totalProduced = Object.values(produced).reduce((s, n) => s + n, 0);
       if (totalProduced > 0) {
@@ -172,8 +199,9 @@ export function livestockSystem(state: GameState): {
           const roll = nextBool(rng, chance);
           rng = roll.rng;
           if (roll.value) {
-            babies.push({ id: nextAnimalId++, type: a.type, age: 0, maturity: 0, health: 1, tileIndex: a.tileIndex });
-            notifications.push({ type: "success", message: `A ${def.name.toLowerCase()} was born!` });
+            const calf = createAnimal(nextAnimalId++, a.type, a.tileIndex);
+            babies.push(calf);
+            notifications.push({ type: "success", message: `${calf.name} the ${def.name.toLowerCase()} was born!` });
           }
         }
       }
