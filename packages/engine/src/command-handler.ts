@@ -22,12 +22,16 @@ import {
 } from "./entities/equipment.js";
 import { laborCost } from "./entities/labor.js";
 import { nextTurn } from "./tick.js";
+import type { Cause } from "./entities/cause.js";
 
 export interface CommandResult {
   state: GameState;
   success: boolean;
   error?: string;
   notifications: Notification[];
+  /** Structured cause records for this command — read by the UI's turn
+   *  summary + field inspector breadcrumbs. Optional for backward compat. */
+  causes?: Cause[];
 }
 
 function fail(state: GameState, error: string): CommandResult {
@@ -261,14 +265,35 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
     newTiles[idx] = { ...newTiles[idx], nutrients: applyConsumption(newTiles[idx].nutrients, def.consumes) };
   }
 
+  // Yield-loss breakdown the causal layer attaches to the harvest cause —
+  // each fraction is what the *unmodified* baseline lost to that factor.
+  const baseQuantity = Math.round(def.baseYield * field.tileIndices.length);
+  const limNutrient = soilMod < 0.95 ? limitingNutrient(avg, def.needs) : null;
+  const reductions = {
+    health: 1 - healthMod,
+    weeds: 1 - weedMod,
+    nutrients: 1 - soilMod,
+  };
+
+  const causes: Cause[] = [
+    {
+      kind: "harvest_complete",
+      fieldId,
+      cropId: field.cropId,
+      quantity,
+      baseQuantity,
+      reductions,
+      limitingNutrient: limNutrient,
+    },
+  ];
+
   const notifications: Notification[] = [
     { type: "success", message: `Harvested ${quantity} ${def.name} from field #${fieldId}` },
   ];
-  if (soilMod < 0.7) {
-    const lim = limitingNutrient(avg, def.needs);
+  if (soilMod < 0.7 && limNutrient) {
     notifications.push({
       type: "warning",
-      message: `Field #${fieldId}'s ${nutrientName(lim)} is running low — rotate crops or fertilize.`,
+      message: `Field #${fieldId}'s ${nutrientName(limNutrient)} is running low — rotate crops or fertilize.`,
     });
   }
 
@@ -294,6 +319,7 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
     },
     success: true,
     notifications,
+    causes,
   };
 }
 
@@ -740,7 +766,12 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
   // the month and refreshes labor for the next one.
   if (command.type === "END_TURN") {
     const result = nextTurn(state);
-    return { state: result.state, success: true, notifications: result.notifications };
+    return {
+      state: result.state,
+      success: true,
+      notifications: result.notifications,
+      causes: result.causes,
+    };
   }
 
   // Labor gate — every other command is rejected up front when the cost would

@@ -1,12 +1,15 @@
 import type { Field } from "../entities/field.js";
+import type { Cause } from "../entities/cause.js";
 import { getCropDef } from "../data/crops.js";
 import type { GameState, Notification } from "../state.js";
 
 export function cropSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   const { weather } = state;
 
   const fields = state.fields.map((field): Field => {
@@ -30,14 +33,40 @@ export function cropSystem(state: GameState): {
             type: "warning",
             message: `${def.name} in field #${field.id} killed by frost!`,
           });
+          causes.push({ kind: "frost_kill", fieldId: field.id, cropId: field.cropId });
           return { ...field, state: "dead", health: 0 };
         }
         notifications.push({
           type: "warning",
           message: `${def.name} in field #${field.id} damaged by frost!`,
         });
+        causes.push({
+          kind: "frost_damage",
+          fieldId: field.id,
+          cropId: field.cropId,
+          healthLost: damage,
+        });
         return { ...field, health: newHealth };
       }
+    }
+
+    // Temperature stress / drought stress (informational, even when growing).
+    if (weather.temperature > def.idealTempMax + 5) {
+      causes.push({
+        kind: "heat_stress",
+        fieldId: field.id,
+        cropId: field.cropId,
+        tempDegF: weather.temperature,
+      });
+    }
+    if (field.moisture < def.waterNeed * 0.5) {
+      causes.push({
+        kind: "drought_stress",
+        fieldId: field.id,
+        cropId: field.cropId,
+        moisture: field.moisture,
+        need: def.waterNeed,
+      });
     }
 
     // Growth rate modifiers
@@ -65,17 +94,11 @@ export function cropSystem(state: GameState): {
     // Health modifier
     growthRate *= Math.max(0.3, field.health);
 
-    // Dead field check
-    if (field.health < 0.2) {
-      notifications.push({
-        type: "warning",
-        message: `${def.name} in field #${field.id} has died from poor health!`,
-      });
-      return { ...field, state: "dead", health: 0 };
-    }
-
-    // One turn = one month. Crop grows by 1/growthMonths of the bar per turn,
-    // modulated by health/temperature/moisture.
+    // Compute growth *first* so a crop reaching maturity this turn is allowed
+    // to harvest even if its health is low — the yield formula already
+    // discounts by health, which is the intended punishment for letting it
+    // get sick. (Pre-fix, the death check ran first and could cheat the
+    // player out of a crop on the very turn it would have hit "ready".)
     const newGrowthMonths = field.growthMonths + 1;
     const baseProgress = 1 / def.growthMonths;
     const newGrowth = Math.min(1, field.growth + baseProgress * growthRate);
@@ -85,12 +108,24 @@ export function cropSystem(state: GameState): {
         type: "success",
         message: `${def.name} in field #${field.id} is ready to harvest!`,
       });
+      causes.push({ kind: "ready_to_harvest", fieldId: field.id, cropId: field.cropId });
       return {
         ...field,
         state: "ready",
         growth: 1,
         growthMonths: newGrowthMonths,
       };
+    }
+
+    // Still growing — *now* check whether the field is too damaged to
+    // continue. Death is permanent so the threshold is conservative.
+    if (field.health < 0.2) {
+      notifications.push({
+        type: "warning",
+        message: `${def.name} in field #${field.id} has died from poor health!`,
+      });
+      causes.push({ kind: "crop_died_health", fieldId: field.id, cropId: field.cropId });
+      return { ...field, state: "dead", health: 0 };
     }
 
     return {
@@ -104,5 +139,6 @@ export function cropSystem(state: GameState): {
   return {
     state: { ...state, fields },
     notifications,
+    causes,
   };
 }

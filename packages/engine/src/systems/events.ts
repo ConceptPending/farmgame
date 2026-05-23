@@ -1,5 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { Field } from "../entities/field.js";
+import type { Cause } from "../entities/cause.js";
 import { getCropDef } from "../data/crops.js";
 import { nextBool, nextFloat, nextInt } from "../rng.js";
 
@@ -19,13 +20,14 @@ function cropName(field: Field): string {
 export function eventSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   let rng = state.rng;
 
   const trigger = nextBool(rng, EVENT_CHANCE);
   rng = trigger.rng;
   if (!trigger.value) {
-    return { state: { ...state, rng }, notifications: [] };
+    return { state: { ...state, rng }, notifications: [], causes: [] };
   }
 
   const pick = nextFloat(rng);
@@ -38,6 +40,7 @@ export function eventSystem(state: GameState): {
   });
 
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   let fields = state.fields;
   let money = state.money;
 
@@ -57,6 +60,7 @@ export function eventSystem(state: GameState): {
       type: "warning",
       message: "Locust swarm! Pests are surging across your fields.",
     });
+    causes.push({ kind: "event_locust" });
   } else if (roll < 0.35 && activeFieldIdx.length > 0) {
     // Hailstorm — wipes out one random field's crop.
     const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)];
@@ -68,6 +72,7 @@ export function eventSystem(state: GameState): {
       type: "error",
       message: `Hailstorm destroyed the ${cropName(hit)} in field #${hit.id}!`,
     });
+    if (hit.cropId) causes.push({ kind: "event_hail", fieldId: hit.id, cropId: hit.cropId });
   } else if (roll < 0.45 && activeFieldIdx.length > 0) {
     // Crop blight — health hit across active fields.
     fields = state.fields.map((f) =>
@@ -77,6 +82,7 @@ export function eventSystem(state: GameState): {
       type: "warning",
       message: "Blight is spreading — crop health is falling.",
     });
+    causes.push({ kind: "event_blight" });
   } else if (roll < 0.65 && activeFieldIdx.length > 0) {
     // Bumper conditions — one growing field thrives.
     const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)];
@@ -90,6 +96,7 @@ export function eventSystem(state: GameState): {
       type: "success",
       message: `Perfect conditions gave the ${cropName(hit)} in field #${hit.id} a bumper boost!`,
     });
+    if (hit.cropId) causes.push({ kind: "event_bumper", fieldId: hit.id, cropId: hit.cropId });
   } else if (roll < 0.8) {
     // Government subsidy.
     const amount = draw(300, 1200);
@@ -98,6 +105,7 @@ export function eventSystem(state: GameState): {
       type: "success",
       message: `Agricultural subsidy granted: +$${amount}.`,
     });
+    causes.push({ kind: "event_subsidy", amount });
   } else if (roll < 0.9) {
     // Inheritance windfall.
     const amount = draw(1000, 3000);
@@ -106,6 +114,7 @@ export function eventSystem(state: GameState): {
       type: "success",
       message: `An inheritance arrived: +$${amount}.`,
     });
+    causes.push({ kind: "event_inheritance", amount });
   } else {
     // Equipment breakdown — repair bill.
     const amount = draw(200, 600);
@@ -114,7 +123,8 @@ export function eventSystem(state: GameState): {
       type: "warning",
       message: `Equipment breakdown! Repairs cost $${amount}.`,
     });
+    causes.push({ kind: "event_breakdown", amount });
   }
 
-  return { state: { ...state, rng, fields, money }, notifications };
+  return { state: { ...state, rng, fields, money }, notifications, causes };
 }

@@ -1,4 +1,5 @@
 import type { Season } from "./entities/crop.js";
+import type { Cause } from "./entities/cause.js";
 import type { Field } from "./entities/field.js";
 import type { Building } from "./entities/building.js";
 import type { Animal } from "./entities/animal.js";
@@ -79,6 +80,9 @@ export interface Notification {
 export interface TickResult {
   state: GameState;
   notifications: Notification[];
+  /** Structured cause records from this turn. UI groups + translates these
+   *  into the end-of-turn summary panel and field-inspector breadcrumbs. */
+  causes: Cause[];
 }
 
 /** Three monthly turns per season (Early / Mid / Late). */
