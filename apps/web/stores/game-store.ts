@@ -6,13 +6,26 @@ import {
   type GameState,
   type GameCommand,
   type Notification,
+  type Season,
   type CreateGameOptions,
 } from "@farmgame/engine";
 import { TICK_INTERVAL_MS } from "@farmgame/shared";
 
+/** Notification + the in-game time it fired. Drives the event log timeline. */
+export interface StampedNotification extends Notification {
+  id: number;
+  year: number;
+  season: Season;
+  day: number;
+}
+
+/** History cap — older entries get dropped FIFO. Long enough for ~20 minutes of play. */
+const NOTIFICATION_HISTORY = 200;
+
 interface GameStore {
   state: GameState | null;
-  notifications: Notification[];
+  notifications: StampedNotification[];
+  nextNotificationId: number;
   tickInterval: ReturnType<typeof setInterval> | null;
   /** Whether the game is auto-advancing on a timer (vs. manual stepping). */
   autoplay: boolean;
@@ -65,21 +78,40 @@ function isStopWorthy(n: Notification): boolean {
 type Get = () => GameStore;
 type Set = (partial: Partial<GameStore>) => void;
 
+/** Append `newOnes` to the notifications log, stamped with the game time from
+ *  `stampState` (or the current store state if not provided). Caps at
+ *  NOTIFICATION_HISTORY entries, dropping the oldest first. */
+function pushStamped(get: Get, set: Set, newOnes: Notification[], stampState?: GameState | null): void {
+  if (newOnes.length === 0) return;
+  const { notifications, nextNotificationId, state } = get();
+  const ts = stampState ?? state;
+  let id = nextNotificationId;
+  const stamped: StampedNotification[] = newOnes.map((n) => ({
+    ...n,
+    id: id++,
+    year: ts?.year ?? 0,
+    season: ts?.season ?? "spring",
+    day: ts?.day ?? 0,
+  }));
+  const all = [...notifications, ...stamped];
+  const trimmed = all.length > NOTIFICATION_HISTORY ? all.slice(all.length - NOTIFICATION_HISTORY) : all;
+  set({ notifications: trimmed, nextNotificationId: id });
+}
+
 /** Advance the simulation one tick and append any notifications. Returns the new notifications. */
 function runTick(get: Get, set: Set): Notification[] {
-  const { state, notifications } = get();
+  const { state } = get();
   if (!state) return [];
   const result = nextTick(state);
-  set({
-    state: result.state,
-    notifications: [...notifications, ...result.notifications],
-  });
+  set({ state: result.state });
+  pushStamped(get, set, result.notifications, result.state);
   return result.notifications;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   notifications: [],
+  nextNotificationId: 1,
   tickInterval: null,
   // Turn-based by default: the player advances time with the STEP controls.
   // Autoplay is the optional mode, toggled from the HUD.
@@ -90,13 +122,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: (config: CreateGameOptions) => {
     get().stopLoop();
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, lastConfig: config });
     if (get().autoplay) get().startLoop();
   },
 
   returnToMenu: () => {
     get().stopLoop();
-    set({ state: null, notifications: [] });
+    set({ state: null, notifications: [], nextNotificationId: 1 });
   },
 
   dispatch: (command: GameCommand) => {
@@ -105,22 +137,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const result = applyCommand(state, command);
     if (result.success) {
-      set({
-        state: result.state,
-        notifications: [...get().notifications, ...result.notifications],
-      });
+      set({ state: result.state });
+      pushStamped(get, set, result.notifications, result.state);
       // If speed changed while auto-advancing, restart the loop at the new cadence.
       if (command.type === "SET_SPEED" && get().autoplay) {
         get().stopLoop();
         get().startLoop();
       }
     } else {
-      set({
-        notifications: [
-          ...get().notifications,
-          { type: "error", message: result.error ?? "Command failed" },
-        ],
-      });
+      pushStamped(get, set, [{ type: "error", message: result.error ?? "Command failed" }]);
     }
   },
 
@@ -186,7 +211,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   addNotification: (notification: Notification) => {
-    set({ notifications: [...get().notifications, notification] });
+    pushStamped(get, set, [notification]);
   },
 
   clearNotifications: () => {

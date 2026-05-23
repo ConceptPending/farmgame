@@ -3,14 +3,37 @@
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { tileCoords, getCropDef, plotOwner, CROP_CATALOG, type CropId } from "@farmgame/engine";
+import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
+
+const RISKY_WEATHER: Record<string, { glyph: string; color: string; label: string }> = {
+  storm: { glyph: "⛈", color: "#ff6b6b", label: "Storm" },
+  frost: { glyph: "❄", color: "#9fc3e8", label: "Frost" },
+  drought: { glyph: "🔥", color: "#ffdd57", label: "Drought" },
+  rain: { glyph: "🌧", color: "#9db4d0", label: "Rain" },
+};
 
 export function InfoPanel() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
+  const notifications = useGameStore((s) => s.notifications);
   const selectedTileIndex = useUIStore((s) => s.selectedTileIndex);
   const selectedFieldId = useUIStore((s) => s.selectedFieldId);
+  const openPanel = useUIStore((s) => s.openPanel);
 
   if (!state) return null;
+
+  // First risky weather in the next 5 days — surfaced as a one-line warning.
+  let upcomingRisk: { glyph: string; color: string; label: string; inDays: number } | null = null;
+  for (let i = 0; i < state.weather.forecast.length; i++) {
+    const cond = state.weather.forecast[i].condition;
+    const r = RISKY_WEATHER[cond];
+    if (r && (cond !== "rain" || i < 2)) {
+      // Rain is mild — only surface it if it's right around the corner.
+      upcomingRisk = { ...r, inDays: i + 1 };
+      break;
+    }
+  }
+  const recent = notifications.slice(-3).reverse();
 
   const tile = selectedTileIndex >= 0 && selectedTileIndex < state.world.tiles.length
     ? state.world.tiles[selectedTileIndex]
@@ -55,6 +78,24 @@ export function InfoPanel() {
         flexShrink: 0,
       }}
     >
+      {/* Forecast risk line — always visible, sets the mood for the panel. */}
+      <div style={{ marginBottom: 10, fontSize: 11 }}>
+        {upcomingRisk ? (
+          <span style={{ color: upcomingRisk.color }}>
+            {upcomingRisk.glyph} {upcomingRisk.label} in {upcomingRisk.inDays} day{upcomingRisk.inDays > 1 ? "s" : ""}
+          </span>
+        ) : (
+          <span style={{ color: "#7a8a9a" }}>☀ Forecast clear</span>
+        )}
+      </div>
+
+      {/* Empty-state hint so the panel has presence even with nothing selected. */}
+      {!tile && !selectedField && Object.keys(state.inventory).length === 0 && (
+        <div style={{ color: "#7a8a9a", fontSize: 11, marginBottom: 12 }}>
+          Click any tile to inspect it.
+        </div>
+      )}
+
       {/* Tile info */}
       {tile && coords && (
         <div style={{ marginBottom: 12 }}>
@@ -119,16 +160,23 @@ export function InfoPanel() {
             <br />
             Pests: {(selectedField.pests * 100).toFixed(0)}%
           </div>
-          {selectedField.cropId && selectedField.state === "ready" && (
-            <div style={{ marginTop: 4 }}>
-              <div style={{ color: "#7ddf64", fontSize: 11 }}>
-                Est. yield: ~{getCropDef(selectedField.cropId)!.baseYield * selectedField.tileIndices.length} units
+          {selectedField.cropId && (() => {
+            const def = getCropDef(selectedField.cropId)!;
+            const factor = selectedField.growth * selectedField.health;
+            const yieldNow = Math.max(0, Math.round(def.baseYield * selectedField.tileIndices.length * factor));
+            const price = state.market.prices[selectedField.cropId] ?? def.basePrice;
+            const valueNow = Math.round(yieldNow * price);
+            return (
+              <div style={{ marginTop: 4 }}>
+                <div style={{ color: "#7ddf64", fontSize: 11 }}>
+                  Projected yield: ~{yieldNow} units{selectedField.state !== "ready" && " (at current growth)"}
+                </div>
+                <div style={{ color: "#ffdd57", fontSize: 11 }}>
+                  If sold now: ${valueNow} <span style={{ color: "#7a8a9a" }}>(market ${price.toFixed(1)})</span>
+                </div>
               </div>
-              <div style={{ color: "#ffdd57", fontSize: 11 }}>
-                Market price: ${state.market.prices[selectedField.cropId]?.toFixed(1) ?? "?"}
-              </div>
-            </div>
-          )}
+            );
+          })()}
           {(() => {
             const cost = 2 * selectedField.tileIndices.length;
             const disabled = state.manure < cost;
@@ -185,6 +233,54 @@ export function InfoPanel() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Recent events — always present so the panel has live content. */}
+      {recent.length > 0 && (
+        <div style={{ marginTop: 4, borderTop: "1px solid #243353", paddingTop: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+            <span style={{ color: "#7a8a9a", fontSize: 10, letterSpacing: 0.5 }}>RECENT</span>
+            <button
+              onClick={() => openPanel("log")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#4ecca3",
+                fontSize: 10,
+                cursor: "pointer",
+                padding: 0,
+                textDecoration: "underline",
+              }}
+            >
+              view all →
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {recent.map((n) => (
+              <div
+                key={n.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 4,
+                  fontSize: 11,
+                  lineHeight: 1.3,
+                  borderLeft: `2px solid ${NOTIFICATION_COLOR[n.type]}`,
+                  paddingLeft: 5,
+                  color: "#cdd5e0",
+                }}
+                title={n.message}
+              >
+                <span aria-hidden style={{ color: NOTIFICATION_COLOR[n.type], fontWeight: 700 }}>
+                  {NOTIFICATION_GLYPH[n.type]}
+                </span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                  {n.message}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
