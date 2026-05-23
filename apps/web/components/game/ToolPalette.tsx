@@ -11,18 +11,19 @@ import {
   type ToolId,
 } from "@farmgame/engine";
 import type { SprayType } from "@farmgame/engine";
+import { Icon, type IconName } from "../ui/Icon";
 
-const TOOLS: { id: ToolId; label: string; icon: string }[] = [
-  { id: "pointer", label: "Select", icon: "👆" },
-  { id: "buy_land", label: "Buy Land", icon: "🏷️" },
-  { id: "designate_field", label: "Field", icon: "🔲" },
-  { id: "plow", label: "Plow", icon: "🌾" },
-  { id: "plant", label: "Plant", icon: "🌱" },
-  { id: "harvest", label: "Harvest", icon: "🫘" },
-  { id: "build", label: "Build", icon: "🏗️" },
-  { id: "place_animal", label: "Animals", icon: "🐄" },
-  { id: "spray", label: "Spray", icon: "💧" },
-  { id: "bulldoze", label: "Remove", icon: "🗑️" },
+const TOOLS: { id: ToolId; label: string; icon: IconName }[] = [
+  { id: "pointer", label: "Select", icon: "pointer" },
+  { id: "buy_land", label: "Buy Land", icon: "buy-land" },
+  { id: "designate_field", label: "Field", icon: "field" },
+  { id: "plow", label: "Plow", icon: "plow" },
+  { id: "plant", label: "Plant", icon: "plant" },
+  { id: "harvest", label: "Harvest", icon: "harvest" },
+  { id: "build", label: "Build", icon: "build" },
+  { id: "place_animal", label: "Animals", icon: "animal" },
+  { id: "spray", label: "Spray", icon: "spray" },
+  { id: "bulldoze", label: "Remove", icon: "remove" },
 ];
 
 const TOOL_HINTS: Record<ToolId, string> = {
@@ -97,7 +98,7 @@ export function ToolPalette() {
           onClick={() => setSelectedTool(tool.id)}
           style={buttonStyle(selectedTool === tool.id)}
         >
-          <span style={{ fontSize: 18 }}>{tool.icon}</span>
+          <Icon name={tool.icon} size={18} color={selectedTool === tool.id ? "#4ecca3" : "#ccc"} />
           <span>{tool.label}</span>
         </button>
       ))}
