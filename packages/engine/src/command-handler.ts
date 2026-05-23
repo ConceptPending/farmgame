@@ -346,6 +346,29 @@ function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: numb
   if (tile.fieldId !== null) return fail(state, "Cannot build on a field tile");
   if (tile.terrain === "water") return fail(state, "Cannot build on water");
 
+  // Water trough must sit within 3 tiles of a water source (water tile or pump).
+  if (buildingType === "water_trough") {
+    const w = state.world.width;
+    const x = tileIdx % w;
+    const y = (tileIdx / w) | 0;
+    const pumps = new Set(state.buildings.filter((b) => b.type === "water_pump").map((b) => b.tileIndex));
+    let nearWater = false;
+    outer: for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if (Math.abs(dx) + Math.abs(dy) > 3) continue; // Manhattan radius 3
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= state.world.height) continue;
+        const ni = ny * w + nx;
+        if (state.world.tiles[ni].terrain === "water" || pumps.has(ni)) {
+          nearWater = true;
+          break outer;
+        }
+      }
+    }
+    if (!nearWater) return fail(state, "A water trough must be within 3 tiles of water or a water pump.");
+  }
+
   const buildingDef = BUILDING_CATALOG[buildingType];
   if (state.money < buildingDef.cost) {
     return fail(state, `Not enough money. Need $${buildingDef.cost}, have $${state.money}`);

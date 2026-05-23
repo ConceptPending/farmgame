@@ -4,6 +4,12 @@ import { ANIMAL_CATALOG } from "../entities/animal.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG } from "../data/products.js";
 import { nextBool } from "../rng.js";
+import {
+  pastureGrazingOffset,
+  animalAmenities,
+  FEED_TROUGH_FACTOR,
+  WATER_TROUGH_BREED_BONUS,
+} from "./pen.js";
 
 /** Soft ceiling on herd size; feed economics are the real limiter below this. */
 const MAX_HERD = 40;
@@ -43,8 +49,15 @@ export function livestockSystem(state: GameState): {
   let manure = state.manure;
 
   if (state.day === 1) {
-    // Feed consumption from grain + forage stocks.
-    const needed = animals.reduce((sum, a) => sum + ANIMAL_CATALOG[a.type].feedPerSeason, 0);
+    // Effective feed need per animal: feed troughs cut waste; pasture (grass
+    // tiles inside the pen) provides free grazing up to a cap.
+    const pasture = pastureGrazingOffset(state);
+    const amenities = animalAmenities(state);
+    const needed = animals.reduce((sum, a) => {
+      const base = ANIMAL_CATALOG[a.type].feedPerSeason;
+      const afterTrough = amenities.get(a.id)?.feed ? base * FEED_TROUGH_FACTOR : base;
+      return sum + Math.max(0, afterTrough - (pasture.get(a.id) ?? 0));
+    }, 0);
     const available = FEED_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
     const consumed = Math.min(needed, available);
 
@@ -125,14 +138,19 @@ export function livestockSystem(state: GameState): {
 
     // Breeding: well-fed, mature, healthy animals. Feed economics limit the
     // herd; a soft cap just prevents runaway growth. Calves join their parent's
-    // tile (so they're born inside the same pen).
+    // tile (so they're born inside the same pen). A water trough in the pen
+    // gives this animal a small breeding bonus.
     if (fedRatio >= 1) {
       const babies: Animal[] = [];
       for (const a of animals) {
         if (animals.length + babies.length >= MAX_HERD) break;
         const def = ANIMAL_CATALOG[a.type];
         if (a.maturity >= 1 && a.health >= 0.8) {
-          const roll = nextBool(rng, def.breedChance);
+          const chance = Math.min(
+            1,
+            def.breedChance * (amenities.get(a.id)?.water ? WATER_TROUGH_BREED_BONUS : 1),
+          );
+          const roll = nextBool(rng, chance);
           rng = roll.rng;
           if (roll.value) {
             babies.push({ id: nextAnimalId++, type: a.type, age: 0, maturity: 0, health: 1, tileIndex: a.tileIndex });

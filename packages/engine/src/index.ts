@@ -102,7 +102,17 @@ export { TOOL_CATALOG } from "./entities/tools.js";
 
 export type { AnimalType, AnimalDefinition, Animal } from "./entities/animal.js";
 export { ANIMAL_CATALOG, ALL_ANIMAL_TYPES, animalValue, createAnimal } from "./entities/animal.js";
-export { pennedTiles, FENCE_BREACH, FENCE_DECAY } from "./systems/pen.js";
+export {
+  pennedTiles,
+  findPen,
+  pastureGrazingOffset,
+  animalAmenities,
+  FENCE_BREACH,
+  FENCE_DECAY,
+  PASTURE_YIELD,
+  FEED_TROUGH_FACTOR,
+  WATER_TROUGH_BREED_BONUS,
+} from "./systems/pen.js";
 
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {

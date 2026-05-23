@@ -11,6 +11,9 @@ import {
   BUILDING_CATALOG,
   animalValue,
   pennedTiles,
+  pastureGrazingOffset,
+  animalAmenities,
+  FEED_TROUGH_FACTOR,
 } from "@farmgame/engine";
 
 export function LivestockPanel() {
@@ -37,12 +40,22 @@ export function LivestockPanel() {
     0,
   );
 
-  const feedNeeded = state.animals.reduce((s, a) => s + ANIMAL_CATALOG[a.type].feedPerSeason, 0);
+  const baseFeed = state.animals.reduce((s, a) => s + ANIMAL_CATALOG[a.type].feedPerSeason, 0);
+  const pasture = pastureGrazingOffset(state);
+  const amenities = animalAmenities(state);
+  const feedNeeded = state.animals.reduce((s, a) => {
+    const base = ANIMAL_CATALOG[a.type].feedPerSeason;
+    const afterTrough = amenities.get(a.id)?.feed ? base * FEED_TROUGH_FACTOR : base;
+    return s + Math.max(0, afterTrough - (pasture.get(a.id) ?? 0));
+  }, 0);
+  const feedSavings = Math.max(0, baseFeed - feedNeeded);
   const feedStock = Object.entries(state.inventory).reduce((s, [id, qty]) => {
     const cat = CROP_CATALOG[id as keyof typeof CROP_CATALOG]?.category;
     return s + (cat === "grain" || cat === "forage" ? qty : 0);
   }, 0);
   const feedShort = feedNeeded > feedStock;
+  const waterTroughs = state.buildings.filter((b) => b.type === "water_trough").length;
+  const feedTroughs = state.buildings.filter((b) => b.type === "feed_trough").length;
 
   const startPlacing = (type: (typeof ALL_ANIMAL_TYPES)[number]) => {
     setSelectedAnimalType(type);
@@ -94,9 +107,19 @@ export function LivestockPanel() {
 
       {/* Feed + manure status */}
       <div style={{ fontSize: 12, color: feedShort ? "#ff6b6b" : "#aaa", marginBottom: 4 }}>
-        Feed per season: {feedNeeded} (grain or hay) · In stock: {feedStock}
+        Feed per season: {Math.round(feedNeeded)} (grain or hay) · In stock: {feedStock}
+        {feedSavings > 0 && (
+          <span style={{ color: "#4ecca3" }}> · saving {Math.round(feedSavings)} (pasture/trough)</span>
+        )}
         {feedShort && total > 0 && " — shortfall! animals will lose health"}
       </div>
+      {(waterTroughs > 0 || feedTroughs > 0) && (
+        <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 4 }}>
+          Amenities: {waterTroughs > 0 && `${waterTroughs} water trough${waterTroughs > 1 ? "s" : ""}`}
+          {waterTroughs > 0 && feedTroughs > 0 && " · "}
+          {feedTroughs > 0 && `${feedTroughs} feed trough${feedTroughs > 1 ? "s" : ""}`}
+        </div>
+      )}
       <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 12 }}>
         Manure: {state.manure} · producing ≈ {state.animals.reduce((m, a) => m + ANIMAL_CATALOG[a.type].manurePerSeason, 0)}/season (spread on fields to restore soil)
       </div>

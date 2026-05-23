@@ -14,6 +14,8 @@ const BUILDING_SPRITE_MAP: Record<BuildingType, SpriteKey> = {
   irrigation_ditch: "irrigation",
   road: "road",
   fence: "fence",
+  water_trough: "water_trough",
+  feed_trough: "feed_trough",
 };
 
 export class BuildingLayer {

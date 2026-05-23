@@ -39,6 +39,8 @@ export const SPRITES = {
   irrigation: { col: 3, row: 3 },
   fence: { col: 4, row: 3 },
   barn: { col: 5, row: 3 },
+  water_trough: { col: 6, row: 3 },
+  feed_trough: { col: 7, row: 3 },
 
   // Weather icons (row 4)
   weather_clear: { col: 0, row: 4 },
@@ -98,6 +100,8 @@ export async function generateTileset(app: Application): Promise<void> {
   drawIrrigation(g, 3, 3);
   drawFence(g, 4, 3);
   drawBarn(g, 5, 3);
+  drawWaterTrough(g, 6, 3);
+  drawFeedTrough(g, 7, 3);
 
   // --- Row 4: Weather icons ---
   drawWeatherClear(g, 0, 4);
@@ -603,6 +607,36 @@ function drawWeatherDrought(g: Graphics, col: number, row: number) {
   // Heat waves
   g.rect(x + 3, y + 12, 4, 1).fill(0xff8800);
   g.rect(x + 9, y + 13, 4, 1).fill(0xff8800);
+}
+
+function drawWaterTrough(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f); // grass base
+  softShadow(g, x + 8, y + 13, 5, 1.4);
+  // Trough body: wooden box, low and wide.
+  g.rect(x + 2, y + 9, 12, 4).fill(0x6b4a2c);
+  g.rect(x + 2, y + 9, 12, 1).fill(0x8a6a44); // rim highlight
+  g.rect(x + 2, y + 12, 12, 1).fill(0x4a3018); // base shadow
+  // Water inside.
+  g.rect(x + 3, y + 10, 10, 2).fill(0x3a8ec8);
+  g.rect(x + 5, y + 10, 2, 1).fill(0xbfe4f5);
+  g.rect(x + 10, y + 11, 2, 1).fill(0xbfe4f5);
+}
+
+function drawFeedTrough(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f);
+  softShadow(g, x + 8, y + 13, 5, 1.4);
+  // Wooden trough.
+  g.rect(x + 2, y + 9, 12, 4).fill(0x6b4a2c);
+  g.rect(x + 2, y + 9, 12, 1).fill(0x8a6a44);
+  g.rect(x + 2, y + 12, 12, 1).fill(0x4a3018);
+  // Grain heap.
+  g.rect(x + 4, y + 10, 8, 2).fill(0xdcb43c);
+  g.rect(x + 5, y + 10, 6, 1).fill(0xefcf6c);
+  g.rect(x + 7, y + 10, 1, 1).fill(0x9a7e2c);
 }
 
 // --- Animals (side view, bottom-aligned in the cell, with a contact shadow) ---
