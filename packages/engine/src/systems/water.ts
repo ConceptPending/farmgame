@@ -21,12 +21,25 @@ export function waterSystem(state: GameState): {
   // month's averaged intensity, so the multiplier doesn't need scaling.
   const rainAdd = weather.rainfall * 0.3;
 
-  // Collect water pump positions for irrigation
-  const pumpPositions: { x: number; y: number }[] = [];
+  // Collect moisture sources — pumps and windmills both push water out, with
+  // their own radii and ditch-network reach. A windmill is a strict upgrade
+  // over a pump: ~2.6× the area for ~2.7× the price ($800 vs $300).
+  interface MoistureSource {
+    x: number;
+    y: number;
+    radius: number;
+    boost: number;
+    ditchReach: number;
+  }
+  const sources: MoistureSource[] = [];
   for (const b of buildings) {
-    if (b.type === "water_pump" && b.active) {
-      const coords = tileCoords(b.tileIndex, world.width);
-      pumpPositions.push(coords);
+    if (!b.active) continue;
+    if (b.type === "water_pump") {
+      const c = tileCoords(b.tileIndex, world.width);
+      sources.push({ x: c.x, y: c.y, radius: 5, boost: 0.3, ditchReach: 10 });
+    } else if (b.type === "windmill") {
+      const c = tileCoords(b.tileIndex, world.width);
+      sources.push({ x: c.x, y: c.y, radius: 8, boost: 0.35, ditchReach: 18 });
     }
   }
 
@@ -57,21 +70,21 @@ export function waterSystem(state: GameState): {
       // Proximity to water tiles (natural seepage)
       // (Already factored into initial moisture; skip per-tick for performance)
 
-      // Water pump effect: maintain high moisture in radius 5
-      for (const pump of pumpPositions) {
-        const dist = Math.abs(x - pump.x) + Math.abs(y - pump.y);
-        if (dist <= 5) {
-          const pumpBoost = (1 - dist / 6) * 0.3;
-          moisture += pumpBoost;
+      // Moisture-source effect: each pump/windmill within radius pushes
+      // a falloff boost. Multiple sources can stack on the same tile.
+      for (const src of sources) {
+        const dist = Math.abs(x - src.x) + Math.abs(y - src.y);
+        if (dist <= src.radius) {
+          moisture += (1 - dist / (src.radius + 1)) * src.boost;
         }
       }
 
-      // Irrigation ditch: propagate moisture from pump along the ditch network
+      // Irrigation ditch: propagate moisture from any source along the ditch
+      // network. Windmills extend the reach much further than pumps do.
       if (ditchSet.has(idx)) {
-        // Ditches connected to pump radius get a moisture boost
-        for (const pump of pumpPositions) {
-          const dist = Math.abs(x - pump.x) + Math.abs(y - pump.y);
-          if (dist <= 10) {
+        for (const src of sources) {
+          const dist = Math.abs(x - src.x) + Math.abs(y - src.y);
+          if (dist <= src.ditchReach) {
             moisture += 0.15;
             break;
           }

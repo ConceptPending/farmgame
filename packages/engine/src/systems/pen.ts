@@ -47,7 +47,7 @@ function buildingByTile(buildings: Building[]): Map<number, Building> {
  * FENCE_BREACH is a gap and no longer contains.
  */
 /** Buildings small enough to be passable ground features (animals walk over). */
-const PASSABLE_BUILDINGS = new Set(["water_trough", "feed_trough", "road"]);
+const PASSABLE_BUILDINGS = new Set(["water_trough", "feed_trough"]);
 
 function isWall(state: GameState, idx: number, byTile: Map<number, Building>): boolean {
   if (state.world.tiles[idx].terrain === "water") return true;
