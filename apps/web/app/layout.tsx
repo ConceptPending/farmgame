@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FarmGame",
-  description: "A casual farming simulation game",
+  title: "Smallholding",
+  description: "A small farm against four seasons and a fickle market.",
 };
 
 export default function RootLayout({
