@@ -1,12 +1,14 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { isAudioEnabled, playSound, setAudioEnabled } from "../../lib/sounds";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 import { Icon } from "../ui/Icon";
+import { useAnimatedNumber, useNumberPulse, usePulseOnChange } from "./juice-hooks";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -59,6 +61,19 @@ export function HUD() {
   const goalIsMoney = state.goal.type !== "land_baron" && state.goal.type !== "market_leader";
   const fmtGoal = (n: number) => (goalIsMoney ? `$${n.toLocaleString()}` : `${n}`);
 
+  // Juice: animate the money counter to its new value + briefly flash on
+  // gain (green) or loss (red). Pulse the season-day label when season ticks.
+  const moneyDisplay = useAnimatedNumber(state.money, 450);
+  const moneyDir = useNumberPulse(state.money, 700);
+  const seasonPulse = usePulseOnChange(state.season, 800);
+  const moneyBaseColor = state.money < 0 ? "#ff6b6b" : "#4ecca3";
+  const moneyColor = moneyDir === "up" ? "#7ee0b8" : moneyDir === "down" ? "#ff9090" : moneyBaseColor;
+  const moneyShadow = moneyDir === "up"
+    ? "0 0 8px rgba(126, 224, 184, 0.55)"
+    : moneyDir === "down"
+      ? "0 0 8px rgba(255, 144, 144, 0.55)"
+      : "none";
+
   return (
     <>
       <div
@@ -77,9 +92,18 @@ export function HUD() {
           zIndex: 200,
         }}
       >
-        {/* Money */}
-        <div style={{ fontSize: 18, fontWeight: "bold", color: state.money < 0 ? "#ff6b6b" : "#4ecca3" }}>
-          ${state.money.toLocaleString()}
+        {/* Money — animates to the new value and briefly flashes on change. */}
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: "bold",
+            color: moneyColor,
+            textShadow: moneyShadow,
+            transition: "color 200ms, text-shadow 200ms",
+            minWidth: 70,
+          }}
+        >
+          ${moneyDisplay.toLocaleString()}
         </div>
 
         {/* Goal progress */}
@@ -107,8 +131,15 @@ export function HUD() {
           </div>
         </button>
 
-        {/* Season/Day/Year */}
-        <div style={{ color: seasonColors[state.season] ?? "#eee", fontWeight: 600 }}>
+        {/* Season/Day/Year — pulses briefly on season change. */}
+        <div
+          style={{
+            color: seasonColors[state.season] ?? "#eee",
+            fontWeight: 600,
+            filter: seasonPulse ? "brightness(1.55) drop-shadow(0 0 6px currentColor)" : "none",
+            transition: "filter 250ms",
+          }}
+        >
           Year {state.year} -&nbsp;
           {state.season.charAt(0).toUpperCase() + state.season.slice(1)}&nbsp;
           Day {state.day}
@@ -206,6 +237,7 @@ export function HUD() {
             >
               <Icon name="bell" size={11} />
             </button>
+            <AudioToggleButton />
           </div>
 
           <div style={divider} />
@@ -316,6 +348,37 @@ function PanelButton({
       }}
     >
       {label}
+    </button>
+  );
+}
+
+/** Toggle for the synthesised UI sounds. Off by default; persisted in localStorage. */
+function AudioToggleButton() {
+  const [on, setOn] = useState(false);
+  // Hydrate from localStorage on mount (the sounds module already handles this).
+  useEffect(() => setOn(isAudioEnabled()), []);
+  const toggle = () => {
+    const next = !on;
+    setAudioEnabled(next);
+    setOn(next);
+    // Play a sample on enable so the user knows what they just opted into.
+    if (next) playSound("plant");
+  };
+  return (
+    <button
+      onClick={toggle}
+      title={on ? "Sounds on (click to mute)" : "Sounds off (click to enable)"}
+      style={{
+        padding: "2px 6px",
+        fontSize: 11,
+        borderRadius: 3,
+        cursor: "pointer",
+        border: on ? "1px solid #4ecca3" : "1px solid #444",
+        background: on ? "#1a4040" : "#222",
+        color: on ? "#4ecca3" : "#888",
+      }}
+    >
+      <Icon name={on ? "volume" : "volume-mute"} size={11} />
     </button>
   );
 }

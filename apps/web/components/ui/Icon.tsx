@@ -26,7 +26,9 @@ export type IconName =
   | "bell"
   | "target"
   | "tractor"
-  | "wheat";
+  | "wheat"
+  | "volume"
+  | "volume-mute";
 
 interface IconProps {
   name: IconName;
@@ -178,6 +180,19 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 12c-3-1-4-3-4-6" strokeOpacity={0.6} />
       <path d="M12 8c3-1 4-3 4-6-3 0-4 2-4 6z" />
       <path d="M12 12c3-1 4-3 4-6" strokeOpacity={0.6} />
+    </>
+  ),
+  volume: (
+    <>
+      <path d="M5 9v6h3l5 4V5L8 9H5z" />
+      <path d="M16 8c1.5 1 2 2.5 2 4s-.5 3-2 4" />
+      <path d="M18 5c3 2 3 12 0 14" />
+    </>
+  ),
+  "volume-mute": (
+    <>
+      <path d="M5 9v6h3l5 4V5L8 9H5z" />
+      <path d="M16 9l5 5M21 9l-5 5" />
     </>
   ),
 };

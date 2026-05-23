@@ -200,6 +200,10 @@ export function GameCanvas() {
 
       rendererRef.current = renderer;
 
+      // Let the renderer's RAF loop pull queued juice events from the store
+      // — successful player actions (plant/harvest/build/manure) burst at the tile.
+      renderer.setFXSource(() => useGameStore.getState().takeFXEvents());
+
       // Draw the current state immediately. The state-change effect below only
       // fires on subsequent updates, so without this the world stays blank
       // until the next tick — which never comes in turn-based (paused) mode.

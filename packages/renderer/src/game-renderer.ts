@@ -6,6 +6,7 @@ import { BuildingLayer } from "./layers/building.js";
 import { AnimalLayer } from "./layers/animal.js";
 import { PenDecorLayer } from "./layers/pen-decor.js";
 import { SeasonOverlay } from "./layers/season-overlay.js";
+import { FXLayer, type FXEvent } from "./layers/fx.js";
 import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
 import { Camera } from "./camera.js";
@@ -26,7 +27,9 @@ export class GameRenderer {
   private buildingLayer: BuildingLayer;
   private animalLayer: AnimalLayer;
   private penDecorLayer: PenDecorLayer;
+  private fxLayer: FXLayer;
   private seasonOverlay: SeasonOverlay;
+  private fxSource: (() => FXEvent[]) | null = null;
   private gridOverlay: GridOverlay;
   private weatherEffects: WeatherEffects;
   private camera: Camera;
@@ -49,6 +52,7 @@ export class GameRenderer {
     this.buildingLayer = new BuildingLayer();
     this.animalLayer = new AnimalLayer();
     this.penDecorLayer = new PenDecorLayer();
+    this.fxLayer = new FXLayer();
     this.seasonOverlay = new SeasonOverlay();
     this.gridOverlay = new GridOverlay();
     this.weatherEffects = new WeatherEffects();
@@ -81,6 +85,8 @@ export class GameRenderer {
     // below animals, so animals walk over their pen.
     this.world.addChild(this.penDecorLayer.container);
     this.world.addChild(this.animalLayer.container);
+    // FX particles draw above animals so an action burst always reads on top.
+    this.world.addChild(this.fxLayer.container);
     this.world.addChild(this.gridOverlay.container);
     this.world.addChild(this.weatherEffects.container);
 
@@ -126,6 +132,11 @@ export class GameRenderer {
       this.weatherEffects.tick();
       this.animalLayer.tick(dt);
       this.gridOverlay.tick(dt);
+      if (this.fxSource && this.lastState) {
+        const events = this.fxSource();
+        if (events.length > 0) this.fxLayer.drain(events, this.lastState.world.width);
+      }
+      this.fxLayer.tick(dt);
       this.animationTickerId = requestAnimationFrame(animate);
     };
     this.animationTickerId = requestAnimationFrame(animate);
@@ -135,6 +146,11 @@ export class GameRenderer {
 
   setInputHandler(handler: (event: InputEvent) => void): void {
     this.onInput = handler;
+  }
+
+  /** Provide a function the renderer calls each frame to pull queued FX events. */
+  setFXSource(source: () => FXEvent[]): void {
+    this.fxSource = source;
   }
 
   setOverlayMode(mode: OverlayMode): void {
