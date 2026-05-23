@@ -1,5 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { PriceSnapshot } from "../entities/market.js";
+import type { Cause } from "../entities/cause.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG, ALL_PRODUCT_IDS } from "../data/products.js";
 import { rivalSupplyPressure } from "../entities/rival.js";
@@ -17,8 +18,10 @@ export const MIN_DEMAND = 0.1;
 export function marketSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   let rng = state.rng;
   const newPrices = { ...state.market.prices };
   const newDemand = { ...state.market.demand };
@@ -79,6 +82,7 @@ export function marketSystem(state: GameState): {
         type: "info",
         message: `Market alert: ${eventDef.name} demand surging! Price up 30%.`,
       });
+      causes.push({ kind: "market_event_spike", good: eventCropId, pct: 0.3 });
     } else {
       // Price crash
       newPrices[eventCropId] = Math.max(eventDef.basePrice * 0.3, newPrices[eventCropId] * 0.7);
@@ -87,6 +91,7 @@ export function marketSystem(state: GameState): {
         type: "warning",
         message: `Market alert: ${eventDef.name} prices crashing! Down 30%.`,
       });
+      causes.push({ kind: "market_event_crash", good: eventCropId, pct: -0.3 });
     }
   }
 
@@ -100,6 +105,15 @@ export function marketSystem(state: GameState): {
     newHistory = newHistory.slice(newHistory.length - MAX_HISTORY);
   }
 
+  // Emit rival-supply-pressure causes for goods where rivals are dragging
+  // the demand floor down meaningfully (5% or more).
+  for (const id of [...ALL_CROP_IDS, ...ALL_PRODUCT_IDS]) {
+    const pressure = rivalSupplyPressure(state.rivals, id);
+    if (pressure >= 0.05) {
+      causes.push({ kind: "rival_supply_pressure", good: id, pressure });
+    }
+  }
+
   return {
     state: {
       ...state,
@@ -111,5 +125,6 @@ export function marketSystem(state: GameState): {
       },
     },
     notifications,
+    causes,
   };
 }

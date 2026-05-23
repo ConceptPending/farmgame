@@ -1,5 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { Animal } from "../entities/animal.js";
+import type { Cause } from "../entities/cause.js";
 import { ANIMAL_CATALOG, createAnimal } from "../entities/animal.js";
 import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG } from "../data/products.js";
@@ -29,14 +30,16 @@ const FEED_IDS = ALL_CROP_IDS.filter(
 export function livestockSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   // No animals → no work and, importantly, no RNG consumption (keeps games
   // without livestock byte-for-byte identical).
   if (state.animals.length === 0) {
-    return { state, notifications: [] };
+    return { state, notifications: [], causes: [] };
   }
 
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   let rng = state.rng;
 
   // Per-turn growth + lifetime counters. One turn = one month.
@@ -99,11 +102,16 @@ export function livestockSystem(state: GameState): {
       if (c?.tier === "cramped") crampedCount++;
       if (health <= 0) {
         const name = ANIMAL_CATALOG[a.type].name.toLowerCase();
-        const message =
-          c?.tier === "cramped" && fedRatio >= 1
-            ? `A ${name} died from stress in a cramped pen.`
-            : `A ${name} starved for lack of feed.`;
+        const crowded = c?.tier === "cramped" && fedRatio >= 1;
+        const message = crowded
+          ? `A ${name} died from stress in a cramped pen.`
+          : `A ${name} starved for lack of feed.`;
         notifications.push({ type: "warning", message });
+        causes.push(
+          crowded
+            ? { kind: "animal_lost_crowding", species: a.type, name: a.name }
+            : { kind: "animal_starved", species: a.type, name: a.name },
+        );
         continue;
       }
       survivors.push({ ...a, health });
@@ -121,6 +129,12 @@ export function livestockSystem(state: GameState): {
         type: "warning",
         message: "Livestock are underfed — grow or buy more feed.",
       });
+      causes.push({
+        kind: "feed_shortfall",
+        needed: Math.round(needed),
+        consumed: Math.round(consumed),
+        affected: animals.length,
+      });
     }
 
     // Manure: per-animal contribution (bigger animals more), credit each to its lifetime tally.
@@ -130,6 +144,9 @@ export function livestockSystem(state: GameState): {
       const m = ANIMAL_CATALOG[a.type].manurePerSeason * a.health;
       manureByAnimal.set(a.id, m);
       manureTotal += m;
+    }
+    if (Math.round(manureTotal) > 0) {
+      causes.push({ kind: "manure_produced", amount: Math.round(manureTotal) });
     }
     manure += Math.round(manureTotal);
     animals = animals.map((a) => ({
@@ -202,6 +219,7 @@ export function livestockSystem(state: GameState): {
             const calf = createAnimal(nextAnimalId++, a.type, a.tileIndex);
             babies.push(calf);
             notifications.push({ type: "success", message: `${calf.name} the ${def.name.toLowerCase()} was born!` });
+            causes.push({ kind: "animal_born", species: a.type, name: calf.name });
           }
         }
       }
@@ -212,5 +230,6 @@ export function livestockSystem(state: GameState): {
   return {
     state: { ...state, animals, inventory, rng, nextAnimalId, manure },
     notifications,
+    causes,
   };
 }

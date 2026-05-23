@@ -5,6 +5,7 @@ import { BUILDING_CATALOG } from "../entities/building.js";
 import { EQUIPMENT_CATALOG } from "../entities/equipment.js";
 import { animalValue } from "../entities/animal.js";
 import { getCropDef } from "../data/crops.js";
+import type { Cause } from "../entities/cause.js";
 
 // Seasonal cost tuning.
 export const LAND_TAX_PER_PLOT = 80;
@@ -207,12 +208,15 @@ export function goalProgress(state: GameState): GoalProgress {
 export function financeSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   let current = state;
 
   // Season just rolled over (the season system sets monthOfSeason back to 1).
   if (current.monthOfSeason === 1) {
+    causes.push({ kind: "season_change", season: current.season, year: current.year });
     const exp = computeSeasonalExpenses(current);
     if (exp.total > 0) {
       current = { ...current, money: current.money - exp.total };
@@ -220,6 +224,20 @@ export function financeSystem(state: GameState): {
         type: "warning",
         message: `Seasonal expenses: $${exp.total} (tax $${exp.landTax}, upkeep $${exp.upkeep}, interest $${exp.interest})`,
       });
+      causes.push({
+        kind: "seasonal_expense",
+        landTax: exp.landTax,
+        upkeep: exp.upkeep,
+        interest: exp.interest,
+        total: exp.total,
+      });
+      if (exp.interest > 0) {
+        causes.push({
+          kind: "interest_charged",
+          amount: exp.interest,
+          outstandingLoan: current.loan,
+        });
+      }
     }
 
     // Update the market-leader streak from the season's sales, then reset.
@@ -244,5 +262,5 @@ export function financeSystem(state: GameState): {
     }
   }
 
-  return { state: current, notifications };
+  return { state: current, notifications, causes };
 }

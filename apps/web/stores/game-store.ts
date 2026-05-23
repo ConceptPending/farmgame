@@ -7,6 +7,7 @@ import {
   type Notification,
   type Season,
   type CreateGameOptions,
+  type Cause,
 } from "@farmgame/engine";
 import { playSound } from "../lib/sounds";
 
@@ -35,6 +36,9 @@ interface GameStore {
   nextNotificationId: number;
   /** Queued juice events; the renderer drains this each frame. */
   fxEvents: FXEvent[];
+  /** Causes from the most recent End Turn — drives the TurnSummaryPanel.
+   *  Cleared when the panel is dismissed. Empty between turns. */
+  lastTurnCauses: Cause[];
   /** Config of the current/most-recent game, for "Play Again". */
   lastConfig: CreateGameOptions | null;
 
@@ -51,6 +55,8 @@ interface GameStore {
   clearNotifications: () => void;
   /** Drain and clear the queued FX events; the renderer calls this each frame. */
   takeFXEvents: () => FXEvent[];
+  /** Dismiss the turn-summary panel (clears lastTurnCauses). */
+  clearTurnSummary: () => void;
 }
 
 type Get = () => GameStore;
@@ -228,19 +234,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   notifications: [],
   nextNotificationId: 1,
   fxEvents: [],
+  lastTurnCauses: [],
   lastConfig: null,
 
   startGame: (config: CreateGameOptions) => {
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], lastConfig: config });
   },
 
   loadGameState: (state: GameState) => {
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [] });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [] });
   },
 
   returnToMenu: () => {
-    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [] });
+    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [] });
   },
 
   dispatch: (command: GameCommand) => {
@@ -258,6 +265,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // a single tonal blip per player action is what reads as feedback).
       if (fx.length > 0) playSound(fx[0].kind === "manure" ? "build" : fx[0].kind);
       else if (command.type === "SELL" && result.state.money > state.money) playSound("money");
+      // Causal summary — END_TURN populates it; other commands append to it
+      // so a harvest's breakdown is visible without waiting for the next turn.
+      if (result.causes && result.causes.length > 0) {
+        const next = command.type === "END_TURN"
+          ? result.causes
+          : [...get().lastTurnCauses, ...result.causes];
+        set({ lastTurnCauses: next });
+      }
     } else {
       pushStamped(get, set, [{ type: "error", message: result.error ?? "Command failed" }]);
     }
@@ -281,6 +296,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ fxEvents: [] });
     return fxEvents;
   },
+
+  clearTurnSummary: () => set({ lastTurnCauses: [] }),
 }));
 
 // Debug/automation hook: lets the playtest harness drive the real game.

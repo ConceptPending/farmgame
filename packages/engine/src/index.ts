@@ -23,6 +23,10 @@ export {
 } from "./state.js";
 export { laborCost, canAfford, minLaborCost } from "./entities/labor.js";
 
+// Causal feedback layer — structured records of why things happened.
+export type { Cause, CauseCategory } from "./entities/cause.js";
+export { causeCategory, causePriority, causeCopy } from "./entities/cause.js";
+
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
 

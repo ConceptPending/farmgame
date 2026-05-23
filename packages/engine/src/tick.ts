@@ -1,5 +1,6 @@
 import type { GameState, Notification, TickResult } from "./state.js";
 import { BASE_LABOR_CAPACITY } from "./state.js";
+import type { Cause } from "./entities/cause.js";
 import { equipmentLaborBonus } from "./entities/equipment.js";
 import { seasonSystem } from "./systems/season.js";
 import { weatherSystem } from "./systems/weather.js";
@@ -24,73 +25,45 @@ import { financeSystem } from "./systems/finance.js";
 export function nextTurn(state: GameState): TickResult {
   // Don't advance after the game has ended.
   if (state.status !== "playing") {
-    return { state, notifications: [] };
+    return { state, notifications: [], causes: [] };
   }
 
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
+
+  // Record any labor the player left on the table this past month — it's
+  // emitted *before* the rest of the pipeline so it reflects the turn the
+  // player just finished planning, not the one we're about to resolve.
+  const unused = state.labor.capacity - state.labor.used;
+  if (unused > 0 && state.labor.capacity > 0) {
+    causes.push({ kind: "labor_unused", unused, capacity: state.labor.capacity });
+  }
 
   // Advance turn counter
   let current: GameState = { ...state, tick: state.tick + 1 };
 
-  // Season system (advance day, handle season/year transitions)
-  const seasonResult = seasonSystem(current);
-  current = seasonResult.state;
-  notifications.push(...seasonResult.notifications);
+  // Each system returns notifications + (optional) causes. We accumulate
+  // both into the TickResult so the UI sees one combined stream.
+  type SysResult = { state: GameState; notifications: Notification[]; causes?: Cause[] };
+  const run = (sys: (s: GameState) => SysResult): void => {
+    const r = sys(current);
+    current = r.state;
+    notifications.push(...r.notifications);
+    if (r.causes) causes.push(...r.causes);
+  };
 
-  // Weather system (generate daily weather + forecast)
-  const weatherResult = weatherSystem(current);
-  current = weatherResult.state;
-  notifications.push(...weatherResult.notifications);
-
-  // Water system (moisture simulation: rain, evaporation, irrigation)
-  const waterResult = waterSystem(current);
-  current = waterResult.state;
-  notifications.push(...waterResult.notifications);
-
-  // Crop system (growth affected by weather, moisture, health)
-  const cropResult = cropSystem(current);
-  current = cropResult.state;
-  notifications.push(...cropResult.notifications);
-
-  // Field health system (weeds, pests, disease)
-  const healthResult = fieldHealthSystem(current);
-  current = healthResult.state;
-  notifications.push(...healthResult.notifications);
-
-  // Livestock system (growth, feed, breeding)
-  const livestockResult = livestockSystem(current);
-  current = livestockResult.state;
-  notifications.push(...livestockResult.notifications);
-
-  // Pen system (fence wear + livestock containment/escape)
-  const penResult = penSystem(current);
-  current = penResult.state;
-  notifications.push(...penResult.notifications);
-
-  // Predator system (loose animals may be taken — barns shelter; weather scales risk)
-  const predResult = predatorSystem(current);
-  current = predResult.state;
-  notifications.push(...predResult.notifications);
-
-  // Rival farms (expansion + market competition)
-  const rivalResult = rivalSystem(current);
-  current = rivalResult.state;
-  notifications.push(...rivalResult.notifications);
-
-  // Random events (disasters + strokes of luck)
-  const eventResult = eventSystem(current);
-  current = eventResult.state;
-  notifications.push(...eventResult.notifications);
-
-  // Market system (price fluctuation)
-  const marketResult = marketSystem(current);
-  current = marketResult.state;
-  notifications.push(...marketResult.notifications);
-
-  // Finance system (seasonal expenses, interest, win/lose resolution)
-  const financeResult = financeSystem(current);
-  current = financeResult.state;
-  notifications.push(...financeResult.notifications);
+  run(seasonSystem);
+  run(weatherSystem);
+  run(waterSystem);
+  run(cropSystem);
+  run(fieldHealthSystem);
+  run(livestockSystem);
+  run(penSystem);
+  run(predatorSystem);
+  run(rivalSystem);
+  run(eventSystem);
+  run(marketSystem);
+  run(financeSystem);
 
   // Replenish the monthly labor budget for the player's next turn — and
   // recompute capacity from currently-owned equipment so a newly-bought
@@ -98,5 +71,5 @@ export function nextTurn(state: GameState): TickResult {
   const capacity = BASE_LABOR_CAPACITY + equipmentLaborBonus(current.equipment);
   current = { ...current, labor: { used: 0, capacity } };
 
-  return { state: current, notifications };
+  return { state: current, notifications, causes };
 }
