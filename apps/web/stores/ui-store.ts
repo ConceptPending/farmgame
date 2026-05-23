@@ -6,6 +6,27 @@ import type { SprayType } from "@farmgame/engine";
 /** Modal panels — only one may be open at a time. */
 export type PanelId = "market" | "finance" | "livestock" | "equipment" | "standings" | "log";
 
+const ONBOARDING_STORAGE_KEY = "farmgame.onboardingDismissed";
+
+function loadOnboardingDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistOnboardingDismissed(value: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+    else window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+  } catch {
+    // localStorage can be disabled (private mode, etc.) — coach simply won't persist.
+  }
+}
+
 interface UIStore {
   selectedTool: ToolId;
   selectedCrop: CropId;
@@ -22,6 +43,8 @@ interface UIStore {
   dragStartTile: number | null;
   /** Mouse position in viewport pixels while hovering the canvas (null when off). */
   hoverScreen: { x: number; y: number } | null;
+  /** Whether the player has dismissed the onboarding coach card. Persisted. */
+  onboardingDismissed: boolean;
 
   setSelectedTool: (tool: ToolId) => void;
   setSelectedCrop: (cropId: CropId) => void;
@@ -38,6 +61,8 @@ interface UIStore {
   setShowInfoPanel: (show: boolean) => void;
   setDragStartTile: (idx: number | null) => void;
   setHoverScreen: (p: { x: number; y: number } | null) => void;
+  dismissOnboarding: () => void;
+  reopenOnboarding: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -54,6 +79,7 @@ export const useUIStore = create<UIStore>((set) => ({
   showInfoPanel: true,
   dragStartTile: null,
   hoverScreen: null,
+  onboardingDismissed: loadOnboardingDismissed(),
 
   setSelectedTool: (tool) => set({ selectedTool: tool }),
   setSelectedCrop: (cropId) => set({ selectedCrop: cropId }),
@@ -69,4 +95,12 @@ export const useUIStore = create<UIStore>((set) => ({
   setShowInfoPanel: (show) => set({ showInfoPanel: show }),
   setDragStartTile: (idx) => set({ dragStartTile: idx }),
   setHoverScreen: (p) => set({ hoverScreen: p }),
+  dismissOnboarding: () => {
+    persistOnboardingDismissed(true);
+    set({ onboardingDismissed: true });
+  },
+  reopenOnboarding: () => {
+    persistOnboardingDismissed(false);
+    set({ onboardingDismissed: false });
+  },
 }));

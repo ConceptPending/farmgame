@@ -4,6 +4,8 @@ import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { tileCoords, getCropDef, plotOwner, CROP_CATALOG, type CropId } from "@farmgame/engine";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
+import { HelpHint } from "../ui/Tooltip";
+import { HELP } from "../../lib/help-text";
 
 const RISKY_WEATHER: Record<string, { glyph: string; color: string; label: string }> = {
   storm: { glyph: "⛈", color: "#ff6b6b", label: "Storm" },
@@ -105,16 +107,18 @@ export function InfoPanel() {
           <div style={{ color: "#aaa" }}>
             Terrain: {tile.terrain}
             <br />
-            Soil: {(tile.soilQuality * 100).toFixed(0)}%
+            Soil: {(tile.soilQuality * 100).toFixed(0)}%<HelpHint text={HELP.soilQuality} />
             <br />
-            Moisture: {(tile.moisture * 100).toFixed(0)}%
+            Moisture: {(tile.moisture * 100).toFixed(0)}%<HelpHint text={HELP.tileMoisture} />
             <br />
             Owned: {tile.owned ? "Yes" : rivalOwnerName ? `${rivalOwnerName}` : "No"}
             {tile.fieldId !== null && <><br />Field: #{tile.fieldId}</>}
           </div>
           {tile.terrain !== "water" && tile.terrain !== "rock" && (
             <div style={{ marginTop: 6 }}>
-              <div style={{ fontSize: 10, color: "#7a8a9a", marginBottom: 2 }}>SOIL N-P-K</div>
+              <div style={{ fontSize: 10, color: "#7a8a9a", marginBottom: 2 }}>
+                SOIL N-P-K<HelpHint text={HELP.soilNPK} />
+              </div>
               <NutrientBars nutrients={tile.nutrients} />
             </div>
           )}
@@ -158,18 +162,18 @@ export function InfoPanel() {
                     </>
                   )}
                   <br />
-                  Growth: {(selectedField.growth * 100).toFixed(0)}%
+                  Growth: {(selectedField.growth * 100).toFixed(0)}%<HelpHint text={HELP.fieldGrowth} />
                   <br />
                 </>
               );
             })()}
-            Health: {(selectedField.health * 100).toFixed(0)}%
+            Health: {(selectedField.health * 100).toFixed(0)}%<HelpHint text={HELP.fieldHealth} />
             <br />
-            Moisture: {(selectedField.moisture * 100).toFixed(0)}%
+            Moisture: {(selectedField.moisture * 100).toFixed(0)}%<HelpHint text={HELP.fieldMoisture} />
             <br />
-            Weeds: {(selectedField.weeds * 100).toFixed(0)}%
+            Weeds: {(selectedField.weeds * 100).toFixed(0)}%<HelpHint text={HELP.fieldWeeds} />
             <br />
-            Pests: {(selectedField.pests * 100).toFixed(0)}%
+            Pests: {(selectedField.pests * 100).toFixed(0)}%<HelpHint text={HELP.fieldPests} />
           </div>
           {selectedField.cropId && (() => {
             const def = getCropDef(selectedField.cropId)!;

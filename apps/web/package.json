@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint app components stores"
+    "lint": "eslint app components stores",
+    "test": "vitest run"
   },
   "dependencies": {
     "@farmgame/engine": "workspace:*",
@@ -24,6 +25,7 @@
     "@types/node": "25.3.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

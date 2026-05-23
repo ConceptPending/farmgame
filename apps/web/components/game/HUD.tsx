@@ -45,6 +45,8 @@ export function HUD() {
   const selectedTool = useUIStore((s) => s.selectedTool);
   const openPanel = useUIStore((s) => s.openPanel);
   const activePanel = useUIStore((s) => s.activePanel);
+  const onboardingDismissed = useUIStore((s) => s.onboardingDismissed);
+  const reopenOnboarding = useUIStore((s) => s.reopenOnboarding);
 
   if (!state) return null;
 
@@ -252,6 +254,25 @@ export function HUD() {
             )}
             <PanelButton label="Market" color="#ffdd57" active={activePanel === "market"} onClick={() => openPanel("market")} />
             <PanelButton label="Log" color="#9db4d0" active={activePanel === "log"} onClick={() => openPanel("log")} />
+            {onboardingDismissed && (
+              <button
+                onClick={reopenOnboarding}
+                title="Reopen the getting-started tips"
+                aria-label="Reopen the getting-started tips"
+                style={{
+                  padding: "2px 8px",
+                  fontSize: 11,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  border: "1px solid #555",
+                  background: "#222",
+                  color: "#7a8a9a",
+                  fontWeight: 700,
+                }}
+              >
+                ?
+              </button>
+            )}
           </div>
         </div>
       </div>
