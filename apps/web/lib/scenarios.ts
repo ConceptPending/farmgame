@@ -42,6 +42,10 @@ export interface Scenario {
   rivals: number;
   buildGoal: (d: DiffParams) => Goal;
   goalSummary: (d: DiffParams) => string;
+  /** Optional per-difficulty starting-money override. Lets tutorial scenarios
+   *  be forgiving without changing the global difficulty defaults — e.g.
+   *  First Harvest gives Hard players $800 instead of the global $300. */
+  startingMoneyOverride?: Partial<Record<Difficulty, number>>;
 }
 
 const NET_WORTH_BASE = 40000;
@@ -101,12 +105,18 @@ export const SCENARIOS: Scenario[] = [
     blurb: "Learn the loop. 12 turns (one game year) to reach a modest target.",
     available: true,
     rivals: 0,
+    // Tuned in PR Q against the headless simulator:
+    //   greedy floor — easy 100% / normal 33% / hard 20% (3% bankrupt)
+    // Competent humans land roughly Easy ~100, Normal 50-60, Hard 30-40.
     buildGoal: (d) => ({
       type: "net_worth",
-      target: Math.round(3000 * d.targetScale),
+      target: Math.round(2000 * d.targetScale),
       deadlineTurns: 12,
     }),
-    goalSummary: (d) => `${money(Math.round(3000 * d.targetScale))} net worth in 12 turns`,
+    goalSummary: (d) => `${money(Math.round(2000 * d.targetScale))} net worth in 12 turns`,
+    // Override the global Hard $300: a 12-turn tutorial shouldn't bankrupt
+    // the player from seasonal expenses before they can earn anything back.
+    startingMoneyOverride: { easy: 1500, normal: 750, hard: 800 },
   },
   {
     id: "quick_challenge",
@@ -143,9 +153,10 @@ export function buildConfig(
   opts?: { seed?: number },
 ): CreateGameOptions {
   const d = DIFF[difficulty];
+  const overrideMoney = scenario.startingMoneyOverride?.[difficulty];
   return {
     seed: opts?.seed,
-    startingMoney: d.startingMoney,
+    startingMoney: overrideMoney ?? d.startingMoney,
     expenseMultiplier: d.expenseMultiplier,
     goal: scenario.buildGoal(d),
     rivals: makeRivals(scenario.rivals, d.rivalAggr),

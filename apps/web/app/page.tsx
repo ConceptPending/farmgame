@@ -18,6 +18,7 @@ import { OnboardingCoach } from "../components/game/OnboardingCoach";
 import { SettingsPanel } from "../components/game/SettingsPanel";
 import { TurnSummaryPanel } from "../components/game/TurnSummaryPanel";
 import { DebugReportPanel } from "../components/game/DebugReportPanel";
+import { ScenarioIntroCard } from "../components/game/ScenarioIntroCard";
 import { StartScreen } from "../components/menu/StartScreen";
 
 export default function Home() {
@@ -48,6 +49,7 @@ export default function Home() {
       <AnimalHoverTooltip />
       <TurnSummaryPanel />
       <DebugReportPanel />
+      <ScenarioIntroCard />
     </div>
   );
 }
