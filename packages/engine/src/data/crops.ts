@@ -18,6 +18,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.3,
     consumes: { n: 0.06, p: 0.02, k: 0.02 },
     needs: { n: 0.6, p: 0.2, k: 0.3 },
+    archetype: "hardy-staple",
+    archetypeTagline: "Hardy staple — handles frost and dry spells; modest profit.",
   },
   corn: {
     id: "corn",
@@ -36,6 +38,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.5,
     consumes: { n: 0.1, p: 0.02, k: 0.03 },
     needs: { n: 0.9, p: 0.3, k: 0.4 },
+    archetype: "heavy-feeder",
+    archetypeTagline: "Heavy feeder, heat-loving — drains nitrogen fast.",
   },
   tomato: {
     id: "tomato",
@@ -54,6 +58,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.6,
     consumes: { n: 0.04, p: 0.07, k: 0.06 },
     needs: { n: 0.4, p: 0.7, k: 0.6 },
+    archetype: "fast-fragile-cash",
+    archetypeTagline: "Fast cash, fragile — frost and pests will wreck it.",
   },
   soybeans: {
     id: "soybeans",
@@ -72,6 +78,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.4,
     consumes: { n: -0.1, p: 0.03, k: 0.03 },
     needs: { n: 0.2, p: 0.4, k: 0.4 },
+    archetype: "nitrogen-fixer",
+    archetypeTagline: "Nitrogen fixer — replenishes soil while you sell.",
   },
   potatoes: {
     id: "potatoes",
@@ -85,11 +93,13 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     idealTempMin: 45,
     idealTempMax: 75,
     waterNeed: 0.5,
-    frostTolerance: 0.4,
-    droughtTolerance: 0.4,
+    frostTolerance: 0.5,
+    droughtTolerance: 0.55,
     pestVulnerability: 0.5,
     consumes: { n: 0.04, p: 0.03, k: 0.09 },
     needs: { n: 0.4, p: 0.3, k: 0.8 },
+    archetype: "cool-season-root",
+    archetypeTagline: "Cool-season root — bulk yield in spring; thirsty for potassium.",
   },
   strawberries: {
     id: "strawberries",
@@ -108,6 +118,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.7,
     consumes: { n: 0.03, p: 0.07, k: 0.06 },
     needs: { n: 0.3, p: 0.7, k: 0.6 },
+    archetype: "luxury-fruit",
+    archetypeTagline: "Luxury fruit — top price, fragile, water-hungry.",
   },
   cotton: {
     id: "cotton",
@@ -122,10 +134,12 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     idealTempMax: 95,
     waterNeed: 0.4,
     frostTolerance: 0.0,
-    droughtTolerance: 0.6,
+    droughtTolerance: 0.7,
     pestVulnerability: 0.6,
     consumes: { n: 0.08, p: 0.04, k: 0.06 },
     needs: { n: 0.7, p: 0.4, k: 0.6 },
+    archetype: "long-season-fiber",
+    archetypeTagline: "Long-season fiber — slow, heat-loving, drought-tolerant.",
   },
   sunflowers: {
     id: "sunflowers",
@@ -138,12 +152,14 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     baseYield: 3,
     idealTempMin: 60,
     idealTempMax: 90,
-    waterNeed: 0.3,
+    waterNeed: 0.25,
     frostTolerance: 0.1,
-    droughtTolerance: 0.6,
+    droughtTolerance: 0.75,
     pestVulnerability: 0.3,
     consumes: { n: 0.05, p: 0.02, k: 0.04 },
     needs: { n: 0.5, p: 0.3, k: 0.5 },
+    archetype: "drought-oilseed",
+    archetypeTagline: "Drought-tolerant oilseed — low-water, low-pest.",
   },
   peppers: {
     id: "peppers",
@@ -162,6 +178,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.5,
     consumes: { n: 0.04, p: 0.06, k: 0.06 },
     needs: { n: 0.4, p: 0.6, k: 0.6 },
+    archetype: "premium-summer-veg",
+    archetypeTagline: "Premium summer veg — heat-loving, no frost survival.",
   },
   lettuce: {
     id: "lettuce",
@@ -180,6 +198,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.6,
     consumes: { n: 0.06, p: 0.01, k: 0.02 },
     needs: { n: 0.7, p: 0.2, k: 0.3 },
+    archetype: "quick-cash",
+    archetypeTagline: "Quick cool-season cash — fastest cycle in the game.",
   },
   pumpkins: {
     id: "pumpkins",
@@ -198,6 +218,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.4,
     consumes: { n: 0.08, p: 0.05, k: 0.06 },
     needs: { n: 0.7, p: 0.5, k: 0.6 },
+    archetype: "autumn-gourd",
+    archetypeTagline: "Autumn gourd — plant in summer; long and frost-vulnerable.",
   },
   grapes: {
     id: "grapes",
@@ -216,6 +238,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     pestVulnerability: 0.5,
     consumes: { n: 0.03, p: 0.05, k: 0.07 },
     needs: { n: 0.3, p: 0.5, k: 0.7 },
+    archetype: "premium-long-term",
+    archetypeTagline: "Premium long-term — top price, longest growth, patient money.",
   },
   clover: {
     id: "clover",
@@ -236,6 +260,8 @@ export const CROP_CATALOG: Record<CropId, CropDefinition> = {
     // of nitrogen; its harvest is hay (forage feed) rather than a cash crop.
     consumes: { n: -0.18, p: 0.03, k: 0.03 },
     needs: { n: 0.1, p: 0.3, k: 0.3 },
+    archetype: "forage-cover",
+    archetypeTagline: "Forage cover — feeds livestock and restores nitrogen.",
   },
 };
 

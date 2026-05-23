@@ -42,6 +42,7 @@ export type {
   CropId,
   CropDefinition,
   CropCategory,
+  CropArchetype,
   NutrientProfile,
   Season,
 } from "./entities/crop.js";

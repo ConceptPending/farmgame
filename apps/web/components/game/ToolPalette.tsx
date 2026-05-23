@@ -78,6 +78,14 @@ export function ToolPalette() {
   const selectedSprayType = useUIStore((s) => s.selectedSprayType);
   const setSelectedSprayType = useUIStore((s) => s.setSelectedSprayType);
 
+  // Sub-palettes (plant/build/spray/place_animal) have richer buttons with
+  // sub-text, so the palette widens when one of those tools is active. The
+  // icon column itself stays narrow.
+  const needsWidePalette =
+    selectedTool === "plant" ||
+    selectedTool === "build" ||
+    selectedTool === "spray" ||
+    selectedTool === "place_animal";
   return (
     <div
       style={{
@@ -88,8 +96,9 @@ export function ToolPalette() {
         background: "#16213e",
         borderRight: "2px solid #0f3460",
         overflowY: "auto",
-        width: 68,
+        width: needsWidePalette ? 170 : 68,
         flexShrink: 0,
+        transition: "width 140ms ease",
       }}
     >
       {TOOLS.map((tool) => (
@@ -130,16 +139,37 @@ export function ToolPalette() {
           }}
         >
           <div style={{ fontSize: 9, color: "#888", textAlign: "center" }}>CROP</div>
-          {(Object.keys(CROP_CATALOG) as CropId[]).map((id) => (
-            <button
-              key={id}
-              onClick={() => setSelectedCrop(id)}
-              style={subButtonStyle(selectedCrop === id)}
-            >
-              {CROP_CATALOG[id].name}
-              <span style={{ color: "#888" }}> ${CROP_CATALOG[id].seedCost}</span>
-            </button>
-          ))}
+          {(Object.keys(CROP_CATALOG) as CropId[]).map((id) => {
+            const def = CROP_CATALOG[id];
+            const active = selectedCrop === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setSelectedCrop(id)}
+                title={def.archetypeTagline}
+                style={{
+                  ...subButtonStyle(active),
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 1,
+                  width: "100%",
+                  padding: "4px 6px",
+                  whiteSpace: "normal",
+                  textAlign: "left",
+                  lineHeight: 1.2,
+                }}
+              >
+                <span>
+                  {def.name}
+                  <span style={{ color: "#888" }}> ${def.seedCost}</span>
+                </span>
+                <span style={{ color: "#7a8a9a", fontSize: 9, fontStyle: "italic" }}>
+                  {def.archetypeTagline}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
