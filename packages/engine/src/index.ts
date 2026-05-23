@@ -107,12 +107,14 @@ export {
   findPen,
   pastureGrazingOffset,
   animalAmenities,
+  animalComfort,
   FENCE_BREACH,
   FENCE_DECAY,
   PASTURE_YIELD,
   FEED_TROUGH_FACTOR,
   WATER_TROUGH_BREED_BONUS,
 } from "./systems/pen.js";
+export type { ComfortTier, ComfortInfo } from "./systems/pen.js";
 
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {

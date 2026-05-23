@@ -9,6 +9,7 @@ import {
   findPen,
   pastureGrazingOffset,
   animalAmenities,
+  animalComfort,
   FENCE_BREACH,
   FEED_TROUGH_FACTOR,
   ANIMAL_CATALOG,
@@ -153,12 +154,83 @@ describe("amenity bonuses", () => {
   });
 });
 
+describe("comfort & density", () => {
+  it("a single animal in a 1-tile pen is comfortable (density 1.0)", () => {
+    const { state, pen } = pennedFarm();
+    const s = { ...state, animals: [createAnimal(state.nextAnimalId, "cow", pen)] };
+    const info = animalComfort(s).get(s.animals[0].id);
+    expect(info?.tier).toBe("comfortable");
+    expect(info?.density).toBeCloseTo(1, 5);
+  });
+
+  it("packing many animals into one tile is cramped", () => {
+    const { state, pen } = pennedFarm();
+    const animals = Array.from({ length: 4 }, (_, i) =>
+      createAnimal(state.nextAnimalId + i, "chicken", pen),
+    );
+    const s = { ...state, animals };
+    for (const a of animals) {
+      expect(animalComfort(s).get(a.id)?.tier).toBe("cramped");
+    }
+  });
+
+  it("loose animals are omitted from the comfort map", () => {
+    const base = createGameState({ goalNetWorth: 1e12 });
+    const open = base.world.tiles.findIndex(
+      (t) => t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null,
+    );
+    const s = { ...base, animals: [createAnimal(base.nextAnimalId, "sheep", open)] };
+    expect(animalComfort(s).has(s.animals[0].id)).toBe(false);
+  });
+
+  it("cramping kills animals from stress even when fed", () => {
+    const { state, pen } = pennedFarm();
+    // 4 chickens crammed in a 1-tile pen → cramped (density 4.0). Start them
+    // at low health so stress drift finishes them quickly even while fed.
+    const animals = Array.from({ length: 4 }, (_, i) => ({
+      ...createAnimal(state.nextAnimalId + i, "chicken", pen),
+      health: 0.05,
+    }));
+    let s = { ...state, animals, inventory: { wheat: 1000 }, day: DAYS_PER_SEASON };
+    let stressDeaths = 0;
+    for (let i = 0; i < DAYS_PER_SEASON * 3 && s.animals.length > 0; i++) {
+      const r = nextTick(s);
+      s = r.state;
+      stressDeaths += r.notifications.filter((n) => /cramped pen/i.test(n.message)).length;
+    }
+    expect(stressDeaths).toBeGreaterThan(0);
+  });
+});
+
 describe("water trough placement", () => {
   it("rejects placement away from any water source", () => {
     const s = createGameState({ startingMoney: 1000, goalNetWorth: 1e12 });
-    // openOwned() returns the first owned grazeable tile, which (in this seed)
-    // is comfortably away from water. The check should fail.
-    const tile = openOwned(s);
+    // Find an owned grazeable tile with no water within the 3-tile radius the
+    // handler checks — placement there should be rejected.
+    const W = s.world.width;
+    const H = s.world.height;
+    let tile = -1;
+    for (let i = s.world.tiles.length - 1; i >= 0 && tile < 0; i--) {
+      const t = s.world.tiles[i];
+      if (!t.owned || t.terrain === "water" || t.fieldId !== null || t.buildingId !== null) continue;
+      const x = i % W;
+      const y = (i / W) | 0;
+      let nearWater = false;
+      check: for (let dy = -3; dy <= 3; dy++) {
+        for (let dx = -3; dx <= 3; dx++) {
+          if (Math.abs(dx) + Math.abs(dy) > 3) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          if (s.world.tiles[ny * W + nx].terrain === "water") {
+            nearWater = true;
+            break check;
+          }
+        }
+      }
+      if (!nearWater) tile = i;
+    }
+    expect(tile).toBeGreaterThanOrEqual(0); // sanity
     const r = applyCommand(s, { type: "BUILD", buildingType: "water_trough", tileIndex: tile });
     expect(r.success).toBe(false);
     expect(r.error).toMatch(/water/i);
