@@ -4,7 +4,7 @@ import type { OverlayMode } from "@farmgame/renderer";
 import type { SprayType } from "@farmgame/engine";
 
 /** Modal panels — only one may be open at a time. */
-export type PanelId = "market" | "finance" | "livestock" | "equipment" | "standings" | "log";
+export type PanelId = "market" | "finance" | "livestock" | "equipment" | "standings" | "log" | "settings";
 
 const ONBOARDING_STORAGE_KEY = "farmgame.onboardingDismissed";
 

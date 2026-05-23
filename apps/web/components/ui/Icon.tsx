@@ -28,7 +28,10 @@ export type IconName =
   | "tractor"
   | "wheat"
   | "volume"
-  | "volume-mute";
+  | "volume-mute"
+  | "settings"
+  | "save"
+  | "load";
 
 interface IconProps {
   name: IconName;
@@ -193,6 +196,28 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <path d="M5 9v6h3l5 4V5L8 9H5z" />
       <path d="M16 9l5 5M21 9l-5 5" />
+    </>
+  ),
+  settings: (
+    // Gear: blocky 6-tooth wheel + inner ring.
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+    </>
+  ),
+  save: (
+    // Floppy disk silhouette.
+    <>
+      <path d="M5 5h11l3 3v11H5V5z" />
+      <path d="M8 5v4h8V5" />
+      <rect x="8" y="13" width="8" height="6" />
+    </>
+  ),
+  load: (
+    // Folder with an upward arrow.
+    <>
+      <path d="M3 7h6l2 2h10v10H3V7z" />
+      <path d="M12 17v-4M9 14l3-3 3 3" />
     </>
   ),
 };

@@ -15,6 +15,7 @@ import { EventLogPanel } from "../components/game/EventLogPanel";
 import { GameOverOverlay } from "../components/game/GameOverOverlay";
 import { AnimalHoverTooltip } from "../components/game/AnimalHoverTooltip";
 import { OnboardingCoach } from "../components/game/OnboardingCoach";
+import { SettingsPanel } from "../components/game/SettingsPanel";
 import { StartScreen } from "../components/menu/StartScreen";
 
 export default function Home() {
@@ -36,6 +37,7 @@ export default function Home() {
           <EquipmentPanel />
           <StandingsPanel />
           <EventLogPanel />
+          <SettingsPanel />
           <OnboardingCoach />
         </div>
         <InfoPanel />
