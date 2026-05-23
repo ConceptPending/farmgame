@@ -57,7 +57,7 @@ function AnimalLine({ a }: { a: Animal }) {
   const seasons = Math.floor((a.lifetime.daysAlive % (DAYS_PER_SEASON * 4)) / DAYS_PER_SEASON);
   const ageStr = years > 0 ? `${years}y ${seasons}s` : `${seasons}s`;
   const productName = def.product ? PRODUCT_CATALOG[def.product].name.toLowerCase() : null;
-  const healthColor = a.health < 0.5 ? "#ff6b6b" : a.health < 0.85 ? "#ffdd57" : "#4ecca3";
+  const healthColor = a.health < 0.5 ? "#ff6b6b" : a.health < 0.85 ? "#ffa454" : "#4ecca3";
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "1px 0" }}>
       <span>

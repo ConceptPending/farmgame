@@ -67,7 +67,7 @@ export function LivestockPanel() {
   const tierColor: Record<ComfortTier, string> = {
     cozy: "#4ecca3",
     comfortable: "#9db4d0",
-    crowded: "#ffdd57",
+    crowded: "#ffa454",
     cramped: "#ff6b6b",
   };
   const comfortParts = (Object.keys(comfortCounts) as ComfortTier[])
@@ -117,7 +117,7 @@ export function LivestockPanel() {
       )}
 
       {looseCount > 0 && (
-        <div style={{ color: "#ffdd57", fontSize: 12, marginBottom: 10 }}>
+        <div style={{ color: "#ffa454", fontSize: 12, marginBottom: 10 }}>
           Loose animals will wander off. Fence them into a pen (Build → Fence) and keep it repaired.
         </div>
       )}

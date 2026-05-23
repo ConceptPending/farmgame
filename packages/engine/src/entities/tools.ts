@@ -19,7 +19,7 @@ export interface ToolDefinition {
 export const TOOL_CATALOG: Record<ToolId, ToolDefinition> = {
   pointer: {
     id: "pointer",
-    name: "Pointer",
+    name: "Select",
     description: "Select and inspect tiles and fields",
   },
   buy_land: {
