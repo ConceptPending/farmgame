@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { usePulseOnChange } from "./juice-hooks";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -61,6 +62,17 @@ export function WeatherPanel() {
   const seasonExpanded = seasonExpandUntil > performance.now();
   const expanded = pinned || hovering || seasonExpanded;
 
+  // Sting on a hazardous-weather arrival: brief coloured border flash.
+  const conditionPulse = usePulseOnChange(weather.condition, 850);
+  const stingColor: Partial<Record<WeatherCondition, string>> = {
+    storm: "#ff6b6b",
+    frost: "#9fc3e8",
+    drought: "#ffa454",
+  };
+  const stingActive = conditionPulse && !!stingColor[weather.condition];
+  const borderColor = stingActive ? (stingColor[weather.condition] as string) : "#0f3460";
+  const borderShadow = stingActive ? `0 0 10px ${stingColor[weather.condition]}` : "none";
+
   return (
     <div
       onMouseEnter={() => setHovering(true)}
@@ -72,7 +84,8 @@ export function WeatherPanel() {
         top: 8,
         right: 8,
         background: "rgba(22, 33, 62, 0.92)",
-        border: "1px solid #0f3460",
+        border: `1px solid ${borderColor}`,
+        boxShadow: borderShadow,
         borderRadius: 6,
         padding: expanded ? "8px 12px" : "4px 10px",
         fontSize: 12,
@@ -80,7 +93,7 @@ export function WeatherPanel() {
         zIndex: 10,
         cursor: "pointer",
         userSelect: "none",
-        transition: "padding 120ms ease",
+        transition: "padding 120ms ease, border-color 250ms ease, box-shadow 250ms ease",
       }}
     >
       {/* Current weather — always visible; compact uses a tighter inline form. */}

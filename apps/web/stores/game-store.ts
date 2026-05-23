@@ -10,6 +10,7 @@ import {
   type CreateGameOptions,
 } from "@farmgame/engine";
 import { TICK_INTERVAL_MS } from "@farmgame/shared";
+import { playSound } from "../lib/sounds";
 
 /** Notification + the in-game time it fired. Drives the event log timeline. */
 export interface StampedNotification extends Notification {
@@ -22,10 +23,19 @@ export interface StampedNotification extends Notification {
 /** History cap — older entries get dropped FIFO. Long enough for ~20 minutes of play. */
 const NOTIFICATION_HISTORY = 200;
 
+/** Tile-anchored juice event the renderer turns into a particle burst. */
+export type FXEventKind = "plant" | "harvest" | "build" | "manure";
+export interface FXEvent {
+  kind: FXEventKind;
+  tileIndex: number;
+}
+
 interface GameStore {
   state: GameState | null;
   notifications: StampedNotification[];
   nextNotificationId: number;
+  /** Queued juice events; the renderer drains this each frame. */
+  fxEvents: FXEvent[];
   tickInterval: ReturnType<typeof setInterval> | null;
   /** Whether the game is auto-advancing on a timer (vs. manual stepping). */
   autoplay: boolean;
@@ -50,6 +60,8 @@ interface GameStore {
   advanceToEvent: (maxDays?: number) => void;
   addNotification: (notification: Notification) => void;
   clearNotifications: () => void;
+  /** Drain and clear the queued FX events; the renderer calls this each frame. */
+  takeFXEvents: () => FXEvent[];
   updateSpeed: (speed: 1 | 2 | 3) => void;
 }
 
@@ -77,6 +89,36 @@ function isStopWorthy(n: Notification): boolean {
 
 type Get = () => GameStore;
 type Set = (partial: Partial<GameStore>) => void;
+
+/** Map a successful command to the tile-anchored FX bursts it should produce. */
+function deriveFXEvents(
+  command: GameCommand,
+  prev: GameState,
+  next: GameState,
+): FXEvent[] {
+  switch (command.type) {
+    case "PLANT_FIELD": {
+      const field = next.fields.find((f) => f.id === command.fieldId);
+      if (!field) return [];
+      return field.tileIndices.map((t) => ({ kind: "plant" as const, tileIndex: t }));
+    }
+    case "HARVEST_FIELD": {
+      // The field's tile list is preserved through harvest (state goes back to fallow).
+      const field = prev.fields.find((f) => f.id === command.fieldId);
+      if (!field) return [];
+      return field.tileIndices.map((t) => ({ kind: "harvest" as const, tileIndex: t }));
+    }
+    case "BUILD":
+      return [{ kind: "build", tileIndex: command.tileIndex }];
+    case "SPREAD_MANURE": {
+      const field = next.fields.find((f) => f.id === command.fieldId);
+      if (!field) return [];
+      return field.tileIndices.map((t) => ({ kind: "manure" as const, tileIndex: t }));
+    }
+    default:
+      return [];
+  }
+}
 
 /**
  * Patterns of engine notifications that repeat per-animal in a single tick.
@@ -230,6 +272,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   notifications: [],
   nextNotificationId: 1,
+  fxEvents: [],
   tickInterval: null,
   // Turn-based by default: the player advances time with the STEP controls.
   // Autoplay is the optional mode, toggled from the HUD.
@@ -240,13 +283,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: (config: CreateGameOptions) => {
     get().stopLoop();
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], nextNotificationId: 1, lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastConfig: config });
     if (get().autoplay) get().startLoop();
   },
 
   returnToMenu: () => {
     get().stopLoop();
-    set({ state: null, notifications: [], nextNotificationId: 1 });
+    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [] });
   },
 
   dispatch: (command: GameCommand) => {
@@ -257,6 +300,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (result.success) {
       set({ state: result.state });
       pushStamped(get, set, groupNotifications(result.notifications), result.state);
+      // Push juice events for the renderer (tile-anchored bursts on player actions).
+      const fx = deriveFXEvents(command, state, result.state);
+      if (fx.length > 0) set({ fxEvents: [...get().fxEvents, ...fx] });
+      // Audio: at most one cue per command (FX events can fan out per-tile but
+      // a single tonal blip per player action is what reads as feedback).
+      if (fx.length > 0) playSound(fx[0].kind === "manure" ? "build" : fx[0].kind);
+      else if (command.type === "SELL" && result.state.money > state.money) playSound("money");
       // If speed changed while auto-advancing, restart the loop at the new cadence.
       if (command.type === "SET_SPEED" && get().autoplay) {
         get().stopLoop();
@@ -334,6 +384,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearNotifications: () => {
     set({ notifications: [] });
+  },
+
+  takeFXEvents: () => {
+    const { fxEvents } = get();
+    if (fxEvents.length === 0) return [];
+    set({ fxEvents: [] });
+    return fxEvents;
   },
 }));
 
