@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
+import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -32,7 +33,6 @@ export function HUD() {
   const state = useGameStore((s) => s.state);
   const notifications = useGameStore((s) => s.notifications);
   const dispatch = useGameStore((s) => s.dispatch);
-  const clearNotifications = useGameStore((s) => s.clearNotifications);
   const autoplay = useGameStore((s) => s.autoplay);
   const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
   const autoPauseOnEvents = useGameStore((s) => s.autoPauseOnEvents);
@@ -42,12 +42,6 @@ export function HUD() {
   const selectedTool = useUIStore((s) => s.selectedTool);
   const openPanel = useUIStore((s) => s.openPanel);
   const activePanel = useUIStore((s) => s.activePanel);
-
-  useEffect(() => {
-    if (notifications.length > 8) {
-      clearNotifications();
-    }
-  }, [notifications.length, clearNotifications]);
 
   if (!state) return null;
 
@@ -219,6 +213,7 @@ export function HUD() {
               <PanelButton label="Rivals" color="#ff8c42" active={activePanel === "standings"} onClick={() => openPanel("standings")} />
             )}
             <PanelButton label="Market" color="#ffdd57" active={activePanel === "market"} onClick={() => openPanel("market")} />
+            <PanelButton label="Log" color="#9db4d0" active={activePanel === "log"} onClick={() => openPanel("log")} />
           </div>
         </div>
       </div>
@@ -240,35 +235,31 @@ export function HUD() {
             pointerEvents: "none",
           }}
         >
-          {notifications.slice(-4).map((n, i) => (
-            <div
-              key={i}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 4,
-                fontSize: 11,
-                background:
-                  n.type === "error"
-                    ? "rgba(74, 32, 32, 0.9)"
-                    : n.type === "success"
-                      ? "rgba(26, 64, 32, 0.9)"
-                      : n.type === "warning"
-                        ? "rgba(74, 58, 16, 0.9)"
-                        : "rgba(22, 33, 62, 0.9)",
-                color:
-                  n.type === "error"
-                    ? "#ff6b6b"
-                    : n.type === "success"
-                      ? "#4ecca3"
-                      : n.type === "warning"
-                        ? "#ffdd57"
-                        : "#aaa",
-                border: "1px solid rgba(50,50,50,0.5)",
-              }}
-            >
-              {n.message}
-            </div>
-          ))}
+          {notifications.slice(-4).map((n, i) => {
+            const color = NOTIFICATION_COLOR[n.type];
+            const glyph = NOTIFICATION_GLYPH[n.type];
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 6,
+                  padding: "5px 10px",
+                  borderRadius: 4,
+                  borderLeft: `4px solid ${color}`,
+                  fontSize: 11,
+                  lineHeight: 1.35,
+                  maxWidth: 360,
+                  background: "rgba(10, 14, 25, 0.94)",
+                  color: "#e0e6ed",
+                }}
+              >
+                <span aria-hidden style={{ color, fontWeight: 700, lineHeight: 1.35 }}>{glyph}</span>
+                <span>{n.message}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </>

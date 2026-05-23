@@ -11,6 +11,7 @@ import { FinancePanel } from "../components/game/FinancePanel";
 import { LivestockPanel } from "../components/game/LivestockPanel";
 import { EquipmentPanel } from "../components/game/EquipmentPanel";
 import { StandingsPanel } from "../components/game/StandingsPanel";
+import { EventLogPanel } from "../components/game/EventLogPanel";
 import { GameOverOverlay } from "../components/game/GameOverOverlay";
 import { AnimalHoverTooltip } from "../components/game/AnimalHoverTooltip";
 import { StartScreen } from "../components/menu/StartScreen";
@@ -33,6 +34,7 @@ export default function Home() {
           <LivestockPanel />
           <EquipmentPanel />
           <StandingsPanel />
+          <EventLogPanel />
         </div>
         <InfoPanel />
       </div>
