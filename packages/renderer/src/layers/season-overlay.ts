@@ -80,31 +80,40 @@ function drawSpringFlowers(g: Graphics, rnd: () => number, w: number, h: number)
 }
 
 function drawSummerHaze(g: Graphics, rnd: () => number, w: number, h: number): void {
-  // Faint warm horizontal streaks — heat shimmer in the distance.
+  // Warm horizontal streaks — heat shimmer in the distance. Punchier than the
+  // first pass so summer actually reads as a season change, not just a tint.
   const haze = 0xe0c98e;
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 22; i++) {
     const y = Math.floor(rnd() * h);
-    const height = 3 + Math.floor(rnd() * 3);
-    g.rect(0, y, w, height).fill({ color: haze, alpha: 0.04 });
+    const height = 2 + Math.floor(rnd() * 5);
+    g.rect(0, y, w, height).fill({ color: haze, alpha: 0.07 });
   }
 }
 
 function drawFallLeaves(g: Graphics, rnd: () => number, w: number, h: number): void {
   const palette = [0xd97742, 0xc7561c, 0xe8a838, 0xb53d20, 0x8a4a1a];
   // Lots of small leaf-like specks scattered across the world.
-  for (let i = 0; i < 220; i++) {
+  for (let i = 0; i < 360; i++) {
     const x = Math.floor(rnd() * w);
     const y = Math.floor(rnd() * h);
     const c = palette[Math.floor(rnd() * palette.length)];
     g.rect(x, y, 2, 1).fill({ color: c, alpha: 0.85 });
   }
-  // A few larger fallen leaves with a darker accent pixel for some weight.
-  for (let i = 0; i < 70; i++) {
+  // Larger fallen leaves with a darker accent pixel for some weight.
+  for (let i = 0; i < 110; i++) {
     const x = Math.floor(rnd() * w);
     const y = Math.floor(rnd() * h);
     const c = palette[Math.floor(rnd() * palette.length)];
     g.rect(x, y, 2, 2).fill({ color: c, alpha: 0.85 });
     g.rect(x + 1, y + 1, 1, 1).fill({ color: 0x6b3818, alpha: 0.7 });
+  }
+  // Leaf clumps (3×2 with a dark accent) — bigger drift on grass.
+  for (let i = 0; i < 55; i++) {
+    const x = Math.floor(rnd() * (w - 3));
+    const y = Math.floor(rnd() * (h - 2));
+    const c = palette[Math.floor(rnd() * palette.length)];
+    g.rect(x, y, 3, 2).fill({ color: c, alpha: 0.8 });
+    g.rect(x + 2, y, 1, 1).fill({ color: 0x6b3818, alpha: 0.7 });
   }
 }
 
