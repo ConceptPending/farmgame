@@ -127,13 +127,17 @@ export class TerrainLayer {
         }
         sprite.texture = getTileTexture(texKey);
 
-        // Override dirt tiles in plowed+ fields with tilled texture
+        // Override dirt tiles in fields: tilled furrows for active states,
+        // overgrown/weedy fallow texture for a field that's been left to rest.
         let tilled = false;
         if (tile.fieldId !== null && tile.terrain === "dirt") {
           const fState = fieldStateMap.get(tile.fieldId);
           if (fState && tilledStates.has(fState)) {
             sprite.texture = getTileTexture("tilled");
             tilled = true;
+          } else if (fState === "fallow") {
+            sprite.texture = getTileTexture("fallow");
+            tilled = true; // skip per-tile tint variation so it reads cleanly
           }
         }
 
@@ -275,7 +279,10 @@ export class TerrainLayer {
       if (!world.plotOwnership[pi]) continue;
       const x = (pi % plotsPerRow) * plotSize * TILE_SIZE;
       const y = Math.floor(pi / plotsPerRow) * plotSize * TILE_SIZE;
-      g.rect(x, y, w, w).stroke({ width: 1, color: 0x4ecca3, alpha: 0.5 });
+      // Owned-land boundary: muted desaturated green so it reads as passive
+      // structure, not a live cursor (which is reserved for white). Quieter
+      // than before to let the active cursor / harvest-ready outlines lead.
+      g.rect(x, y, w, w).stroke({ width: 1, color: 0x4a7a64, alpha: 0.4 });
     }
 
     // Rival-claimed plots, outlined in each rival's color.
