@@ -6,6 +6,7 @@ import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
+import { Icon } from "../ui/Icon";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -143,7 +144,9 @@ export function HUD() {
               style={stepBtnStyle}
               title="Fast-forward until something needs your attention"
             >
-              ⏩ Skip
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Icon name="skip" size={11} /> Skip
+              </span>
             </button>
           </div>
 
@@ -164,7 +167,10 @@ export function HUD() {
                 color: autoplay ? "#4ecca3" : "#ccc",
               }}
             >
-              {autoplay ? "⏸ Auto" : "▶ Auto"}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Icon name={autoplay ? "pause" : "play"} size={11} filled />
+                Auto
+              </span>
             </button>
             {([1, 2, 3] as const).map((speed) => (
               <button
@@ -198,7 +204,7 @@ export function HUD() {
                 color: autoPauseOnEvents ? "#4ecca3" : "#888",
               }}
             >
-              🔔
+              <Icon name="bell" size={11} />
             </button>
           </div>
 

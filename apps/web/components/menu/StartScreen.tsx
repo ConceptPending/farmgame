@@ -11,6 +11,8 @@ import {
   type Difficulty,
 } from "../../lib/scenarios";
 import type { GoalType } from "@farmgame/engine";
+import { Icon } from "../ui/Icon";
+import { StartScreenBackdrop } from "./StartScreenBackdrop";
 
 export function StartScreen() {
   const startGame = useGameStore((s) => s.startGame);
@@ -50,21 +52,32 @@ export function StartScreen() {
   return (
     <div
       style={{
+        position: "relative",
         height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 18,
         background: "#0d1b2a",
         color: "#eee",
         fontFamily: "system-ui, sans-serif",
-        padding: 24,
         overflowY: "auto",
       }}
     >
+      <StartScreenBackdrop />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          minHeight: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 18,
+          padding: 24,
+        }}
+      >
       <div style={{ textAlign: "center" }}>
-        <h1 style={{ margin: 0, color: "#4ecca3", fontSize: 36, letterSpacing: 1 }}>🌾 FarmGame</h1>
+        <h1 style={{ margin: 0, color: "#4ecca3", fontSize: 36, letterSpacing: 1, display: "inline-flex", alignItems: "center", gap: 10 }}>
+          <Icon name="wheat" size={32} /> FarmGame
+        </h1>
         <p style={{ color: "#7a8a9a", margin: "6px 0 0" }}>Choose how you want to play.</p>
       </div>
 
@@ -97,11 +110,15 @@ export function StartScreen() {
                 {s.name}
               </div>
               <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 8, lineHeight: 1.35 }}>{s.blurb}</div>
-              <div style={{ fontSize: 11, color: "#7a8a9a" }}>
-                🎯 {s.goalSummary({ startingMoney: 0, expenseMultiplier: 0, rivalAggr: 0, targetScale: difficultyScale(difficulty) })}
+              <div style={{ fontSize: 11, color: "#7a8a9a", display: "flex", alignItems: "center", gap: 5 }}>
+                <Icon name="target" size={11} color="#ffdd57" />
+                {s.goalSummary({ startingMoney: 0, expenseMultiplier: 0, rivalAggr: 0, targetScale: difficultyScale(difficulty) })}
               </div>
               {s.rivals > 0 && (
-                <div style={{ fontSize: 11, color: "#7a8a9a", marginTop: 2 }}>🚜 {s.rivals} rivals</div>
+                <div style={{ fontSize: 11, color: "#7a8a9a", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon name="tractor" size={11} color="#ff8c42" />
+                  {s.rivals} rivals
+                </div>
               )}
             </button>
           );
@@ -150,6 +167,7 @@ export function StartScreen() {
       <button onClick={start} disabled={!canStart} style={startBtn(canStart)}>
         Start Farming →
       </button>
+      </div>
     </div>
   );
 }

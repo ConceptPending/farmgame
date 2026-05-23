@@ -4,6 +4,7 @@ import { TerrainLayer } from "./layers/terrain.js";
 import { CropLayer } from "./layers/crop.js";
 import { BuildingLayer } from "./layers/building.js";
 import { AnimalLayer } from "./layers/animal.js";
+import { PenDecorLayer } from "./layers/pen-decor.js";
 import { SeasonOverlay } from "./layers/season-overlay.js";
 import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
@@ -24,6 +25,7 @@ export class GameRenderer {
   private cropLayer: CropLayer;
   private buildingLayer: BuildingLayer;
   private animalLayer: AnimalLayer;
+  private penDecorLayer: PenDecorLayer;
   private seasonOverlay: SeasonOverlay;
   private gridOverlay: GridOverlay;
   private weatherEffects: WeatherEffects;
@@ -46,6 +48,7 @@ export class GameRenderer {
     this.cropLayer = new CropLayer();
     this.buildingLayer = new BuildingLayer();
     this.animalLayer = new AnimalLayer();
+    this.penDecorLayer = new PenDecorLayer();
     this.seasonOverlay = new SeasonOverlay();
     this.gridOverlay = new GridOverlay();
     this.weatherEffects = new WeatherEffects();
@@ -74,6 +77,9 @@ export class GameRenderer {
     this.world.addChild(this.seasonOverlay.container);
     this.world.addChild(this.cropLayer.container);
     this.world.addChild(this.buildingLayer.container);
+    // Pen decoration (hay/mud/grain/footprints) sits above buildings but
+    // below animals, so animals walk over their pen.
+    this.world.addChild(this.penDecorLayer.container);
     this.world.addChild(this.animalLayer.container);
     this.world.addChild(this.gridOverlay.container);
     this.world.addChild(this.weatherEffects.container);
@@ -151,6 +157,7 @@ export class GameRenderer {
     this.terrainLayer.update(state);
     this.cropLayer.update(state);
     this.buildingLayer.update(state);
+    this.penDecorLayer.update(state);
     this.animalLayer.update(state);
     this.gridOverlay.update(state);
     this.weatherEffects.updateState(state);
