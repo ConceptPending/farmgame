@@ -94,6 +94,47 @@ export const SCENARIOS: Scenario[] = [
     buildGoal: () => ({ type: "market_leader", good: "wheat", seasons: 4 }),
     goalSummary: () => "Top wheat seller for 4 seasons",
   },
+  // Turn-limited scenarios — added in PR M when deadline_turns landed.
+  {
+    id: "first_harvest",
+    name: "First Harvest",
+    blurb: "Learn the loop. 12 turns (one game year) to reach a modest target.",
+    available: true,
+    rivals: 0,
+    buildGoal: (d) => ({
+      type: "net_worth",
+      target: Math.round(3000 * d.targetScale),
+      deadlineTurns: 12,
+    }),
+    goalSummary: (d) => `${money(Math.round(3000 * d.targetScale))} net worth in 12 turns`,
+  },
+  {
+    id: "quick_challenge",
+    name: "Quick Challenge",
+    blurb: "24 turns (two years) for a real payday.",
+    available: true,
+    rivals: 0,
+    buildGoal: (d) => ({
+      type: "net_worth",
+      target: Math.round(15000 * d.targetScale),
+      deadlineTurns: 24,
+    }),
+    goalSummary: (d) => `${money(Math.round(15000 * d.targetScale))} net worth in 24 turns`,
+  },
+  {
+    id: "race_the_clock",
+    name: "Race the Clock",
+    blurb: "Outrun three rivals and the calendar — 36 turns to win.",
+    available: true,
+    rivals: 3,
+    buildGoal: (d) => ({
+      type: "tycoon_race",
+      target: Math.round(NET_WORTH_BASE * d.targetScale),
+      deadlineTurns: 36,
+    }),
+    goalSummary: (d) =>
+      `First to ${money(Math.round(NET_WORTH_BASE * d.targetScale))} (36-turn limit)`,
+  },
 ];
 
 export function buildConfig(

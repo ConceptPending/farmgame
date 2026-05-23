@@ -26,7 +26,7 @@ describe("onboarding step derivation", () => {
     expect(currentOnboardingStep(s)).toBe("designate");
   });
 
-  it("advances designate → plow → plant → wait as the player acts", () => {
+  it("advances designate → plow → plant → labor → wait as the player acts", () => {
     let s = createGameState({ seed: 1, startingMoney: 5000 });
 
     // Pick four owned, workable tiles to mark as a field.
@@ -44,7 +44,12 @@ describe("onboarding step derivation", () => {
     expect(currentOnboardingStep(s)).toBe("plant");
 
     s = step(s, { type: "PLANT_FIELD", fieldId, cropId: "wheat" });
-    // Freshly planted → growing but not ready, inventory empty → wait.
+    // Planted + labor spent this month → the "mind your labor" step fires
+    // before "wait" so the player is told about the budget they just touched.
+    expect(currentOnboardingStep(s)).toBe("labor");
+
+    // After ending the turn, labor refreshes to 0 → step advances to "wait".
+    s = step(s, { type: "END_TURN" });
     expect(currentOnboardingStep(s)).toBe("wait");
   });
 

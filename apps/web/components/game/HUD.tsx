@@ -84,6 +84,17 @@ export function HUD() {
   const goalPct = Math.round(progress.pct * 100);
   const goalIsMoney = state.goal.type !== "land_baron" && state.goal.type !== "market_leader";
   const fmtGoal = (n: number) => (goalIsMoney ? `$${n.toLocaleString()}` : `${n}`);
+  // Deadline countdown — appears on scenarios with a turn limit. The colour
+  // shifts orange/red as the deadline closes in.
+  const deadline = state.goal.type !== "sandbox" ? state.goal.deadlineTurns : undefined;
+  const turnsLeft = deadline != null ? Math.max(0, deadline - state.tick) : null;
+  const deadlineColor = turnsLeft == null
+    ? null
+    : turnsLeft <= 2
+      ? "#ff6b6b"
+      : turnsLeft <= 6
+        ? "#ffa454"
+        : "#9db4d0";
 
   // Juice
   const moneyDisplay = useAnimatedNumber(state.money, 450);
@@ -155,6 +166,9 @@ export function HUD() {
           <span style={{ fontSize: 10, color: "#7a8a9a" }}>
             {progress.label.toUpperCase()} <span style={{ color: "#eee" }}>{fmtGoal(progress.current)}</span>
             {progress.target > 0 && <span> / {fmtGoal(progress.target)}</span>}
+            {turnsLeft != null && deadlineColor && (
+              <span style={{ color: deadlineColor }}> · {turnsLeft} turns left</span>
+            )}
             {state.loan > 0 && <span style={{ color: "#ff6b6b" }}> · debt ${state.loan.toLocaleString()}</span>}
           </span>
           <div style={{ width: 120, height: 5, background: "#16213e", borderRadius: 3, overflow: "hidden" }}>

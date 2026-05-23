@@ -51,7 +51,7 @@ export function EquipmentPanel() {
               key={type}
               disabled={disabled}
               onClick={() => dispatch({ type: "BUY_EQUIPMENT", equipmentType: type })}
-              title={`+${def.workableTiles} workable tiles · upkeep $${def.upkeepPerSeason}/season`}
+              title={`+${def.workableTiles} workable tiles · +${def.laborBonus} labor/month · upkeep $${def.upkeepPerSeason}/season`}
               style={{
                 padding: "4px 8px",
                 fontSize: 11,
@@ -62,7 +62,8 @@ export function EquipmentPanel() {
                 cursor: disabled ? "default" : "pointer",
               }}
             >
-              {def.name} ${def.cost} <span style={{ opacity: 0.7 }}>(+{def.workableTiles})</span>
+              {def.name} ${def.cost}{" "}
+              <span style={{ opacity: 0.7 }}>(+{def.workableTiles}t · +{def.laborBonus}L)</span>
             </button>
           );
         })}
@@ -81,7 +82,10 @@ export function EquipmentPanel() {
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #222", padding: "3px 0" }}
               >
                 <span style={{ color: "#ccc" }}>
-                  {def.name} <span style={{ color: "#888" }}>· +{def.workableTiles} tiles · ${def.upkeepPerSeason}/season</span>
+                  {def.name}{" "}
+                  <span style={{ color: "#888" }}>
+                    · +{def.workableTiles} tiles · +{def.laborBonus} labor/mo · ${def.upkeepPerSeason}/season
+                  </span>
                 </span>
                 <button
                   onClick={() => dispatch({ type: "SELL_EQUIPMENT", equipmentId: e.id })}

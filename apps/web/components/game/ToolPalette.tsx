@@ -43,6 +43,21 @@ const TOOL_REPRESENTATIVE_COMMAND: Partial<Record<ToolId, GameCommand>> = {
   bulldoze: { type: "REMOVE_FIELD", fieldId: 0 },
 };
 
+/** Re-target a command at a specific field id so the per-tile lookup can find it. */
+function patchFieldId(cmd: GameCommand, fieldId: number): GameCommand {
+  if (
+    cmd.type === "PLOW_FIELD" ||
+    cmd.type === "PLANT_FIELD" ||
+    cmd.type === "HARVEST_FIELD" ||
+    cmd.type === "SPRAY" ||
+    cmd.type === "SPREAD_MANURE" ||
+    cmd.type === "REMOVE_FIELD"
+  ) {
+    return { ...cmd, fieldId };
+  }
+  return cmd;
+}
+
 const TOOL_HINTS: Record<ToolId, string> = {
   pointer: "Click to inspect",
   buy_land: "Click a plot to buy",
@@ -95,11 +110,25 @@ export function ToolPalette() {
   const selectedSprayType = useUIStore((s) => s.selectedSprayType);
   const setSelectedSprayType = useUIStore((s) => s.setSelectedSprayType);
   const state = useGameStore((s) => s.state);
+  const selectedFieldId = useUIStore((s) => s.selectedFieldId);
 
   const laborLeft = state ? state.labor.capacity - state.labor.used : 0;
+  /**
+   * When the player has a field selected and the tool would act on a field,
+   * compute the cost against that specific field's tile count. Otherwise
+   * fall back to the per-tile minimum (chunk floor = 1).
+   */
   function toolCost(id: ToolId): number {
     const cmd = TOOL_REPRESENTATIVE_COMMAND[id];
-    return cmd ? laborCost(cmd) : 0;
+    if (!cmd) return 0;
+    if (state && selectedFieldId != null) {
+      const field = state.fields.find((f) => f.id === selectedFieldId);
+      if (field) {
+        const scoped = patchFieldId(cmd, field.id);
+        return laborCost(scoped, state);
+      }
+    }
+    return laborCost(cmd);
   }
   function toolDisabled(id: ToolId): boolean {
     return toolCost(id) > laborLeft;

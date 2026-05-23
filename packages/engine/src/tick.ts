@@ -1,4 +1,6 @@
 import type { GameState, Notification, TickResult } from "./state.js";
+import { BASE_LABOR_CAPACITY } from "./state.js";
+import { equipmentLaborBonus } from "./entities/equipment.js";
 import { seasonSystem } from "./systems/season.js";
 import { weatherSystem } from "./systems/weather.js";
 import { waterSystem } from "./systems/water.js";
@@ -90,8 +92,11 @@ export function nextTurn(state: GameState): TickResult {
   current = financeResult.state;
   notifications.push(...financeResult.notifications);
 
-  // Replenish the monthly labor budget for the player's next turn.
-  current = { ...current, labor: { ...current.labor, used: 0 } };
+  // Replenish the monthly labor budget for the player's next turn — and
+  // recompute capacity from currently-owned equipment so a newly-bought
+  // tractor's bonus shows up on the very next turn.
+  const capacity = BASE_LABOR_CAPACITY + equipmentLaborBonus(current.equipment);
+  current = { ...current, labor: { used: 0, capacity } };
 
   return { state: current, notifications };
 }
