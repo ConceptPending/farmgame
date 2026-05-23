@@ -144,14 +144,25 @@ export function InfoPanel() {
             <br />
             Tiles: {selectedField.tileIndices.length}
             <br />
-            {selectedField.cropId && (
-              <>
-                Crop: {getCropDef(selectedField.cropId)?.name ?? selectedField.cropId}
-                <br />
-                Growth: {(selectedField.growth * 100).toFixed(0)}%
-                <br />
-              </>
-            )}
+            {selectedField.cropId && (() => {
+              const cropDef = getCropDef(selectedField.cropId);
+              return (
+                <>
+                  Crop: {cropDef?.name ?? selectedField.cropId}
+                  {cropDef && (
+                    <>
+                      <br />
+                      <span style={{ color: "#7a8a9a", fontStyle: "italic", fontSize: 11 }}>
+                        {cropDef.archetypeTagline}
+                      </span>
+                    </>
+                  )}
+                  <br />
+                  Growth: {(selectedField.growth * 100).toFixed(0)}%
+                  <br />
+                </>
+              );
+            })()}
             Health: {(selectedField.health * 100).toFixed(0)}%
             <br />
             Moisture: {(selectedField.moisture * 100).toFixed(0)}%
