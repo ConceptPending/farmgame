@@ -105,9 +105,14 @@ export class GameRenderer {
       }
     });
 
-    // Animation loop — only does work when weather particles exist
+    // Per-frame animation: weather particles + livestock idle/walk.
+    let lastTs = performance.now();
     const animate = () => {
+      const now = performance.now();
+      const dt = now - lastTs;
+      lastTs = now;
       this.weatherEffects.tick();
+      this.animalLayer.tick(dt);
       this.animationTickerId = requestAnimationFrame(animate);
     };
     this.animationTickerId = requestAnimationFrame(animate);
