@@ -10,6 +10,7 @@ import {
   pastureGrazingOffset,
   animalAmenities,
   animalComfort,
+  predatorSystem,
   FENCE_BREACH,
   FEED_TROUGH_FACTOR,
   ANIMAL_CATALOG,
@@ -62,20 +63,20 @@ describe("containment & escape", () => {
     expect(s.animals[0].tileIndex).toBe(pen);
   });
 
-  it("a loose, fed animal eventually wanders off and is lost", () => {
+  it("a loose, fed animal eventually gets lost (wandering or predator)", () => {
     const base = createGameState({ seed: 3, startingMoney: 1000, goalNetWorth: 1e12 });
     let s: GameState = {
       ...base,
       animals: [createAnimal(base.nextAnimalId, "cow", openOwned(base))],
-      inventory: { wheat: 100000 }, // fed, so loss is from wandering, not starving
+      inventory: { wheat: 100000 }, // fed, so any loss is from wandering or predators
     };
-    let wandered = false;
+    let lost = false;
     for (let i = 0; i < DAYS_PER_SEASON * 60 && s.animals.length > 0; i++) {
       const r = nextTick(s);
       s = r.state;
-      if (r.notifications.some((n) => /wander/i.test(n.message))) wandered = true;
+      if (r.notifications.some((n) => /wander|predator/i.test(n.message))) lost = true;
     }
-    expect(wandered).toBe(true);
+    expect(lost).toBe(true);
     expect(s.animals).toHaveLength(0);
   });
 });
@@ -243,6 +244,68 @@ describe("water trough placement", () => {
     s = applyCommand(s, { type: "BUILD", buildingType: "water_pump", tileIndex: tile + 1 }).state;
     const r = applyCommand(s, { type: "BUILD", buildingType: "water_trough", tileIndex: tile });
     expect(r.success).toBe(true);
+  });
+});
+
+describe("predators", () => {
+  it("never targets a penned animal", () => {
+    // Drive predatorSystem directly so fence decay can't reopen the pen on us.
+    const { state, pen } = pennedFarm();
+    let s: GameState = {
+      ...state,
+      animals: [createAnimal(state.nextAnimalId, "sheep", pen)],
+      day: 1,
+    };
+    for (let i = 0; i < 60; i++) s = predatorSystem(s).state;
+    expect(s.animals).toHaveLength(1);
+  });
+
+  it("eventually takes a loose animal", () => {
+    // Drive predatorSystem directly so we isolate it from penSystem's wander
+    // (which would otherwise escape the animal off the farm first).
+    const base = createGameState({ seed: 3, startingMoney: 1000, goalNetWorth: 1e12 });
+    let s: GameState = {
+      ...base,
+      animals: [createAnimal(base.nextAnimalId, "sheep", openOwned(base))],
+      day: 1,
+    };
+    let taken = false;
+    for (let i = 0; i < 80 && s.animals.length > 0; i++) {
+      const r = predatorSystem(s);
+      s = r.state;
+      if (r.notifications.some((n) => /predator/i.test(n.message))) taken = true;
+    }
+    expect(taken).toBe(true);
+    expect(s.animals).toHaveLength(0);
+  });
+});
+
+describe("barns shelter from predators", () => {
+  it("a herd next to a barn loses fewer animals than one out in the open", () => {
+    // Many loose sheep + one predator roll each; barn presence halves the
+    // per-animal chance, so the sheltered herd should suffer fewer losses.
+    const base = createGameState({ seed: 7, startingMoney: 1000, goalNetWorth: 1e12 });
+    const W = base.world.width;
+    const open: number[] = [];
+    for (let i = 0; i < base.world.tiles.length; i++) {
+      const t = base.world.tiles[i];
+      if (t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null) open.push(i);
+    }
+    const herdTile = open[Math.floor(open.length / 2)];
+    const makeHerd = (withBarn: boolean): GameState => {
+      const herd = Array.from({ length: 40 }, (_, i) =>
+        createAnimal(1000 + i, "sheep", herdTile),
+      );
+      return {
+        ...base,
+        animals: herd,
+        day: 1,
+        buildings: withBarn ? [createBuilding(1, "barn", herdTile + 1)] : [],
+      };
+    };
+    const lossesSheltered = makeHerd(true).animals.length - predatorSystem(makeHerd(true)).state.animals.length;
+    const lossesExposed = makeHerd(false).animals.length - predatorSystem(makeHerd(false)).state.animals.length;
+    expect(lossesSheltered).toBeLessThan(lossesExposed);
   });
 });
 

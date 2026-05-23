@@ -6,6 +6,7 @@ import { cropSystem } from "./systems/crop.js";
 import { fieldHealthSystem } from "./systems/field-health.js";
 import { livestockSystem } from "./systems/livestock.js";
 import { penSystem } from "./systems/pen.js";
+import { predatorSystem } from "./systems/predator.js";
 import { rivalSystem } from "./systems/rival.js";
 import { eventSystem } from "./systems/events.js";
 import { marketSystem } from "./systems/market.js";
@@ -13,7 +14,7 @@ import { financeSystem } from "./systems/finance.js";
 
 /**
  * Core tick function. Pure: same state in = same state out.
- * Pipeline: season → weather → water → crops → fieldHealth → livestock → pens → rivals → events → market → finance
+ * Pipeline: season → weather → water → crops → fieldHealth → livestock → pens → predators → rivals → events → market → finance
  */
 export function nextTick(state: GameState): TickResult {
   // Don't advance while paused or after the game has ended.
@@ -60,6 +61,11 @@ export function nextTick(state: GameState): TickResult {
   const penResult = penSystem(current);
   current = penResult.state;
   notifications.push(...penResult.notifications);
+
+  // Predator system (loose animals may be taken — barns shelter; weather scales risk)
+  const predResult = predatorSystem(current);
+  current = predResult.state;
+  notifications.push(...predResult.notifications);
 
   // Rival farms (expansion + market competition)
   const rivalResult = rivalSystem(current);

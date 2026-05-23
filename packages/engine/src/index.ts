@@ -115,6 +115,7 @@ export {
   WATER_TROUGH_BREED_BONUS,
 } from "./systems/pen.js";
 export type { ComfortTier, ComfortInfo } from "./systems/pen.js";
+export { predatorSystem } from "./systems/predator.js";
 
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {
