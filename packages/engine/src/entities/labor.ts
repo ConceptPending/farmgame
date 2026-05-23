@@ -25,17 +25,18 @@
 
 import type { GameCommand } from "../commands.js";
 import type { GameState } from "../state.js";
+import { isFieldRoadConnected } from "./road.js";
 
 /** Heavy crop work — 1 labor per 4 tiles. */
 const HEAVY_TILE_CHUNK = 4;
 /** Light field work — 1 labor per 8 tiles. */
 const LIGHT_TILE_CHUNK = 8;
 
-/** Cost given a per-tile chunk size. DESIGNATE_FIELD carries its own tile list
- *  so it works without state; field-targeting commands look up the field's
- *  tile count and fall back to 1 if state isn't available. */
+/** Per-tile cost with one labor unit shaved off when the target field is
+ *  road-connected — see `isFieldRoadConnected`. Minimum cost is always 1. */
 function perTileCost(cmd: GameCommand, state: GameState | undefined, chunk: number): number {
   if (cmd.type === "DESIGNATE_FIELD") {
+    // Designating doesn't target an existing field; no road discount applies.
     return Math.max(1, Math.ceil(cmd.tileIndices.length / chunk));
   }
   if (!state) return 1;
@@ -49,7 +50,9 @@ function perTileCost(cmd: GameCommand, state: GameState | undefined, chunk: numb
   ) {
     const field = state.fields.find((f) => f.id === cmd.fieldId);
     if (!field) return 1;
-    return Math.max(1, Math.ceil(field.tileIndices.length / chunk));
+    const base = Math.ceil(field.tileIndices.length / chunk);
+    const discount = isFieldRoadConnected(state, field) ? 1 : 0;
+    return Math.max(1, base - discount);
   }
   return 1;
 }

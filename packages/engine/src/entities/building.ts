@@ -57,7 +57,7 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     type: "windmill",
     name: "Windmill",
     cost: 800,
-    description: "Powers nearby irrigation and increases field efficiency",
+    description: "Wider water source — 8-tile moisture radius and 18-tile irrigation reach",
   },
   irrigation_ditch: {
     type: "irrigation_ditch",
@@ -69,7 +69,7 @@ export const BUILDING_CATALOG: Record<BuildingType, BuildingDefinition> = {
     type: "road",
     name: "Road",
     cost: 25,
-    description: "Decorative path tile",
+    description: "Adjacent fields cost 1 less labor per heavy/light action (min 1).",
   },
   fence: {
     type: "fence",
