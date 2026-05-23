@@ -76,6 +76,47 @@ describe("growth, feed, and breeding", () => {
   });
 });
 
+describe("identity (name + lifetime)", () => {
+  it("created animals get a name from a deterministic per-type pool", () => {
+    const s = createGameState({ startingMoney: 5000, goalNetWorth: 1e12 });
+    const r1 = applyCommand(s, { type: "BUY_ANIMAL", animalType: "cow" });
+    const r2 = applyCommand(s, { type: "BUY_ANIMAL", animalType: "cow" });
+    expect(r1.state.animals[0].name).toBeTruthy();
+    // Same id (nextAnimalId before each buy) → same name.
+    expect(r1.state.animals[0].name).toBe(r2.state.animals[0].name);
+  });
+
+  it("lifetime daysAlive increments every tick", () => {
+    const s = withPenned("cow", 1);
+    const after = nextTick(s).state;
+    expect(after.animals[0].lifetime.daysAlive).toBe(1);
+  });
+
+  it("lifetime products accumulate after a producing season", () => {
+    const base = withPenned("chicken", 1);
+    const s = {
+      ...base,
+      animals: base.animals.map((a) => ({ ...a, maturity: 1 })),
+      inventory: { wheat: 100 },
+      day: DAYS_PER_SEASON,
+    };
+    const after = nextTick(s).state;
+    expect(after.animals[0].lifetime.products).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
+  });
+
+  it("RENAME_ANIMAL updates the name (trimmed, non-empty required)", () => {
+    const s = applyCommand(
+      createGameState({ startingMoney: 5000, goalNetWorth: 1e12 }),
+      { type: "BUY_ANIMAL", animalType: "pig" },
+    ).state;
+    const id = s.animals[0].id;
+    const r = applyCommand(s, { type: "RENAME_ANIMAL", animalId: id, name: "  Sir Bacon  " });
+    expect(r.success).toBe(true);
+    expect(r.state.animals[0].name).toBe("Sir Bacon");
+    expect(applyCommand(r.state, { type: "RENAME_ANIMAL", animalId: id, name: "   " }).success).toBe(false);
+  });
+});
+
 describe("net worth", () => {
   it("counts livestock as an asset", () => {
     const base = createGameState({ startingMoney: 5000, goalNetWorth: 1e12 });

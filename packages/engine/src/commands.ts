@@ -20,6 +20,7 @@ export type GameCommand =
   | { type: "SELL"; cropId: CropId | ProductType; quantity: number }
   | { type: "BUY_ANIMAL"; animalType: AnimalType; tileIndex?: number }
   | { type: "SELL_ANIMAL"; animalId: number }
+  | { type: "RENAME_ANIMAL"; animalId: number; name: string }
   | { type: "REPAIR_FENCES" }
   | { type: "BUY_EQUIPMENT"; equipmentType: EquipmentType }
   | { type: "SELL_EQUIPMENT"; equipmentId: number }

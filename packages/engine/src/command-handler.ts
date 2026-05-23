@@ -636,6 +636,21 @@ function handleRepairFences(state: GameState): CommandResult {
   };
 }
 
+function handleRenameAnimal(state: GameState, animalId: number, name: string): CommandResult {
+  const trimmed = name.trim().slice(0, 24);
+  if (trimmed.length === 0) return fail(state, "Name can't be empty.");
+  const animal = state.animals.find((a) => a.id === animalId);
+  if (!animal) return fail(state, "Animal not found");
+  return {
+    state: {
+      ...state,
+      animals: state.animals.map((a) => (a.id === animalId ? { ...a, name: trimmed } : a)),
+    },
+    success: true,
+    notifications: [],
+  };
+}
+
 function handleSellAnimal(state: GameState, animalId: number): CommandResult {
   const animal = state.animals.find((a) => a.id === animalId);
   if (!animal) return fail(state, "Animal not found");
@@ -746,6 +761,8 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleBuyAnimal(state, command.animalType, command.tileIndex);
     case "SELL_ANIMAL":
       return handleSellAnimal(state, command.animalId);
+    case "RENAME_ANIMAL":
+      return handleRenameAnimal(state, command.animalId, command.name);
     case "REPAIR_FENCES":
       return handleRepairFences(state);
     case "BUY_EQUIPMENT":

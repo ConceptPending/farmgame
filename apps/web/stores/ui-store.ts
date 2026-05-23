@@ -20,6 +20,8 @@ interface UIStore {
   activePanel: PanelId | null;
   showInfoPanel: boolean;
   dragStartTile: number | null;
+  /** Mouse position in viewport pixels while hovering the canvas (null when off). */
+  hoverScreen: { x: number; y: number } | null;
 
   setSelectedTool: (tool: ToolId) => void;
   setSelectedCrop: (cropId: CropId) => void;
@@ -35,6 +37,7 @@ interface UIStore {
   closePanel: () => void;
   setShowInfoPanel: (show: boolean) => void;
   setDragStartTile: (idx: number | null) => void;
+  setHoverScreen: (p: { x: number; y: number } | null) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -50,6 +53,7 @@ export const useUIStore = create<UIStore>((set) => ({
   activePanel: null,
   showInfoPanel: true,
   dragStartTile: null,
+  hoverScreen: null,
 
   setSelectedTool: (tool) => set({ selectedTool: tool }),
   setSelectedCrop: (cropId) => set({ selectedCrop: cropId }),
@@ -64,4 +68,5 @@ export const useUIStore = create<UIStore>((set) => ({
   closePanel: () => set({ activePanel: null }),
   setShowInfoPanel: (show) => set({ showInfoPanel: show }),
   setDragStartTile: (idx) => set({ dragStartTile: idx }),
+  setHoverScreen: (p) => set({ hoverScreen: p }),
 }));

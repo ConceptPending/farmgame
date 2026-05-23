@@ -41,8 +41,12 @@ export function GameCanvas() {
         if (!currentState) return;
 
         if (event.type === "tile_hover") {
-          // Hover is handled directly by the renderer (no React re-render).
-          // Only update zustand on click for the info panel.
+          // Renderer already drew the hover highlight directly; we additionally
+          // publish the hovered tile so React-rendered overlays (e.g. the
+          // animal tooltip) can react to it.
+          if (event.tileIndex !== useUIStore.getState().hoveredTileIndex) {
+            useUIStore.getState().setHoveredTileIndex(event.tileIndex);
+          }
           return;
         }
 
@@ -220,6 +224,24 @@ export function GameCanvas() {
       rendererRef.current.update(state);
     }
   }, [state]);
+
+  // Publish mouse position over the canvas so overlay tooltips can anchor to it.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onMove = (e: MouseEvent) =>
+      useUIStore.getState().setHoverScreen({ x: e.clientX, y: e.clientY });
+    const onLeave = () => {
+      useUIStore.getState().setHoverScreen(null);
+      useUIStore.getState().setHoveredTileIndex(-1);
+    };
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseleave", onLeave);
+    return () => {
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
 
   // Update overlay mode
   const selectedOverlay = useUIStore((s) => s.selectedOverlay);
