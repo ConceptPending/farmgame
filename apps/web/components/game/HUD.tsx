@@ -241,7 +241,7 @@ export function HUD() {
             pointerEvents: "none",
           }}
         >
-          {notifications.slice(-4).map((n, i) => {
+          {notifications.slice(-3).map((n, i) => {
             const color = NOTIFICATION_COLOR[n.type];
             const glyph = NOTIFICATION_GLYPH[n.type];
             return (
@@ -266,6 +266,24 @@ export function HUD() {
               </div>
             );
           })}
+          {notifications.length > 3 && (
+            <button
+              onClick={() => openPanel("log")}
+              style={{
+                marginTop: 2,
+                padding: "3px 8px",
+                fontSize: 10,
+                border: "none",
+                borderRadius: 3,
+                background: "rgba(10, 14, 25, 0.85)",
+                color: "#7a8a9a",
+                cursor: "pointer",
+                pointerEvents: "auto",
+              }}
+            >
+              +{notifications.length - 3} earlier · view log
+            </button>
+          )}
         </div>
       )}
     </>

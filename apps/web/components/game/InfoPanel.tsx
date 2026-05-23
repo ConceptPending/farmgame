@@ -8,7 +8,7 @@ import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 const RISKY_WEATHER: Record<string, { glyph: string; color: string; label: string }> = {
   storm: { glyph: "⛈", color: "#ff6b6b", label: "Storm" },
   frost: { glyph: "❄", color: "#9fc3e8", label: "Frost" },
-  drought: { glyph: "🔥", color: "#ffdd57", label: "Drought" },
+  drought: { glyph: "🔥", color: "#ffa454", label: "Drought" },
   rain: { glyph: "🌧", color: "#9db4d0", label: "Rain" },
 };
 

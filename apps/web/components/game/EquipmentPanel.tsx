@@ -32,7 +32,7 @@ export function EquipmentPanel() {
           <span style={{ color: used > capacity ? "#ff6b6b" : "#4ecca3" }}>{used} / {capacity} tiles</span>
         </div>
         <div style={{ height: 8, background: "#0a1628", borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ width: `${pct}%`, height: "100%", background: pct >= 100 ? "#ffdd57" : "#4ecca3" }} />
+          <div style={{ width: `${pct}%`, height: "100%", background: pct >= 100 ? "#ffa454" : "#4ecca3" }} />
         </div>
         <div style={{ color: "#7a8a9a", fontSize: 11, marginTop: 4 }}>
           Buy machinery to plow and work more land at once.

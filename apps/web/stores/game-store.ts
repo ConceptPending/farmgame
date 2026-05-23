@@ -78,6 +78,123 @@ function isStopWorthy(n: Notification): boolean {
 type Get = () => GameStore;
 type Set = (partial: Partial<GameStore>) => void;
 
+/**
+ * Patterns of engine notifications that repeat per-animal in a single tick.
+ * Each entry captures the species (and optionally the named individual) so we
+ * can collapse N births into one toast instead of flooding the player. The
+ * first match wins; non-matching notifications pass through untouched.
+ */
+interface GroupSpec {
+  pattern: RegExp;
+  /** Indexes inside the regex match: species at [speciesIdx], optional name at [nameIdx]. */
+  speciesIdx: number;
+  nameIdx?: number;
+  /** Build the collapsed message for `count` matched events of the same species. */
+  build: (species: string, count: number, names: string[]) => string;
+}
+
+function plural(species: string, n: number): string {
+  // The engine uses lowercase common nouns; chicken→chickens, sheep→sheep.
+  if (species === "sheep") return "sheep";
+  return n === 1 ? species : `${species}s`;
+}
+
+const NAMES_LIMIT = 5;
+function nameList(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length <= NAMES_LIMIT) return names.join(", ");
+  return `${names.slice(0, NAMES_LIMIT).join(", ")}, +${names.length - NAMES_LIMIT} more`;
+}
+
+const GROUP_SPECS: GroupSpec[] = [
+  {
+    // "Cluck the chicken was born!"
+    pattern: /^(\w+) the (chicken|pig|sheep|cow) was born!$/,
+    speciesIdx: 2,
+    nameIdx: 1,
+    build: (s, n, names) => `${n} ${plural(s, n)} were born: ${nameList(names)}.`,
+  },
+  {
+    // "A chicken starved for lack of feed."
+    pattern: /^A (chicken|pig|sheep|cow) starved for lack of feed\.$/,
+    speciesIdx: 1,
+    build: (s, n) => `${n} ${plural(s, n)} starved for lack of feed.`,
+  },
+  {
+    // "A chicken died from stress in a cramped pen."
+    pattern: /^A (chicken|pig|sheep|cow) died from stress in a cramped pen\.$/,
+    speciesIdx: 1,
+    build: (s, n) => `${n} ${plural(s, n)} died from stress in cramped pens.`,
+  },
+  {
+    // "A predator took Cluck the chicken."
+    pattern: /^A predator took (\w+) the (chicken|pig|sheep|cow)\.$/,
+    speciesIdx: 2,
+    nameIdx: 1,
+    build: (s, n, names) => `${n} ${plural(s, n)} were taken by a predator: ${nameList(names)}.`,
+  },
+  {
+    // "A chicken wandered off through a gap and was lost!"
+    pattern: /^A (chicken|pig|sheep|cow) wandered off through a gap and was lost!$/,
+    speciesIdx: 1,
+    build: (s, n) => `${n} ${plural(s, n)} wandered off and were lost.`,
+  },
+];
+
+/**
+ * Collapse repeated single-event notifications from one tick into one summary
+ * line per kind. Singletons pass through. The first occurrence's position in
+ * the input array is preserved; later duplicates are removed.
+ */
+export function groupNotifications(input: Notification[]): Notification[] {
+  if (input.length < 2) return input;
+  // Bucket key → { firstIndex, type, species, names[] }
+  interface Bucket {
+    firstIndex: number;
+    type: Notification["type"];
+    spec: GroupSpec;
+    species: string;
+    names: string[];
+  }
+  const buckets = new Map<string, Bucket>();
+  const ungrouped: { index: number; n: Notification }[] = [];
+  input.forEach((n, i) => {
+    for (const spec of GROUP_SPECS) {
+      const m = spec.pattern.exec(n.message);
+      if (!m) continue;
+      const species = m[spec.speciesIdx];
+      const key = `${n.type}:${spec.pattern.source}:${species}`;
+      let b = buckets.get(key);
+      if (!b) {
+        b = { firstIndex: i, type: n.type, spec, species, names: [] };
+        buckets.set(key, b);
+      }
+      if (spec.nameIdx) b.names.push(m[spec.nameIdx]);
+      return; // matched & bucketed
+    }
+    ungrouped.push({ index: i, n });
+  });
+  // Reassemble: place each bucket at its firstIndex, interleaved with ungrouped.
+  const collapsed: { index: number; n: Notification }[] = [];
+  for (const b of buckets.values()) {
+    const count = b.names.length || countMatches(input, b.spec, b.species);
+    const message = count === 1
+      ? input[b.firstIndex].message // singleton → keep the original phrasing
+      : b.spec.build(b.species, count, b.names);
+    collapsed.push({ index: b.firstIndex, n: { type: b.type, message } });
+  }
+  return [...collapsed, ...ungrouped].sort((a, b) => a.index - b.index).map((e) => e.n);
+}
+
+function countMatches(input: Notification[], spec: GroupSpec, species: string): number {
+  let n = 0;
+  for (const m of input) {
+    const r = spec.pattern.exec(m.message);
+    if (r && r[spec.speciesIdx] === species) n++;
+  }
+  return n;
+}
+
 /** Append `newOnes` to the notifications log, stamped with the game time from
  *  `stampState` (or the current store state if not provided). Caps at
  *  NOTIFICATION_HISTORY entries, dropping the oldest first. */
@@ -104,8 +221,9 @@ function runTick(get: Get, set: Set): Notification[] {
   if (!state) return [];
   const result = nextTick(state);
   set({ state: result.state });
-  pushStamped(get, set, result.notifications, result.state);
-  return result.notifications;
+  const grouped = groupNotifications(result.notifications);
+  pushStamped(get, set, grouped, result.state);
+  return grouped;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -138,7 +256,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const result = applyCommand(state, command);
     if (result.success) {
       set({ state: result.state });
-      pushStamped(get, set, result.notifications, result.state);
+      pushStamped(get, set, groupNotifications(result.notifications), result.state);
       // If speed changed while auto-advancing, restart the loop at the new cadence.
       if (command.type === "SET_SPEED" && get().autoplay) {
         get().stopLoop();
