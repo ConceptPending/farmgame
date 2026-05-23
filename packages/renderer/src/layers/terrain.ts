@@ -92,7 +92,12 @@ export class TerrainLayer {
     // Build a cheap fingerprint to detect changes
     // Terrain changes are rare (only on buy_land or bulldoze)
     const ownershipKey = world.plotOwnership.map((o) => (o ? "1" : "0")).join("");
-    const fieldStateKey = state.fields.map((f) => `${f.id}:${f.state}:${f.tileIndices.length}`).join(",");
+    // Field key also includes coarse-bucketed weeds + moisture so the tilled
+    // variant (dry/weedy) re-evaluates as soil conditions drift, without
+    // thrashing every micro-tick.
+    const fieldStateKey = state.fields
+      .map((f) => `${f.id}:${f.state}:${f.tileIndices.length}:${Math.round(f.weeds * 10)}:${Math.round(f.moisture * 10)}`)
+      .join(",");
     const rivalKey = state.rivals.map((r) => `${r.id}:${r.ownedPlots.join(".")}`).join(",");
     const terrainChanged = this.lastTerrainKey === "";
     const ownershipChanged = ownershipKey !== this.lastOwnershipKey;
@@ -100,11 +105,14 @@ export class TerrainLayer {
     const rivalChanged = rivalKey !== this.lastRivalKey;
 
     if (terrainChanged || ownershipChanged || fieldStateChanged || rivalChanged) {
-      // Build lookup: fieldId → state for tilled texture
+      // Build lookups: fieldId → state for tilled texture, fieldId → field
+      // for picking the tilled variant by moisture/weeds.
       const tilledStates: Set<FieldState> = new Set(["plowed", "planted", "growing", "ready"]);
       const fieldStateMap = new Map<number, FieldState>();
+      const fieldById = new Map<number, (typeof state.fields)[number]>();
       for (const field of state.fields) {
         fieldStateMap.set(field.id, field.state);
+        fieldById.set(field.id, field);
       }
       const rivalTile = rivalTileColors(state);
 
@@ -127,13 +135,18 @@ export class TerrainLayer {
         }
         sprite.texture = getTileTexture(texKey);
 
-        // Override dirt tiles in fields: tilled furrows for active states,
-        // overgrown/weedy fallow texture for a field that's been left to rest.
+        // Override dirt tiles in fields: tilled furrows for active states
+        // (picking dry/weedy variants when the field is in trouble), and the
+        // overgrown texture for a field that's been left to rest.
         let tilled = false;
         if (tile.fieldId !== null && tile.terrain === "dirt") {
           const fState = fieldStateMap.get(tile.fieldId);
           if (fState && tilledStates.has(fState)) {
-            sprite.texture = getTileTexture("tilled");
+            const field = fieldById.get(tile.fieldId)!;
+            let tilledKey = "tilled";
+            if (field.weeds > 0.5) tilledKey = "tilled_weedy";
+            else if (field.moisture < 0.35) tilledKey = "tilled_dry";
+            sprite.texture = getTileTexture(tilledKey);
             tilled = true;
           } else if (fState === "fallow") {
             sprite.texture = getTileTexture("fallow");
@@ -239,6 +252,24 @@ export class TerrainLayer {
       for (let d = 1; d <= sd; d++) plot(-d, d === 1 ? SAND_WET : SAND_DRY);
     };
 
+    // Occasionally drop a reed (in the sand band) or a rock (straddling the
+    // foam line), so the shore reads as a natural boundary rather than a
+    // perfectly-feathered seam. Deterministic per-coord; ~8% reeds, ~4% rocks.
+    const REED = 0x3a7a30;
+    const REED_LIGHT = 0x5aa54a;
+    const ROCK = 0x5a5a4a;
+    const ROCK_LIGHT = 0x7a7a6a;
+    const decorate = (coord: number, plot: (d: number, color: number) => void) => {
+      const r = hash(coord + 31) % 100;
+      if (r < 8) {
+        plot(-2, REED);
+        plot(-3, REED_LIGHT);
+      } else if (r < 12) {
+        plot(0, ROCK_LIGHT);
+        plot(1, ROCK);
+      }
+    };
+
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         if (!isWater(x, y)) continue;
@@ -248,10 +279,26 @@ export class TerrainLayer {
           const ax = px + t;
           const ay = py + t;
           // Outward = away from the water tile into the land neighbor.
-          if (!isWater(x, y - 1)) paintColumn(ax, (d, c) => g.rect(ax, py + d, 1, 1).fill(c));
-          if (!isWater(x, y + 1)) paintColumn(ax + 9973, (d, c) => g.rect(ax, py + S - 1 - d, 1, 1).fill(c));
-          if (!isWater(x - 1, y)) paintColumn(ay + 555, (d, c) => g.rect(px + d, ay, 1, 1).fill(c));
-          if (!isWater(x + 1, y)) paintColumn(ay + 7777, (d, c) => g.rect(px + S - 1 - d, ay, 1, 1).fill(c));
+          if (!isWater(x, y - 1)) {
+            const plot = (d: number, c: number) => g.rect(ax, py + d, 1, 1).fill(c);
+            paintColumn(ax, plot);
+            decorate(ax, plot);
+          }
+          if (!isWater(x, y + 1)) {
+            const plot = (d: number, c: number) => g.rect(ax, py + S - 1 - d, 1, 1).fill(c);
+            paintColumn(ax + 9973, plot);
+            decorate(ax + 9973, plot);
+          }
+          if (!isWater(x - 1, y)) {
+            const plot = (d: number, c: number) => g.rect(px + d, ay, 1, 1).fill(c);
+            paintColumn(ay + 555, plot);
+            decorate(ay + 555, plot);
+          }
+          if (!isWater(x + 1, y)) {
+            const plot = (d: number, c: number) => g.rect(px + S - 1 - d, ay, 1, 1).fill(c);
+            paintColumn(ay + 7777, plot);
+            decorate(ay + 7777, plot);
+          }
         }
       }
     }

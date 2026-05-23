@@ -32,6 +32,10 @@ export const SPRITES = {
   // Generic dead crop (any crop type). Per-crop living sprites are generated
   // dynamically into rows 6-9 (see CROP_ROWS) and keyed crop_<id>_<stage>.
   dead_crop: { col: 0, row: 1 },
+  // Soil-condition variants of tilled, picked by terrain.ts based on per-field
+  // moisture / weed pressure so the map reflects field state without UI.
+  tilled_dry: { col: 1, row: 1 },
+  tilled_weedy: { col: 2, row: 1 },
 
   // Buildings (row 3)
   silo: { col: 0, row: 3 },
@@ -86,6 +90,8 @@ export async function generateTileset(app: Application): Promise<void> {
 
   // --- Row 1: Dead crop (generic) ---
   drawDeadCrop(g, 0, 1);
+  drawTilledDry(g, 1, 1);
+  drawTilledWeedy(g, 2, 1);
 
   // --- Rows 6-9: per-crop sprites, 4 growth stages each ---
   ALL_CROP_IDS.forEach((id, k) => {
@@ -289,6 +295,47 @@ function drawTilledSoil(g: Graphics, col: number, row: number) {
     g.rect(x, y + i + 1, TILE_SIZE, 1).fill(darken(base, 0.2)); // shadow trough
   }
   scatterNoise(g, x, y, rnd, base, 14, 0.08, 0.18);
+}
+
+/** Tilled soil that's dried out — paler base, weaker ridges, scattered cracks. */
+function drawTilledDry(g: Graphics, col: number, row: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const base = 0x826142; // warmer + paler than the moist baseline
+  const rnd = seededRng(17);
+  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(base);
+  // Furrows are faint — the moisture that lifts them is gone.
+  for (let i = 1; i < TILE_SIZE; i += 3) {
+    g.rect(x, y + i, TILE_SIZE, 1).fill(lighten(base, 0.06));
+    g.rect(x, y + i + 1, TILE_SIZE, 1).fill(darken(base, 0.12));
+  }
+  scatterNoise(g, x, y, rnd, base, 18, 0.05, 0.14);
+  // A few dark "crack" segments scattered across the surface.
+  const crackColor = darken(base, 0.5);
+  for (let i = 0; i < 5; i++) {
+    const cx = 1 + Math.floor(rnd() * (TILE_SIZE - 4));
+    const cy = 2 + Math.floor(rnd() * (TILE_SIZE - 4));
+    const horizontal = rnd() < 0.5;
+    if (horizontal) g.rect(x + cx, y + cy, 3 + Math.floor(rnd() * 2), 1).fill(crackColor);
+    else g.rect(x + cx, y + cy, 1, 3 + Math.floor(rnd() * 2)).fill(crackColor);
+  }
+}
+
+/** Tilled soil overrun with weeds — base + small green tufts poking through. */
+function drawTilledWeedy(g: Graphics, col: number, row: number) {
+  // Start from the standard moist tilled look so it still reads as cultivated.
+  drawTilledSoil(g, col, row);
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const rnd = seededRng(67);
+  // 5-7 small green tufts scattered across the furrows.
+  for (let i = 0; i < 6; i++) {
+    const wx = 2 + Math.floor(rnd() * 12);
+    const wy = 3 + Math.floor(rnd() * 11);
+    g.rect(x + wx, y + wy, 1, 2).fill({ color: 0x5a8a3e, alpha: 0.95 });
+    g.rect(x + wx - 1, y + wy + 1, 1, 1).fill({ color: 0x4a7330, alpha: 0.9 });
+    g.rect(x + wx + 1, y + wy, 1, 1).fill({ color: 0x6fa552, alpha: 0.85 });
+  }
 }
 
 function drawWater(g: Graphics, col: number, row: number, color: number, seed: number) {
