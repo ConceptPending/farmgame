@@ -105,7 +105,7 @@ export class GameRenderer {
       }
     });
 
-    // Per-frame animation: weather particles + livestock idle/walk.
+    // Per-frame animation: weather particles + livestock idle/walk + cursor pulse.
     let lastTs = performance.now();
     const animate = () => {
       const now = performance.now();
@@ -113,6 +113,7 @@ export class GameRenderer {
       lastTs = now;
       this.weatherEffects.tick();
       this.animalLayer.tick(dt);
+      this.gridOverlay.tick(dt);
       this.animationTickerId = requestAnimationFrame(animate);
     };
     this.animationTickerId = requestAnimationFrame(animate);

@@ -27,6 +27,7 @@ export const SPRITES = {
   water3: { col: 12, row: 0 },
   grass_flower: { col: 13, row: 0 },
   grass_pebble: { col: 14, row: 0 },
+  fallow: { col: 15, row: 0 },
 
   // Generic dead crop (any crop type). Per-crop living sprites are generated
   // dynamically into rows 6-9 (see CROP_ROWS) and keyed crop_<id>_<stage>.
@@ -81,6 +82,7 @@ export async function generateTileset(app: Application): Promise<void> {
   drawWater(g, 12, 0, 0x3093cf, 37); // water3
   drawGrassFlower(g, 13, 0, 0x4a8c3f, 101); // sparse meadow flowers
   drawGrassPebble(g, 14, 0, 0x4a8c3f, 137); // sparse stones
+  drawFallow(g, 15, 0); // fallow field — dirt + weedy tufts
 
   // --- Row 1: Dead crop (generic) ---
   drawDeadCrop(g, 0, 1);
@@ -249,6 +251,29 @@ function drawDirt(g: Graphics, col: number, row: number, color: number, seed: nu
     const cy = Math.floor(rnd() * (TILE_SIZE - 2));
     g.rect(x + cx, y + cy, 2, 2).fill(darken(color, 0.22));
     g.rect(x + cx, y + cy, 1, 1).fill(lighten(color, 0.14));
+  }
+}
+
+function drawFallow(g: Graphics, col: number, row: number) {
+  // Use the same dirt base for continuity with clean dirt, then scatter little
+  // weed tufts so a resting field reads as overgrown rather than freshly tilled.
+  drawDirt(g, col, row, 0x8b7355, 211);
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const rnd = seededRng(431);
+  for (let i = 0; i < 4; i++) {
+    const wx = 2 + Math.floor(rnd() * 12);
+    const wy = 3 + Math.floor(rnd() * 11);
+    // 3-pixel L-shaped tuft + a brighter highlight blade.
+    g.rect(x + wx, y + wy, 1, 2).fill(0x5a8a3e);
+    g.rect(x + wx - 1, y + wy + 1, 1, 1).fill(0x4a7330);
+    g.rect(x + wx + 1, y + wy, 1, 1).fill(0x6fa552);
+  }
+  // A small dry leaf or two for variety.
+  for (let i = 0; i < 2; i++) {
+    const lx = 2 + Math.floor(rnd() * 12);
+    const ly = 2 + Math.floor(rnd() * 12);
+    g.rect(x + lx, y + ly, 2, 1).fill(0x7a5a36);
   }
 }
 
