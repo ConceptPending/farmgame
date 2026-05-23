@@ -39,14 +39,14 @@ export function livestockSystem(state: GameState): {
   const notifications: Notification[] = [];
   let rng = state.rng;
 
-  // Per-tick growth + lifetime counters.
+  // Per-turn growth + lifetime counters. One turn = one month.
   let animals: Animal[] = state.animals.map((a) => {
     const def = ANIMAL_CATALOG[a.type];
     return {
       ...a,
       age: a.age + 1,
-      maturity: Math.min(1, a.maturity + 1 / def.growthTicks),
-      lifetime: { ...a.lifetime, daysAlive: a.lifetime.daysAlive + 1 },
+      maturity: Math.min(1, a.maturity + 1 / def.growthMonths),
+      lifetime: { ...a.lifetime, monthsAlive: a.lifetime.monthsAlive + 1 },
     };
   });
 
@@ -54,7 +54,7 @@ export function livestockSystem(state: GameState): {
   let nextAnimalId = state.nextAnimalId;
   let manure = state.manure;
 
-  if (state.day === 1) {
+  if (state.monthOfSeason === 1) {
     // Effective feed need per animal: feed troughs cut waste; pasture (grass
     // tiles inside the pen) provides free grazing up to a cap.
     const pasture = pastureGrazingOffset(state);

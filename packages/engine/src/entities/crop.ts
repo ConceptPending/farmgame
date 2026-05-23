@@ -28,7 +28,8 @@ export interface CropDefinition {
   name: string;
   category: CropCategory;
   plantSeasons: readonly Season[];
-  growthTicks: number;
+  /** Number of monthly turns from sowing to ready-to-harvest. */
+  growthMonths: number;
   basePrice: number;
   seedCost: number;
   baseYield: number;

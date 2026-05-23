@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick, CROP_CATALOG } from "../src/index.js";
+import { createGameState, nextTurn, CROP_CATALOG } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
 
 describe("market system", () => {
@@ -7,7 +7,7 @@ describe("market system", () => {
     let state = createGameState({ seed: 42 });
     const initialPrices = { ...state.market.prices };
     for (let i = 0; i < 20; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     const someChanged = Object.keys(initialPrices).some(
       (k) => state.market.prices[k] !== initialPrices[k],
@@ -18,7 +18,7 @@ describe("market system", () => {
   it("prices stay within bounds (30% to 300% of base)", () => {
     let state = createGameState({ seed: 42 });
     for (let i = 0; i < 200; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       for (const [cropId, price] of Object.entries(state.market.prices)) {
         const def = CROP_CATALOG[cropId as keyof typeof CROP_CATALOG];
         if (def) {
@@ -32,7 +32,7 @@ describe("market system", () => {
   it("prices are always positive", () => {
     let state = createGameState({ seed: 42 });
     for (let i = 0; i < 200; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       for (const price of Object.values(state.market.prices)) {
         expect(price).toBeGreaterThan(0);
       }
@@ -50,7 +50,7 @@ describe("market system", () => {
   it("records price history up to max", () => {
     let state = createGameState({ seed: 42 });
     for (let i = 0; i < 110; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     // History capped at 100
     expect(state.market.priceHistory.length).toBeLessThanOrEqual(100);
@@ -60,7 +60,7 @@ describe("market system", () => {
   it("price history snapshots have tick and prices", () => {
     let state = createGameState({ seed: 42 });
     for (let i = 0; i < 5; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     for (const snapshot of state.market.priceHistory) {
       expect(snapshot.tick).toBeGreaterThan(0);
@@ -78,7 +78,7 @@ describe("market system", () => {
 
     // Tick to let demand recover
     for (let i = 0; i < 50; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     expect(state.market.demand["wheat"]).toBeGreaterThan(demandAfterSell);
   });

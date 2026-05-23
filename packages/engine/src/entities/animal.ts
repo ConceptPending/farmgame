@@ -11,8 +11,8 @@ export interface AnimalDefinition {
   matureValue: number;
   /** Units of grain feed consumed per season. */
   feedPerSeason: number;
-  /** Ticks (days) to reach maturity. */
-  growthTicks: number;
+  /** Monthly turns to reach maturity (one turn = one in-game month). */
+  growthMonths: number;
   /** Per-season chance a mature, well-fed animal produces offspring. */
   breedChance: number;
   /** Product yielded each season by a mature, well-fed animal (if any). */
@@ -28,14 +28,14 @@ export interface AnimalLifetime {
   products: number;
   /** Total manure attributed to this animal. */
   manure: number;
-  /** Days the animal has been alive. */
-  daysAlive: number;
+  /** Monthly turns the animal has been alive. */
+  monthsAlive: number;
 }
 
 export interface Animal {
   id: number;
   type: AnimalType;
-  age: number; // ticks lived
+  age: number; // monthly turns lived
   maturity: number; // 0..1 toward fully grown
   health: number; // 0..1, falls when underfed
   tileIndex: number; // the tile the animal currently occupies / grazes on
@@ -50,7 +50,7 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     cost: 30,
     matureValue: 70,
     feedPerSeason: 4,
-    growthTicks: 18,
+    growthMonths: 5,
     breedChance: 0.35,
     product: "eggs",
     yieldPerSeason: 8,
@@ -62,7 +62,7 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     cost: 120,
     matureValue: 320,
     feedPerSeason: 9,
-    growthTicks: 28,
+    growthMonths: 7,
     breedChance: 0.18,
     manurePerSeason: 3,
   },
@@ -72,7 +72,7 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     cost: 150,
     matureValue: 360,
     feedPerSeason: 8,
-    growthTicks: 36,
+    growthMonths: 9,
     breedChance: 0.14,
     product: "wool",
     yieldPerSeason: 6,
@@ -84,7 +84,7 @@ export const ANIMAL_CATALOG: Record<AnimalType, AnimalDefinition> = {
     cost: 300,
     matureValue: 850,
     feedPerSeason: 12,
-    growthTicks: 48,
+    growthMonths: 12,
     breedChance: 0.1,
     product: "milk",
     yieldPerSeason: 14,
@@ -117,7 +117,7 @@ export function createAnimal(id: number, type: AnimalType, tileIndex: number): A
     health: 1,
     tileIndex,
     name: pickAnimalName(type, id),
-    lifetime: { products: 0, manure: 0, daysAlive: 0 },
+    lifetime: { products: 0, manure: 0, monthsAlive: 0 },
   };
 }
 

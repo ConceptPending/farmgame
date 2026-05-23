@@ -13,18 +13,21 @@ import { marketSystem } from "./systems/market.js";
 import { financeSystem } from "./systems/finance.js";
 
 /**
- * Core tick function. Pure: same state in = same state out.
- * Pipeline: season → weather → water → crops → fieldHealth → livestock → pens → predators → rivals → events → market → finance
+ * Resolves one monthly turn. Pure: same state in = same state out.
+ *
+ * Pipeline: season → weather → water → crops → fieldHealth → livestock → pens
+ * → predators → rivals → events → market → finance. Then the labor budget
+ * resets — the next turn starts with a fresh `labor.used = 0`.
  */
-export function nextTick(state: GameState): TickResult {
-  // Don't advance while paused or after the game has ended.
-  if (state.paused || state.status !== "playing") {
+export function nextTurn(state: GameState): TickResult {
+  // Don't advance after the game has ended.
+  if (state.status !== "playing") {
     return { state, notifications: [] };
   }
 
   const notifications: Notification[] = [];
 
-  // Advance tick counter
+  // Advance turn counter
   let current: GameState = { ...state, tick: state.tick + 1 };
 
   // Season system (advance day, handle season/year transitions)
@@ -86,6 +89,9 @@ export function nextTick(state: GameState): TickResult {
   const financeResult = financeSystem(current);
   current = financeResult.state;
   notifications.push(...financeResult.notifications);
+
+  // Replenish the monthly labor budget for the player's next turn.
+  current = { ...current, labor: { ...current.labor, used: 0 } };
 
   return { state: current, notifications };
 }

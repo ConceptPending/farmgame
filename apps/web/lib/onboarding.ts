@@ -50,7 +50,7 @@ const HINTS: Record<OnboardingStep, Omit<OnboardingHint, "step">> = {
   },
   wait: {
     title: "4. Let it grow",
-    body: "Use Auto (or +1d / +1wk / Skip in the top bar) to advance time. Watch the field's growth meter climb.",
+    body: "Click 'End Turn' in the top bar to advance one month. Each turn refreshes your labor budget and lets crops grow.",
   },
   harvest: {
     title: "5. Harvest",

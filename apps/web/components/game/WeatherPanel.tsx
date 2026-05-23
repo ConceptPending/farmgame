@@ -117,17 +117,18 @@ export function WeatherPanel() {
         </div>
       )}
 
-      {/* 5-day forecast — only when expanded; this is what most obscured the map. */}
+      {/* 2-month forecast — only when expanded. Each card represents the
+          dominant conditions of an upcoming monthly turn. */}
       {expanded && (
         <div
           style={{
             display: "flex",
-            gap: 4,
+            gap: 6,
             borderTop: "1px solid #333",
             paddingTop: 6,
           }}
         >
-          {weather.forecast.map((day, i) => (
+          {weather.forecast.map((month, i) => (
             <div
               key={i}
               style={{
@@ -135,11 +136,17 @@ export function WeatherPanel() {
                 textAlign: "center",
                 fontSize: 10,
                 color: "#aaa",
+                padding: "2px 4px",
+                background: "rgba(10, 14, 25, 0.4)",
+                borderRadius: 3,
               }}
             >
-              <div style={{ fontSize: 14 }}>{CONDITION_ICONS[day.condition]}</div>
-              <div>{day.tempHigh}°</div>
-              <div style={{ color: "#666" }}>{day.tempLow}°</div>
+              <div style={{ color: "#7a8a9a", fontSize: 9, letterSpacing: 0.5, marginBottom: 2 }}>
+                +{i + 1} mo
+              </div>
+              <div style={{ fontSize: 14 }}>{CONDITION_ICONS[month.condition]}</div>
+              <div>{month.tempHigh}°</div>
+              <div style={{ color: "#666" }}>{month.tempLow}°</div>
             </div>
           ))}
         </div>

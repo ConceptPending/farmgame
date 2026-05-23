@@ -2,7 +2,7 @@
 
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { ANIMAL_CATALOG, DAYS_PER_SEASON, PRODUCT_CATALOG } from "@farmgame/engine";
+import { ANIMAL_CATALOG, MONTHS_PER_SEASON, PRODUCT_CATALOG } from "@farmgame/engine";
 import type { Animal } from "@farmgame/engine";
 
 /**
@@ -53,8 +53,8 @@ export function AnimalHoverTooltip() {
 
 function AnimalLine({ a }: { a: Animal }) {
   const def = ANIMAL_CATALOG[a.type];
-  const years = Math.floor(a.lifetime.daysAlive / (DAYS_PER_SEASON * 4));
-  const seasons = Math.floor((a.lifetime.daysAlive % (DAYS_PER_SEASON * 4)) / DAYS_PER_SEASON);
+  const years = Math.floor(a.lifetime.monthsAlive / (MONTHS_PER_SEASON * 4));
+  const seasons = Math.floor((a.lifetime.monthsAlive % (MONTHS_PER_SEASON * 4)) / MONTHS_PER_SEASON);
   const ageStr = years > 0 ? `${years}y ${seasons}s` : `${seasons}s`;
   const productName = def.product ? PRODUCT_CATALOG[def.product].name.toLowerCase() : null;
   const healthColor = a.health < 0.5 ? "#ff6b6b" : a.health < 0.85 ? "#ffa454" : "#4ecca3";

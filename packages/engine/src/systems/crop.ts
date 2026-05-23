@@ -74,8 +74,10 @@ export function cropSystem(state: GameState): {
       return { ...field, state: "dead", health: 0 };
     }
 
-    const newGrowthTicks = field.growthTicks + 1;
-    const baseProgress = 1 / def.growthTicks;
+    // One turn = one month. Crop grows by 1/growthMonths of the bar per turn,
+    // modulated by health/temperature/moisture.
+    const newGrowthMonths = field.growthMonths + 1;
+    const baseProgress = 1 / def.growthMonths;
     const newGrowth = Math.min(1, field.growth + baseProgress * growthRate);
 
     if (newGrowth >= 1) {
@@ -87,7 +89,7 @@ export function cropSystem(state: GameState): {
         ...field,
         state: "ready",
         growth: 1,
-        growthTicks: newGrowthTicks,
+        growthMonths: newGrowthMonths,
       };
     }
 
@@ -95,7 +97,7 @@ export function cropSystem(state: GameState): {
       ...field,
       state: "growing",
       growth: newGrowth,
-      growthTicks: newGrowthTicks,
+      growthMonths: newGrowthMonths,
     };
   });
 

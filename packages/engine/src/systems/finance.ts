@@ -202,8 +202,8 @@ export function financeSystem(state: GameState): {
   const notifications: Notification[] = [];
   let current = state;
 
-  // Season just rolled over (the season system sets day back to 1).
-  if (current.day === 1) {
+  // Season just rolled over (the season system sets monthOfSeason back to 1).
+  if (current.monthOfSeason === 1) {
     const exp = computeSeasonalExpenses(current);
     if (exp.total > 0) {
       current = { ...current, money: current.money - exp.total };

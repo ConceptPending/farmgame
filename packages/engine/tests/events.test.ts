@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick, applyCommand } from "../src/index.js";
+import { createGameState, nextTurn, applyCommand } from "../src/index.js";
 import type { GameState } from "../src/index.js";
 
 const EVENT_RE = /Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown/i;
@@ -26,7 +26,7 @@ describe("random events", () => {
 
     let sawEvent = false;
     for (let i = 0; i < 400 && s.status === "playing"; i++) {
-      const r = nextTick(s);
+      const r = nextTurn(s);
       s = r.state;
       if (r.notifications.some((n) => EVENT_RE.test(n.message))) sawEvent = true;
 
@@ -49,10 +49,10 @@ describe("random events", () => {
     const msgsA: string[] = [];
     const msgsB: string[] = [];
     for (let i = 0; i < 120; i++) {
-      const ra = nextTick(a);
+      const ra = nextTurn(a);
       a = ra.state;
       msgsA.push(...ra.notifications.filter((n) => EVENT_RE.test(n.message)).map((n) => n.message));
-      const rb = nextTick(b);
+      const rb = nextTurn(b);
       b = rb.state;
       msgsB.push(...rb.notifications.filter((n) => EVENT_RE.test(n.message)).map((n) => n.message));
     }

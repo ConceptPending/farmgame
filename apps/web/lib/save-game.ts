@@ -19,7 +19,9 @@
 
 import type { GameState } from "@farmgame/engine";
 
-export const SAVE_VERSION = 1;
+/** Bumped from 1 to 2 when the engine pivoted to monthly turns (PR L).
+ *  v1 saves used per-day timing and `growthTicks`; they cannot be loaded. */
+export const SAVE_VERSION = 2;
 
 const STORAGE_PREFIX = "farmgame.save.";
 
@@ -60,7 +62,7 @@ export interface SaveMeta {
   summary: {
     year: number;
     season: string;
-    day: number;
+    monthOfSeason: number;
     money: number;
     fields: number;
     animals: number;
@@ -131,8 +133,10 @@ function removeRaw(slotId: string): void {
 
 /** Default human-readable name when the caller doesn't supply one. */
 export function defaultSaveName(state: GameState): string {
+  const phase =
+    state.monthOfSeason === 1 ? "Early" : state.monthOfSeason === 3 ? "Late" : "Mid";
   const season = state.season.charAt(0).toUpperCase() + state.season.slice(1);
-  return `Year ${state.year} · ${season}`;
+  return `Year ${state.year} · ${phase} ${season}`;
 }
 
 /**
@@ -243,7 +247,7 @@ function toMeta(slotId: string, payload: SavePayload): SaveMeta {
     summary: {
       year: s.year,
       season: s.season,
-      day: s.day,
+      monthOfSeason: s.monthOfSeason,
       money: s.money,
       fields: s.fields.length,
       animals: s.animals.length,

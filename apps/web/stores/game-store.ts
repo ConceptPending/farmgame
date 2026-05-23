@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import {
   createGameState,
-  nextTick,
   applyCommand,
   type GameState,
   type GameCommand,
@@ -9,7 +8,6 @@ import {
   type Season,
   type CreateGameOptions,
 } from "@farmgame/engine";
-import { TICK_INTERVAL_MS } from "@farmgame/shared";
 import { playSound } from "../lib/sounds";
 
 /** Notification + the in-game time it fired. Drives the event log timeline. */
@@ -17,7 +15,8 @@ export interface StampedNotification extends Notification {
   id: number;
   year: number;
   season: Season;
-  day: number;
+  /** Position within the season at the time the notification fired (1..3). */
+  monthOfSeason: number;
 }
 
 /** History cap — older entries get dropped FIFO. Long enough for ~20 minutes of play. */
@@ -36,11 +35,6 @@ interface GameStore {
   nextNotificationId: number;
   /** Queued juice events; the renderer drains this each frame. */
   fxEvents: FXEvent[];
-  tickInterval: ReturnType<typeof setInterval> | null;
-  /** Whether the game is auto-advancing on a timer (vs. manual stepping). */
-  autoplay: boolean;
-  /** When auto-advancing, stop on the first noteworthy event so the player can react. */
-  autoPauseOnEvents: boolean;
   /** Config of the current/most-recent game, for "Play Again". */
   lastConfig: CreateGameOptions | null;
 
@@ -51,42 +45,12 @@ interface GameStore {
   /** Return to the start screen (state = null). */
   returnToMenu: () => void;
   dispatch: (command: GameCommand) => void;
-  startLoop: () => void;
-  stopLoop: () => void;
-  setAutoplay: (on: boolean) => void;
-  toggleAutoplay: () => void;
-  setAutoPauseOnEvents: (on: boolean) => void;
-  /** Manually advance the simulation by n days (turn-based stepping). */
-  advanceDays: (days: number) => void;
-  /** Fast-forward up to maxDays, stopping early on the first noteworthy event. */
-  advanceToEvent: (maxDays?: number) => void;
+  /** End the current monthly turn — resolves the month and refreshes labor. */
+  endTurn: () => void;
   addNotification: (notification: Notification) => void;
   clearNotifications: () => void;
   /** Drain and clear the queued FX events; the renderer calls this each frame. */
   takeFXEvents: () => FXEvent[];
-  updateSpeed: (speed: 1 | 2 | 3) => void;
-}
-
-function intervalForSpeed(speed: 1 | 2 | 3): number {
-  switch (speed) {
-    case 1: return TICK_INTERVAL_MS;
-    case 2: return TICK_INTERVAL_MS / 2;
-    case 3: return TICK_INTERVAL_MS / 4;
-  }
-}
-
-// Cap on a single "skip to event" so a quiet farm can't loop indefinitely (~4 months).
-const MAX_SKIP_DAYS = 120;
-
-// Events worth stopping for: crop ready/lost, field crises, market swings,
-// random events, and season changes. Deliberately excludes routine weather
-// warnings (frost/storm/drought happen often and may not threaten crops) and
-// seasonal expense notices (every season — too noisy).
-const STOP_WORTHY =
-  /ready to harvest|killed|has died|died from|infestation|overrun|prices crashing|demand surging|has arrived|Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown|closing in on the goal|is running low/i;
-
-function isStopWorthy(n: Notification): boolean {
-  return n.type === "error" || STOP_WORTHY.test(n.message);
 }
 
 type Get = () => GameStore;
@@ -252,22 +216,11 @@ function pushStamped(get: Get, set: Set, newOnes: Notification[], stampState?: G
     id: id++,
     year: ts?.year ?? 0,
     season: ts?.season ?? "spring",
-    day: ts?.day ?? 0,
+    monthOfSeason: ts?.monthOfSeason ?? 0,
   }));
   const all = [...notifications, ...stamped];
   const trimmed = all.length > NOTIFICATION_HISTORY ? all.slice(all.length - NOTIFICATION_HISTORY) : all;
   set({ notifications: trimmed, nextNotificationId: id });
-}
-
-/** Advance the simulation one tick and append any notifications. Returns the new notifications. */
-function runTick(get: Get, set: Set): Notification[] {
-  const { state } = get();
-  if (!state) return [];
-  const result = nextTick(state);
-  set({ state: result.state });
-  const grouped = groupNotifications(result.notifications);
-  pushStamped(get, set, grouped, result.state);
-  return grouped;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -275,28 +228,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   notifications: [],
   nextNotificationId: 1,
   fxEvents: [],
-  tickInterval: null,
-  // Turn-based by default: the player advances time with the STEP controls.
-  // Autoplay is the optional mode, toggled from the HUD.
-  autoplay: false,
-  autoPauseOnEvents: true,
   lastConfig: null,
 
   startGame: (config: CreateGameOptions) => {
-    get().stopLoop();
     const state = createGameState({ seed: Date.now(), ...config });
     set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastConfig: config });
-    if (get().autoplay) get().startLoop();
   },
 
   loadGameState: (state: GameState) => {
-    get().stopLoop();
-    // Re-pause an autoplaying game on load so the player can take stock first.
     set({ state, notifications: [], nextNotificationId: 1, fxEvents: [] });
   },
 
   returnToMenu: () => {
-    get().stopLoop();
     set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [] });
   },
 
@@ -315,75 +258,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // a single tonal blip per player action is what reads as feedback).
       if (fx.length > 0) playSound(fx[0].kind === "manure" ? "build" : fx[0].kind);
       else if (command.type === "SELL" && result.state.money > state.money) playSound("money");
-      // If speed changed while auto-advancing, restart the loop at the new cadence.
-      if (command.type === "SET_SPEED" && get().autoplay) {
-        get().stopLoop();
-        get().startLoop();
-      }
     } else {
       pushStamped(get, set, [{ type: "error", message: result.error ?? "Command failed" }]);
     }
   },
 
-  startLoop: () => {
-    const { tickInterval, state } = get();
-    if (tickInterval) return;
-
-    const speed = state?.speed ?? 1;
-    const interval = setInterval(() => {
-      const newNotifications = runTick(get, set);
-      // Stop the timer when the game ends, or auto-pause on a noteworthy event.
-      if (get().state?.status !== "playing") {
-        get().setAutoplay(false);
-      } else if (get().autoPauseOnEvents && newNotifications.some(isStopWorthy)) {
-        get().setAutoplay(false);
-      }
-    }, intervalForSpeed(speed));
-
-    set({ tickInterval: interval, autoplay: true });
-  },
-
-  stopLoop: () => {
-    const { tickInterval } = get();
-    if (tickInterval) {
-      clearInterval(tickInterval);
-    }
-    set({ tickInterval: null, autoplay: false });
-  },
-
-  setAutoplay: (on: boolean) => {
-    if (on) get().startLoop();
-    else get().stopLoop();
-  },
-
-  toggleAutoplay: () => {
-    get().setAutoplay(!get().autoplay);
-  },
-
-  setAutoPauseOnEvents: (on: boolean) => {
-    set({ autoPauseOnEvents: on });
-  },
-
-  advanceDays: (days: number) => {
-    // Manual stepping implies turn-based control: pause any running timer first.
-    get().stopLoop();
-    for (let i = 0; i < days; i++) {
-      if (get().state?.status !== "playing") break;
-      runTick(get, set);
-    }
-  },
-
-  advanceToEvent: (maxDays: number = MAX_SKIP_DAYS) => {
-    get().stopLoop();
-    for (let i = 0; i < maxDays; i++) {
-      if (get().state?.status !== "playing") break;
-      const newNotifications = runTick(get, set);
-      if (newNotifications.some(isStopWorthy)) break;
-    }
-  },
-
-  updateSpeed: (speed: 1 | 2 | 3) => {
-    get().dispatch({ type: "SET_SPEED", speed });
+  endTurn: () => {
+    get().dispatch({ type: "END_TURN" });
   },
 
   addNotification: (notification: Notification) => {

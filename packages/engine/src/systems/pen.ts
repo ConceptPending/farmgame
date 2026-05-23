@@ -318,7 +318,7 @@ export function penSystem(state: GameState): { state: GameState; notifications: 
   }
 
   const notifications: Notification[] = [];
-  const seasonStart = state.day === 1;
+  const seasonStart = state.monthOfSeason === 1;
 
   // Fence wear.
   let buildings = state.buildings;

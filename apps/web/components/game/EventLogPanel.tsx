@@ -60,7 +60,7 @@ function EventRow({ n }: { n: StampedNotification }) {
           whiteSpace: "nowrap",
         }}
       >
-        Y{n.year} · {n.season} d{n.day}
+        Y{n.year} · {n.season} m{n.monthOfSeason}
       </span>
       <span aria-hidden style={{ color, fontWeight: 700, lineHeight: 1.35 }}>{glyph}</span>
       <span style={{ color: "#dde4ee", flex: 1, lineHeight: 1.35 }}>{n.message}</span>

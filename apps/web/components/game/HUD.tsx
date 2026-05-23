@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
-import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
+import { TOOL_CATALOG, goalProgress, monthPhase, MONTHS_PER_YEAR, MONTHS_PER_SEASON } from "@farmgame/engine";
 import { OverlaySelector } from "./OverlaySelector";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 import { Icon } from "../ui/Icon";
@@ -20,16 +20,6 @@ const CONDITION_ICONS: Record<WeatherCondition, string> = {
   drought: "🔥",
 };
 
-const stepBtnStyle: CSSProperties = {
-  padding: "2px 8px",
-  fontSize: 11,
-  border: "1px solid #555",
-  borderRadius: 3,
-  background: "#222",
-  color: "#ccc",
-  cursor: "pointer",
-};
-
 const divider: CSSProperties = { width: 1, height: 18, background: "#0f3460" };
 
 const iconBtnStyle: CSSProperties = {
@@ -42,24 +32,27 @@ const iconBtnStyle: CSSProperties = {
   color: "#9db4d0",
 };
 
+/** Human-readable "Early/Mid/Late" + capitalized season. */
+function calendarLabel(season: string, monthOfSeason: number): string {
+  const phase = monthPhase(monthOfSeason);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  return `${cap(phase)} ${cap(season)}`;
+}
+
 export function HUD() {
   const state = useGameStore((s) => s.state);
   const notifications = useGameStore((s) => s.notifications);
-  const dispatch = useGameStore((s) => s.dispatch);
-  const autoplay = useGameStore((s) => s.autoplay);
-  const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
+  const endTurn = useGameStore((s) => s.endTurn);
   const loadGameState = useGameStore((s) => s.loadGameState);
   const addNotification = useGameStore((s) => s.addNotification);
-  const advanceDays = useGameStore((s) => s.advanceDays);
-  const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
   const openPanel = useUIStore((s) => s.openPanel);
   const activePanel = useUIStore((s) => s.activePanel);
   const onboardingDismissed = useUIStore((s) => s.onboardingDismissed);
   const reopenOnboarding = useUIStore((s) => s.reopenOnboarding);
 
-  // Autosave on every season change. The first render after a fresh game
-  // primes `lastSeason` without writing — we only write on real transitions.
+  // Autosave on every season change. Primes the ref on the first render so a
+  // fresh game doesn't write before any transition.
   const lastSeasonRef = useRef<string | null>(null);
   useEffect(() => {
     if (!state) {
@@ -92,8 +85,7 @@ export function HUD() {
   const goalIsMoney = state.goal.type !== "land_baron" && state.goal.type !== "market_leader";
   const fmtGoal = (n: number) => (goalIsMoney ? `$${n.toLocaleString()}` : `${n}`);
 
-  // Juice: animate the money counter to its new value + briefly flash on
-  // gain (green) or loss (red). Pulse the season-day label when season ticks.
+  // Juice
   const moneyDisplay = useAnimatedNumber(state.money, 450);
   const moneyDir = useNumberPulse(state.money, 700);
   const seasonPulse = usePulseOnChange(state.season, 800);
@@ -104,6 +96,16 @@ export function HUD() {
     : moneyDir === "down"
       ? "0 0 8px rgba(255, 144, 144, 0.55)"
       : "none";
+
+  // Labor display + pulse on remaining-units change.
+  const laborRemaining = state.labor.capacity - state.labor.used;
+  const laborPulse = usePulseOnChange(state.labor.used, 350);
+  const laborColor = laborRemaining === 0 ? "#ff8c42" : laborRemaining < 3 ? "#ffdd57" : "#9db4d0";
+
+  // Turn position within the year, for the "Turn N / 12" label.
+  const turnInYear = ((state.season === "spring" ? 0
+    : state.season === "summer" ? 1
+      : state.season === "fall" ? 2 : 3) * MONTHS_PER_SEASON) + state.monthOfSeason;
 
   return (
     <>
@@ -117,13 +119,11 @@ export function HUD() {
           borderBottom: "2px solid #0f3460",
           flexShrink: 0,
           fontSize: 13,
-          // Sit above the panel scrim so its buttons stay live — lets you
-          // switch panels or close directly without the scrim eating the click.
           position: "relative",
           zIndex: 200,
         }}
       >
-        {/* Money — animates to the new value and briefly flashes on change. */}
+        {/* Money */}
         <div
           style={{
             fontSize: 18,
@@ -162,18 +162,22 @@ export function HUD() {
           </div>
         </button>
 
-        {/* Season/Day/Year — pulses briefly on season change. */}
+        {/* Calendar — "Year 1 · Early Spring" + "Turn N / 12" */}
         <div
           style={{
             color: seasonColors[state.season] ?? "#eee",
             fontWeight: 600,
             filter: seasonPulse ? "brightness(1.55) drop-shadow(0 0 6px currentColor)" : "none",
             transition: "filter 250ms",
+            display: "flex",
+            flexDirection: "column",
+            lineHeight: 1.15,
           }}
         >
-          Year {state.year} -&nbsp;
-          {state.season.charAt(0).toUpperCase() + state.season.slice(1)}&nbsp;
-          Day {state.day}
+          <span>Year {state.year} · {calendarLabel(state.season, state.monthOfSeason)}</span>
+          <span style={{ fontSize: 10, color: "#7a8a9a", fontWeight: 400 }}>
+            Turn {turnInYear} / {MONTHS_PER_YEAR}
+          </span>
         </div>
 
         {/* Current tool */}
@@ -192,73 +196,49 @@ export function HUD() {
 
         {/* Right side controls */}
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
-          {/* Manual stepping (turn-based) */}
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <span style={{ fontSize: 9, color: "#7a8a9a" }}>STEP</span>
-            <button onClick={() => advanceDays(1)} style={stepBtnStyle} title="Advance one day">
-              +1d
-            </button>
-            <button onClick={() => advanceDays(7)} style={stepBtnStyle} title="Advance one week">
-              +1wk
-            </button>
-            <button
-              onClick={() => advanceToEvent()}
-              style={stepBtnStyle}
-              title="Fast-forward until something needs your attention"
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <Icon name="skip" size={11} /> Skip
-              </span>
-            </button>
+          {/* Labor budget pip — pulses when it changes. */}
+          <div
+            title="Monthly labor budget — actions consume labor and refresh when you end the turn."
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 8px",
+              borderRadius: 4,
+              border: `1px solid ${laborColor}`,
+              background: "#0a1628",
+              color: laborColor,
+              fontSize: 11,
+              fontWeight: 600,
+              filter: laborPulse ? "brightness(1.4)" : "none",
+              transition: "filter 250ms",
+            }}
+          >
+            <Icon name="tractor" size={11} color={laborColor} />
+            Labor {laborRemaining}/{state.labor.capacity}
           </div>
+
+          {/* End Turn — the primary game-loop button. */}
+          <button
+            onClick={endTurn}
+            title="Resolve the month — crops grow, weather changes, labor refreshes."
+            style={{
+              padding: "6px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              borderRadius: 4,
+              cursor: "pointer",
+              border: "1px solid #4ecca3",
+              background: "#1a4040",
+              color: "#4ecca3",
+            }}
+          >
+            End Turn →
+          </button>
 
           <div style={divider} />
 
-          {/* Auto-advance */}
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <button
-              onClick={toggleAutoplay}
-              title={autoplay ? "Pause auto-advance" : "Resume auto-advance"}
-              style={{
-                padding: "2px 10px",
-                fontSize: 11,
-                borderRadius: 3,
-                cursor: "pointer",
-                border: autoplay ? "1px solid #4ecca3" : "1px solid #555",
-                background: autoplay ? "#1a4040" : "#222",
-                color: autoplay ? "#4ecca3" : "#ccc",
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <Icon name={autoplay ? "pause" : "play"} size={11} filled />
-                Auto
-              </span>
-            </button>
-            {([1, 2, 3] as const).map((speed) => (
-              <button
-                key={speed}
-                onClick={() => dispatch({ type: "SET_SPEED", speed })}
-                title={`Auto-advance speed ${speed}×`}
-                style={{
-                  padding: "2px 8px",
-                  fontSize: 11,
-                  borderRadius: 3,
-                  cursor: "pointer",
-                  border: state.speed === speed ? "1px solid #4ecca3" : "1px solid #444",
-                  background: state.speed === speed ? "#1a4040" : "#222",
-                  color: state.speed === speed ? "#4ecca3" : "#888",
-                  opacity: autoplay ? 1 : 0.5,
-                }}
-              >
-                {speed}×
-              </button>
-            ))}
-          </div>
-
-          <div style={divider} />
-
-          {/* Quicksave / Quickload — single-click escape hatches for the */}
-          {/* full Settings panel when you just want to checkpoint and keep playing. */}
+          {/* Quicksave / Quickload */}
           <div style={{ display: "flex", gap: 4 }}>
             <button
               onClick={() => {
@@ -302,7 +282,7 @@ export function HUD() {
 
           <div style={divider} />
 
-          {/* Panel buttons — open one modal at a time; active one is highlighted. */}
+          {/* Panel buttons */}
           <div style={{ display: "flex", gap: 4 }}>
             <PanelButton label="Finance" color="#4ecca3" active={activePanel === "finance"} onClick={() => openPanel("finance")} />
             <PanelButton label="Animals" color="#e0a96d" active={activePanel === "livestock"} onClick={() => openPanel("livestock")} />
@@ -348,8 +328,7 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Notifications toast area — bottom-center so it clears the weather
-          panel and info panel in the top-right corner. */}
+      {/* Notifications toast area */}
       {notifications.length > 0 && (
         <div
           style={{
@@ -443,4 +422,3 @@ function PanelButton({
     </button>
   );
 }
-

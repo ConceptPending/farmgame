@@ -26,6 +26,4 @@ export type GameCommand =
   | { type: "SELL_EQUIPMENT"; equipmentId: number }
   | { type: "TAKE_LOAN"; amount: number }
   | { type: "REPAY_LOAN"; amount: number }
-  | { type: "PAUSE" }
-  | { type: "RESUME" }
-  | { type: "SET_SPEED"; speed: 1 | 2 | 3 };
+  | { type: "END_TURN" };

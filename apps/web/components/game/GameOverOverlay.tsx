@@ -49,7 +49,7 @@ export function GameOverOverlay() {
           Final net worth: <strong style={{ color: "#4ecca3" }}>${netWorth.toLocaleString()}</strong>
           <br />
           <span style={{ color: "#888" }}>
-            Year {state.year}, {state.season.charAt(0).toUpperCase() + state.season.slice(1)} Day {state.day}
+            Year {state.year}, {state.season.charAt(0).toUpperCase() + state.season.slice(1)} (month {state.monthOfSeason}/3)
           </span>
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>

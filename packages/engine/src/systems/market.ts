@@ -7,8 +7,8 @@ import { nextFloat, nextBool } from "../rng.js";
 
 const MAX_HISTORY = 100;
 
-/** How fast demand (and thus price) drifts back toward 1.0 each tick. */
-export const DEMAND_RECOVERY = 0.1;
+/** How fast demand (and thus price) drifts back toward 1.0 each turn (one month). */
+export const DEMAND_RECOVERY = 0.3;
 /** Demand lost per unit sold — the "depth" of the market. */
 export const SELL_DEMAND_IMPACT = 0.003;
 /** Demand can't be driven below this (price floor is enforced separately). */
@@ -30,12 +30,12 @@ export function marketSystem(state: GameState): {
     // Small random walk for life
     const walkResult = nextFloat(rng);
     rng = walkResult.rng;
-    const walk = (walkResult.value - 0.5) * 0.06 * def.basePrice; // +/- 3% of base
+    const walk = (walkResult.value - 0.5) * 0.18 * def.basePrice; // +/- 9% of base per month
 
-    // Seasonal bias: crops in their harvest season are cheaper
+    // Seasonal bias: crops in their harvest season are cheaper. Per monthly turn.
     const seasonBias = def.plantSeasons.includes(state.season)
-      ? -0.01 * def.basePrice // slight downward pressure in season
-      : 0.005 * def.basePrice; // slight upward pressure off-season
+      ? -0.06 * def.basePrice // downward pressure in season
+      : 0.025 * def.basePrice; // upward pressure off-season
 
     // Demand recovers toward its ceiling (1.0, lowered by rival supply on this
     // good); price is anchored to it, so rivals keep the player's prices down.
@@ -58,8 +58,8 @@ export function marketSystem(state: GameState): {
     newPrices[productId] = Math.round(newPrice * 100) / 100;
   }
 
-  // Occasional market events (~2% chance per tick)
-  const eventResult = nextBool(rng, 0.02);
+  // Occasional market events (~10% per turn ≈ one every couple of years).
+  const eventResult = nextBool(rng, 0.1);
   rng = eventResult.rng;
   if (eventResult.value) {
     const cropPickResult = nextFloat(rng);

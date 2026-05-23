@@ -31,7 +31,7 @@ export function rivalSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
 } {
-  if (state.rivals.length === 0 || state.day !== 1) {
+  if (state.rivals.length === 0 || state.monthOfSeason !== 1) {
     return { state, notifications: [] };
   }
 

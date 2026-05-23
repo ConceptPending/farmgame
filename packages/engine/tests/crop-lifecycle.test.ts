@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick, getCropDef, CROP_CATALOG } from "../src/index.js";
+import { createGameState, nextTurn, getCropDef, CROP_CATALOG } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
 import type { CropId, GameState } from "../src/index.js";
 
@@ -35,9 +35,9 @@ describe("crop lifecycle", () => {
 
     // Grow to completion (may take more ticks due to weather effects)
     let s2 = s1;
-    for (let i = 0; i < def.growthTicks * 3; i++) {
+    for (let i = 0; i < def.growthMonths * 3; i++) {
       if (s2.fields.find((f) => f.id === fieldId)?.state === "ready") break;
-      s2 = nextTick(s2).state;
+      s2 = nextTurn(s2).state;
     }
 
     const field = s2.fields.find((f) => f.id === fieldId)!;
@@ -55,7 +55,10 @@ describe("crop lifecycle", () => {
         quantity: qty,
       });
       expect(sellResult.success).toBe(true);
-      expect(sellResult.state.money).toBeGreaterThan(s1.money);
+      // The sale itself must have paid out — we compare against the state
+      // right before the sell, not the pre-planting baseline (a season change
+      // during the wait can charge seasonal expenses that exceed the harvest).
+      expect(sellResult.state.money).toBeGreaterThan(harvestResult.state.money);
     }
   });
 
@@ -72,7 +75,7 @@ describe("crop lifecycle", () => {
 
     let s = s1;
     for (let i = 0; i < 50; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
       for (const field of s.fields) {
         expect(field.growth).toBeGreaterThanOrEqual(0);
         expect(field.growth).toBeLessThanOrEqual(1);
@@ -86,7 +89,7 @@ describe("crop lifecycle", () => {
 
     let s = s1;
     for (let i = 0; i < 50; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
       for (const field of s.fields) {
         expect(field.health).toBeGreaterThanOrEqual(0);
         expect(field.health).toBeLessThanOrEqual(1);
@@ -111,7 +114,7 @@ describe("crop lifecycle", () => {
 
     // Lettuce (5 ticks) should mature before corn (12 ticks)
     for (let i = 0; i < 30; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       const f1 = state.fields.find((f) => f.id === fieldId1)!;
       const f2 = state.fields.find((f) => f.id === fieldId2)!;
 
@@ -145,7 +148,7 @@ describe("crop lifecycle", () => {
 
     let s = s1;
     for (let i = 0; i < 20; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
     }
 
     const field = s.fields.find((f) => f.id === fieldId);
@@ -162,7 +165,7 @@ describe("crop lifecycle", () => {
     // Let weeds/pests grow
     let s = s1;
     for (let i = 0; i < 15; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
     }
 
     const field = s.fields.find((f) => f.id === fieldId);

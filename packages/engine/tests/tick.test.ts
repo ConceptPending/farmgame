@@ -1,50 +1,50 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick, DAYS_PER_SEASON } from "../src/index.js";
+import { createGameState, nextTurn, MONTHS_PER_SEASON } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
 
 function stateWithSeed(seed = 1) {
   return createGameState({ seed, startingMoney: 5000 });
 }
 
-describe("nextTick", () => {
+describe("nextTurn", () => {
   it("increments tick counter", () => {
     const state = stateWithSeed();
-    const result = nextTick(state);
+    const result = nextTurn(state);
     expect(result.state.tick).toBe(1);
   });
 
   it("advances day each tick", () => {
     const state = stateWithSeed();
-    const r1 = nextTick(state);
-    expect(r1.state.day).toBe(2);
-    const r2 = nextTick(r1.state);
-    expect(r2.state.day).toBe(3);
+    const r1 = nextTurn(state);
+    expect(r1.state.monthOfSeason).toBe(2);
+    const r2 = nextTurn(r1.state);
+    expect(r2.state.monthOfSeason).toBe(3);
   });
 
-  it("does nothing when paused", () => {
+  it("does nothing when the game has ended", () => {
     const state = stateWithSeed();
-    const paused = { ...state, paused: true };
-    const result = nextTick(paused);
+    const ended = { ...state, status: "lost" as const };
+    const result = nextTurn(ended);
     expect(result.state.tick).toBe(0);
-    expect(result.state.day).toBe(1);
+    expect(result.state.monthOfSeason).toBe(1);
   });
 
-  it("transitions season after DAYS_PER_SEASON", () => {
+  it("transitions season after MONTHS_PER_SEASON", () => {
     let state = stateWithSeed();
-    for (let i = 0; i < DAYS_PER_SEASON; i++) {
-      state = nextTick(state).state;
+    for (let i = 0; i < MONTHS_PER_SEASON; i++) {
+      state = nextTurn(state).state;
     }
     expect(state.season).toBe("summer");
-    expect(state.day).toBe(1);
+    expect(state.monthOfSeason).toBe(1);
   });
 
   it("cycles through all four seasons", () => {
     let state = stateWithSeed();
     const seasons: string[] = [state.season];
 
-    for (let i = 0; i < DAYS_PER_SEASON * 4; i++) {
+    for (let i = 0; i < MONTHS_PER_SEASON * 4; i++) {
       const prev = state.season;
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       if (state.season !== prev) {
         seasons.push(state.season);
       }
@@ -56,27 +56,27 @@ describe("nextTick", () => {
   it("increments year after full cycle", () => {
     let state = stateWithSeed();
     expect(state.year).toBe(1);
-    for (let i = 0; i < DAYS_PER_SEASON * 4; i++) {
-      state = nextTick(state).state;
+    for (let i = 0; i < MONTHS_PER_SEASON * 4; i++) {
+      state = nextTurn(state).state;
     }
     expect(state.year).toBe(2);
   });
 
   it("notifies on season change", () => {
     let state = stateWithSeed();
-    for (let i = 0; i < DAYS_PER_SEASON - 1; i++) {
-      state = nextTick(state).state;
+    for (let i = 0; i < MONTHS_PER_SEASON - 1; i++) {
+      state = nextTurn(state).state;
     }
-    const result = nextTick(state);
+    const result = nextTurn(state);
     expect(result.notifications.some((n) => n.message.includes("Summer"))).toBe(true);
   });
 
   it("updates weather each tick", () => {
     const state = stateWithSeed();
-    const r1 = nextTick(state);
+    const r1 = nextTurn(state);
     // Weather should be generated
     expect(r1.state.weather.temperature).toBeGreaterThan(0);
-    expect(r1.state.weather.forecast.length).toBe(5);
+    expect(r1.state.weather.forecast.length).toBe(2);
   });
 
   it("updates market prices each tick", () => {
@@ -84,7 +84,7 @@ describe("nextTick", () => {
     const pricesBefore = { ...state.market.prices };
     // Run enough ticks for prices to change
     for (let i = 0; i < 10; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     // At least one price should have changed
     const someChanged = Object.keys(pricesBefore).some(
@@ -96,7 +96,7 @@ describe("nextTick", () => {
   it("records price history", () => {
     let state = stateWithSeed();
     for (let i = 0; i < 5; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
     }
     expect(state.market.priceHistory.length).toBe(5);
   });
@@ -119,7 +119,7 @@ describe("nextTick", () => {
 
     // Tick multiple times - all systems should run
     for (let i = 0; i < 20; i++) {
-      const result = nextTick(state);
+      const result = nextTurn(state);
       state = result.state;
       expect(state.money).not.toBeNaN();
       expect(Number.isFinite(state.money)).toBe(true);
@@ -129,7 +129,7 @@ describe("nextTick", () => {
   it("money never becomes NaN through ticking", () => {
     let state = stateWithSeed(42);
     for (let i = 0; i < 200; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       expect(state.money).not.toBeNaN();
       expect(Number.isFinite(state.money)).toBe(true);
     }
@@ -151,7 +151,7 @@ describe("nextTick", () => {
     state = applyCommand(state, { type: "PLANT_FIELD", fieldId, cropId: "wheat" }).state;
 
     for (let i = 0; i < 100; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       for (const field of state.fields) {
         expect(field.growth).toBeGreaterThanOrEqual(0);
         expect(field.growth).toBeLessThanOrEqual(1);
@@ -162,7 +162,7 @@ describe("nextTick", () => {
   it("moisture values always stay in [0, 1]", () => {
     let state = stateWithSeed(42);
     for (let i = 0; i < 50; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       for (const tile of state.world.tiles) {
         expect(tile.moisture).toBeGreaterThanOrEqual(0);
         expect(tile.moisture).toBeLessThanOrEqual(1);
@@ -173,7 +173,7 @@ describe("nextTick", () => {
   it("market prices always positive", () => {
     let state = stateWithSeed(42);
     for (let i = 0; i < 200; i++) {
-      state = nextTick(state).state;
+      state = nextTurn(state).state;
       for (const price of Object.values(state.market.prices)) {
         expect(price).toBeGreaterThan(0);
       }

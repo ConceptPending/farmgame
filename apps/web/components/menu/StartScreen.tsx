@@ -102,7 +102,7 @@ export function StartScreen() {
               Continue → {continueSave.name}
             </span>
             <span style={{ fontSize: 11, color: "#7a8a9a", marginTop: 2 }}>
-              {continueSave.summary.season} Y{continueSave.summary.year} d{continueSave.summary.day}
+              {continueSave.summary.season} Y{continueSave.summary.year} m{continueSave.summary.monthOfSeason}
               {" · $"}{continueSave.summary.money.toLocaleString()}
               {" · "}{continueSave.summary.fields} fields, {continueSave.summary.animals} animals
             </span>

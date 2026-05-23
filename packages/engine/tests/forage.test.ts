@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   createGameState,
   applyCommand,
-  nextTick,
-  DAYS_PER_SEASON,
+  nextTurn,
+  MONTHS_PER_SEASON,
   ANIMAL_CATALOG,
 } from "../src/index.js";
 import type { GameState, SoilNutrients } from "../src/index.js";
@@ -42,8 +42,8 @@ describe("clover (forage cover crop)", () => {
 
   it("can be fed to animals like grain", () => {
     let s = withPenned("chicken", 2);
-    s = { ...s, inventory: { clover: 100 }, day: DAYS_PER_SEASON };
-    const after = nextTick(s).state;
+    s = { ...s, inventory: { clover: 100 }, monthOfSeason: MONTHS_PER_SEASON };
+    const after = nextTurn(s).state;
     expect(after.inventory.clover).toBe(100 - 2 * ANIMAL_CATALOG.chicken.feedPerSeason);
     expect(after.animals).toHaveLength(2); // fed, none starved
   });
@@ -52,8 +52,8 @@ describe("clover (forage cover crop)", () => {
 describe("manure", () => {
   it("is produced by the herd each season (scaled by health)", () => {
     let s = withPenned("chicken", 3);
-    s = { ...s, inventory: { wheat: 100 }, day: DAYS_PER_SEASON }; // fed -> full health
-    const after = nextTick(s).state;
+    s = { ...s, inventory: { wheat: 100 }, monthOfSeason: MONTHS_PER_SEASON }; // fed -> full health
+    const after = nextTurn(s).state;
     expect(after.manure).toBe(3 * ANIMAL_CATALOG.chicken.manurePerSeason);
   });
 

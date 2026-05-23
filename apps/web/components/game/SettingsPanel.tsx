@@ -15,6 +15,7 @@ import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { PanelModal } from "./PanelModal";
 import { isAudioEnabled, setAudioEnabled, playSound } from "../../lib/sounds";
+import { monthPhase } from "@farmgame/engine";
 import {
   ALL_SLOT_IDS,
   AUTOSAVE_ID,
@@ -34,8 +35,6 @@ export function SettingsPanel() {
   const state = useGameStore((s) => s.state);
   const loadGameState = useGameStore((s) => s.loadGameState);
   const returnToMenu = useGameStore((s) => s.returnToMenu);
-  const autoPauseOnEvents = useGameStore((s) => s.autoPauseOnEvents);
-  const setAutoPauseOnEvents = useGameStore((s) => s.setAutoPauseOnEvents);
   const open = useUIStore((s) => s.activePanel === "settings");
   const closePanel = useUIStore((s) => s.closePanel);
   const reopenOnboarding = useUIStore((s) => s.reopenOnboarding);
@@ -155,12 +154,6 @@ export function SettingsPanel() {
             setAudioOn(next);
             if (next) playSound("plant"); // sample so the user knows it works
           }}
-        />
-        <ToggleRow
-          label="Auto-pause on noteworthy events"
-          description="Stops auto-advance when something needs attention (crop ready, crisis, market swing…)."
-          on={autoPauseOnEvents}
-          onChange={setAutoPauseOnEvents}
         />
         <button
           onClick={() => {
@@ -409,7 +402,7 @@ function SaveSlotRow({
         </div>
         {save ? (
           <div style={{ color: "#7a8a9a", fontSize: 10.5, marginTop: 2 }}>
-            {save.summary.season} Y{save.summary.year} d{save.summary.day} · $
+            {monthPhase(save.summary.monthOfSeason)} {save.summary.season} Y{save.summary.year} · $
             {save.summary.money.toLocaleString()} · {save.summary.fields}f / {save.summary.animals}a
             <span style={{ color: "#556677", marginLeft: 6 }}>{relativeTime(save.savedAt)}</span>
           </div>
