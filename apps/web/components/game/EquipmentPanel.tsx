@@ -10,6 +10,8 @@ import {
   workableTiles,
   cultivatedTiles,
 } from "@farmgame/engine";
+import { HelpHint } from "../ui/Tooltip";
+import { HELP } from "../../lib/help-text";
 
 export function EquipmentPanel() {
   const state = useGameStore((s) => s.state);
@@ -28,7 +30,7 @@ export function EquipmentPanel() {
       {/* Workable-land gauge */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ color: "#aaa" }}>Land under cultivation</span>
+          <span style={{ color: "#aaa" }}>Land under cultivation<HelpHint text={HELP.landCapacity} /></span>
           <span style={{ color: used > capacity ? "#ff6b6b" : "#4ecca3" }}>{used} / {capacity} tiles</span>
         </div>
         <div style={{ height: 8, background: "#0a1628", borderRadius: 4, overflow: "hidden" }}>

@@ -18,6 +18,8 @@ import {
   FEED_TROUGH_FACTOR,
   type ComfortTier,
 } from "@farmgame/engine";
+import { HelpHint } from "../ui/Tooltip";
+import { HELP } from "../../lib/help-text";
 
 export function LivestockPanel() {
   const state = useGameStore((s) => s.state);
@@ -95,7 +97,7 @@ export function LivestockPanel() {
       {penIntegrity !== null && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 12, color: penIntegrity < 0.5 ? "#ff6b6b" : "#9db4d0" }}>
-            Pen fences: {Math.round(penIntegrity * 100)}% sound
+            Pen fences: {Math.round(penIntegrity * 100)}% sound<HelpHint text={HELP.penFences} />
           </span>
           {repairCost > 0 && (
             <button
@@ -124,7 +126,7 @@ export function LivestockPanel() {
 
       {comfortParts.length > 0 && (
         <div style={{ fontSize: 12, marginBottom: 8 }}>
-          <span style={{ color: "#7a8a9a" }}>Comfort:</span>{" "}
+          <span style={{ color: "#7a8a9a" }}>Comfort:<HelpHint text={HELP.animalComfort} /></span>{" "}
           {comfortParts.map(({ t, n }, i) => (
             <span key={t}>
               <span style={{ color: tierColor[t] }}>
@@ -138,7 +140,7 @@ export function LivestockPanel() {
 
       {/* Feed + manure status */}
       <div style={{ fontSize: 12, color: feedShort ? "#ff6b6b" : "#aaa", marginBottom: 4 }}>
-        Feed per season: {Math.round(feedNeeded)} (grain or hay) · In stock: {feedStock}
+        Feed per season: {Math.round(feedNeeded)} (grain or hay)<HelpHint text={HELP.feedPerSeason} /> · In stock: {feedStock}
         {feedSavings > 0 && (
           <span style={{ color: "#4ecca3" }}> · saving {Math.round(feedSavings)} (pasture/trough)</span>
         )}
@@ -152,7 +154,7 @@ export function LivestockPanel() {
         </div>
       )}
       <div style={{ fontSize: 12, color: "#9db4d0", marginBottom: 12 }}>
-        Manure: {state.manure} · producing ≈ {state.animals.reduce((m, a) => m + ANIMAL_CATALOG[a.type].manurePerSeason, 0)}/season (spread on fields to restore soil)
+        Manure: {state.manure}<HelpHint text={HELP.manureStock} /> · producing ≈ {state.animals.reduce((m, a) => m + ANIMAL_CATALOG[a.type].manurePerSeason, 0)}/season (spread on fields to restore soil)
       </div>
 
       {/* Buy → place. Picks the spot for you, or use the Animals tool to aim. */}
