@@ -22,6 +22,7 @@ export type OnboardingStep =
   | "designate"
   | "plow"
   | "plant"
+  | "labor"
   | "wait"
   | "harvest"
   | "sell"
@@ -48,16 +49,20 @@ const HINTS: Record<OnboardingStep, Omit<OnboardingHint, "step">> = {
     title: "3. Plant a crop",
     body: "Pick the Plant tool, choose a crop in the sub-palette (the tagline tells you its role), then click the plowed field.",
   },
+  labor: {
+    title: "4. Mind your labor",
+    body: "Every action spends from your monthly Labor budget (top-right). Heavy work like plowing scales with field size. End Turn refreshes it.",
+  },
   wait: {
-    title: "4. Let it grow",
+    title: "5. Let it grow",
     body: "Click 'End Turn' in the top bar to advance one month. Each turn refreshes your labor budget and lets crops grow.",
   },
   harvest: {
-    title: "5. Harvest",
+    title: "6. Harvest",
     body: "When the field reads 'ready', pick the Harvest tool and click it. The yield drops into your inventory.",
   },
   sell: {
-    title: "6. Sell at the market",
+    title: "7. Sell at the market",
     body: "Open the inspector on the right and hit Sell on a stored crop — or open the Market panel from the top bar.",
   },
   done: {
@@ -97,6 +102,10 @@ export function currentOnboardingStep(state: GameState): OnboardingStep {
   const hasPlanted = state.fields.some((f) => f.cropId !== null);
   if (!hasPlanted) return "plant";
 
+  // Labor step shows once the player has planted, on the first turn where
+  // they've actually spent some labor. After they end the turn (labor.used
+  // resets to 0) we advance to "wait".
+  if (state.labor.used > 0) return "labor";
   return "wait";
 }
 

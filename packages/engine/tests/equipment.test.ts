@@ -32,8 +32,13 @@ describe("workable capacity", () => {
 });
 
 describe("plow gate", () => {
-  it("allows plowing within capacity and blocks beyond it", () => {
-    const s = createGameState({ seed: 1, startingMoney: 5000 });
+  it("allows plowing within capacity and blocks beyond it (machinery cap)", () => {
+    // Generous labor budget so we isolate the workable-tile (machinery) gate
+    // from the monthly labor gate.
+    const s: GameState = {
+      ...createGameState({ seed: 1, startingMoney: 5000 }),
+      labor: { used: 0, capacity: 200 },
+    };
     const small = applyCommand(s, { type: "DESIGNATE_FIELD", tileIndices: dirt(s, 20) }).state;
     const r1 = applyCommand(small, { type: "PLOW_FIELD", fieldId: small.fields[0].id });
     expect(r1.success).toBe(true);
@@ -46,7 +51,10 @@ describe("plow gate", () => {
   });
 
   it("buying equipment unlocks plowing more land", () => {
-    let s = createGameState({ seed: 1, startingMoney: 5000 });
+    let s: GameState = {
+      ...createGameState({ seed: 1, startingMoney: 5000 }),
+      labor: { used: 0, capacity: 200 },
+    };
     s = applyCommand(s, { type: "BUY_EQUIPMENT", equipmentType: "tractor" }).state; // +50 → 74
     const f = applyCommand(s, { type: "DESIGNATE_FIELD", tileIndices: dirt(s, 40) }).state;
     const r = applyCommand(f, { type: "PLOW_FIELD", fieldId: f.fields[0].id });

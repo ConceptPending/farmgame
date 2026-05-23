@@ -746,7 +746,9 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
   // Labor gate — every other command is rejected up front when the cost would
   // exceed the player's remaining monthly budget. The UI mirrors this by
   // disabling buttons; this is the safety net for keyboard/macro/API callers.
-  const cost = laborCost(command);
+  // State is passed in so per-tile commands (plow / harvest / spray …) bill
+  // by the target field's size rather than a flat per-action number.
+  const cost = laborCost(command, state);
   if (cost > 0 && state.labor.used + cost > state.labor.capacity) {
     return fail(
       state,

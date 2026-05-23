@@ -21,7 +21,7 @@ export {
   type TickResult,
   type CreateGameOptions,
 } from "./state.js";
-export { laborCost, canAfford } from "./entities/labor.js";
+export { laborCost, canAfford, minLaborCost } from "./entities/labor.js";
 
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
@@ -129,7 +129,7 @@ export { predatorSystem } from "./systems/predator.js";
 export type { EquipmentType, EquipmentDefinition, Equipment } from "./entities/equipment.js";
 export {
   EQUIPMENT_CATALOG, ALL_EQUIPMENT_TYPES, BASE_WORKABLE_TILES, EQUIPMENT_SALVAGE,
-  createEquipment, workableTiles, cultivatedTiles,
+  createEquipment, workableTiles, cultivatedTiles, equipmentLaborBonus,
 } from "./entities/equipment.js";
 
 // Data

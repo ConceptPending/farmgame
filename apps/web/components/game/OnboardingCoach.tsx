@@ -15,7 +15,7 @@ import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { currentOnboardingStep, onboardingHint } from "../../lib/onboarding";
 
-const ALL_STEPS = ["designate", "plow", "plant", "wait", "harvest", "sell"] as const;
+const ALL_STEPS = ["designate", "plow", "plant", "labor", "wait", "harvest", "sell"] as const;
 
 export function OnboardingCoach() {
   const state = useGameStore((s) => s.state);

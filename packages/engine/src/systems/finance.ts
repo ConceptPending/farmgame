@@ -162,6 +162,15 @@ export function evaluateGoal(state: GameState): { status: GameStatus; message?: 
     case "sandbox":
       break;
   }
+  // Deadline check — if the goal carries a deadline and we've passed it
+  // without hitting the win condition above, the player loses. Sandbox has
+  // no deadline by design (no `deadlineTurns` field).
+  if (goal.type !== "sandbox" && goal.deadlineTurns != null && state.tick >= goal.deadlineTurns) {
+    return {
+      status: "lost",
+      message: `The deadline of ${goal.deadlineTurns} turns passed before you hit your goal. Game over.`,
+    };
+  }
   return { status: "playing" };
 }
 
