@@ -7,6 +7,7 @@ import { nextBool } from "../rng.js";
 import {
   pastureGrazingOffset,
   animalAmenities,
+  animalComfort,
   FEED_TROUGH_FACTOR,
   WATER_TROUGH_BREED_BONUS,
 } from "./pen.js";
@@ -53,6 +54,7 @@ export function livestockSystem(state: GameState): {
     // tiles inside the pen) provides free grazing up to a cap.
     const pasture = pastureGrazingOffset(state);
     const amenities = animalAmenities(state);
+    const comfort = animalComfort(state);
     const needed = animals.reduce((sum, a) => {
       const base = ANIMAL_CATALOG[a.type].feedPerSeason;
       const afterTrough = amenities.get(a.id)?.feed ? base * FEED_TROUGH_FACTOR : base;
@@ -78,23 +80,36 @@ export function livestockSystem(state: GameState): {
 
     const fedRatio = needed > 0 ? consumed / needed : 1;
 
-    // Health update + starvation.
+    // Health update + starvation. Overcrowded/cramped pens drift health down
+    // on top of feed effects; cramped animals can die outright if neglected.
     const survivors: Animal[] = [];
+    let crampedCount = 0;
     for (const a of animals) {
-      const health =
+      const fedHealth =
         fedRatio >= 1
           ? Math.min(1, a.health + 0.2)
           : Math.max(0, a.health - ((1 - fedRatio) * 0.5 + 0.1));
+      const c = comfort.get(a.id);
+      const health = Math.max(0, Math.min(1, fedHealth + (c?.healthDelta ?? 0)));
+      if (c?.tier === "cramped") crampedCount++;
       if (health <= 0) {
-        notifications.push({
-          type: "warning",
-          message: `A ${ANIMAL_CATALOG[a.type].name.toLowerCase()} starved for lack of feed.`,
-        });
+        const name = ANIMAL_CATALOG[a.type].name.toLowerCase();
+        const message =
+          c?.tier === "cramped" && fedRatio >= 1
+            ? `A ${name} died from stress in a cramped pen.`
+            : `A ${name} starved for lack of feed.`;
+        notifications.push({ type: "warning", message });
         continue;
       }
       survivors.push({ ...a, health });
     }
     animals = survivors;
+    if (crampedCount > 0) {
+      notifications.push({
+        type: "warning",
+        message: `${crampedCount} animal${crampedCount > 1 ? "s are" : " is"} stressed in a cramped pen — give them more space.`,
+      });
+    }
 
     if (fedRatio < 1 && animals.length > 0) {
       notifications.push({
@@ -107,12 +122,14 @@ export function livestockSystem(state: GameState): {
     manure += Math.round(animals.reduce((sum, a) => sum + ANIMAL_CATALOG[a.type].manurePerSeason * a.health, 0));
 
     // Products: mature, well-fed animals yield eggs/milk/wool into inventory.
+    // Crowded pens cut yield; cozy pens nudge it up.
     if (fedRatio >= 1) {
       const produced: Record<string, number> = {};
       for (const a of animals) {
         const def = ANIMAL_CATALOG[a.type];
         if (def.product && def.yieldPerSeason && a.maturity >= 1 && a.health > 0) {
-          const amt = Math.round(def.yieldPerSeason * a.health);
+          const mult = comfort.get(a.id)?.productMult ?? 1;
+          const amt = Math.round(def.yieldPerSeason * a.health * mult);
           if (amt > 0) produced[def.product] = (produced[def.product] ?? 0) + amt;
         }
       }
@@ -148,7 +165,9 @@ export function livestockSystem(state: GameState): {
         if (a.maturity >= 1 && a.health >= 0.8) {
           const chance = Math.min(
             1,
-            def.breedChance * (amenities.get(a.id)?.water ? WATER_TROUGH_BREED_BONUS : 1),
+            def.breedChance
+              * (amenities.get(a.id)?.water ? WATER_TROUGH_BREED_BONUS : 1)
+              * (comfort.get(a.id)?.breedMult ?? 1),
           );
           const roll = nextBool(rng, chance);
           rng = roll.rng;

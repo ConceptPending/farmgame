@@ -214,6 +214,51 @@ export function pastureGrazingOffset(
   return out;
 }
 
+export type ComfortTier = "cozy" | "comfortable" | "crowded" | "cramped";
+
+export interface ComfortInfo {
+  /** Animals per pen tile. */
+  density: number;
+  tier: ComfortTier;
+  /** Multiplier applied to per-animal breeding chance. */
+  breedMult: number;
+  /** Multiplier applied to seasonal product yield. */
+  productMult: number;
+  /** Per-season health delta added on top of feed-driven changes. */
+  healthDelta: number;
+}
+
+function comfortFor(density: number): ComfortInfo {
+  if (density < 0.7) {
+    return { density, tier: "cozy", breedMult: 1.05, productMult: 1.05, healthDelta: 0 };
+  }
+  if (density <= 1.5) {
+    return { density, tier: "comfortable", breedMult: 1.0, productMult: 1.0, healthDelta: 0 };
+  }
+  if (density <= 2.5) {
+    return { density, tier: "crowded", breedMult: 0.8, productMult: 0.9, healthDelta: -0.02 };
+  }
+  return { density, tier: "cramped", breedMult: 0, productMult: 0.8, healthDelta: -0.06 };
+}
+
+/**
+ * Per-animal comfort, derived from how densely its pen is stocked. Animals
+ * outside any pen (loose) are omitted — comfort doesn't model their lives.
+ */
+export function animalComfort(
+  state: GameState,
+  buildings: Building[] = state.buildings,
+): Map<number, ComfortInfo> {
+  const out = new Map<number, ComfortInfo>();
+  const { animalsByPen } = penIndex(state, buildings);
+  for (const [pen, group] of animalsByPen) {
+    const density = pen.tiles.size > 0 ? group.length / pen.tiles.size : Infinity;
+    const info = comfortFor(density);
+    for (const a of group) out.set(a.id, info);
+  }
+  return out;
+}
+
 /** Whether an animal's pen contains a water trough / feed trough. */
 export function animalAmenities(
   state: GameState,

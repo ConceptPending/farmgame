@@ -13,7 +13,9 @@ import {
   pennedTiles,
   pastureGrazingOffset,
   animalAmenities,
+  animalComfort,
   FEED_TROUGH_FACTOR,
+  type ComfortTier,
 } from "@farmgame/engine";
 
 export function LivestockPanel() {
@@ -56,6 +58,20 @@ export function LivestockPanel() {
   const feedShort = feedNeeded > feedStock;
   const waterTroughs = state.buildings.filter((b) => b.type === "water_trough").length;
   const feedTroughs = state.buildings.filter((b) => b.type === "feed_trough").length;
+
+  // Comfort tally (only penned animals show up here; loose ones are omitted).
+  const comfort = animalComfort(state);
+  const comfortCounts: Record<ComfortTier, number> = { cozy: 0, comfortable: 0, crowded: 0, cramped: 0 };
+  for (const info of comfort.values()) comfortCounts[info.tier]++;
+  const tierColor: Record<ComfortTier, string> = {
+    cozy: "#4ecca3",
+    comfortable: "#9db4d0",
+    crowded: "#ffdd57",
+    cramped: "#ff6b6b",
+  };
+  const comfortParts = (Object.keys(comfortCounts) as ComfortTier[])
+    .filter((t) => comfortCounts[t] > 0)
+    .map((t) => ({ t, n: comfortCounts[t] }));
 
   const startPlacing = (type: (typeof ALL_ANIMAL_TYPES)[number]) => {
     setSelectedAnimalType(type);
@@ -102,6 +118,20 @@ export function LivestockPanel() {
       {looseCount > 0 && (
         <div style={{ color: "#ffdd57", fontSize: 12, marginBottom: 10 }}>
           Loose animals will wander off. Fence them into a pen (Build → Fence) and keep it repaired.
+        </div>
+      )}
+
+      {comfortParts.length > 0 && (
+        <div style={{ fontSize: 12, marginBottom: 8 }}>
+          <span style={{ color: "#7a8a9a" }}>Comfort:</span>{" "}
+          {comfortParts.map(({ t, n }, i) => (
+            <span key={t}>
+              <span style={{ color: tierColor[t] }}>
+                {n} {t}
+              </span>
+              {i < comfortParts.length - 1 && <span style={{ color: "#444" }}> · </span>}
+            </span>
+          ))}
         </div>
       )}
 
