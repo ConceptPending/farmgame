@@ -76,9 +76,9 @@ export function StartScreen() {
       >
       <div style={{ textAlign: "center" }}>
         <h1 style={{ margin: 0, color: "#4ecca3", fontSize: 36, letterSpacing: 1, display: "inline-flex", alignItems: "center", gap: 10 }}>
-          <Icon name="wheat" size={32} /> FarmGame
+          <Icon name="wheat" size={32} /> Smallholding
         </h1>
-        <p style={{ color: "#7a8a9a", margin: "6px 0 0" }}>Choose how you want to play.</p>
+        <p style={{ color: "#7a8a9a", margin: "6px 0 0" }}>A small farm against four seasons and a fickle market.</p>
       </div>
 
       {/* Difficulty */}
