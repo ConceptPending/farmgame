@@ -193,13 +193,20 @@ export function InfoPanel() {
             );
           })()}
           {(() => {
-            const cost = 2 * selectedField.tileIndices.length;
-            const disabled = state.manure < cost;
+            const manureCost = 2 * selectedField.tileIndices.length;
+            const labor = 2; // labor cost of SPREAD_MANURE — kept in sync with the engine table.
+            const laborLeft = state.labor.capacity - state.labor.used;
+            const noManure = state.manure < manureCost;
+            const noLabor = laborLeft < labor;
+            const disabled = noManure || noLabor;
+            const why = noLabor
+              ? `Needs ${labor} labor (${laborLeft} left this month)`
+              : `Spend ${manureCost} manure + ${labor} labor to restore this field's N-P-K (have ${state.manure})`;
             return (
               <button
                 onClick={() => dispatch({ type: "SPREAD_MANURE", fieldId: selectedField.id })}
                 disabled={disabled}
-                title={`Spend ${cost} manure to restore this field's N-P-K (have ${state.manure})`}
+                title={why}
                 style={{
                   marginTop: 6,
                   padding: "3px 8px",
@@ -211,7 +218,7 @@ export function InfoPanel() {
                   cursor: disabled ? "default" : "pointer",
                 }}
               >
-                Spread Manure ({state.manure})
+                Spread Manure ({state.manure}) <span style={{ color: "#7a8a9a", fontSize: 9 }}>· {labor} labor</span>
               </button>
             );
           })()}

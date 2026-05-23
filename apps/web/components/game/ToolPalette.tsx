@@ -1,14 +1,17 @@
 "use client";
 
 import { useUIStore } from "../../stores/ui-store";
+import { useGameStore } from "../../stores/game-store";
 import {
   CROP_CATALOG,
   BUILDING_CATALOG,
   ANIMAL_CATALOG,
   ALL_ANIMAL_TYPES,
+  laborCost,
   type CropId,
   type BuildingType,
   type ToolId,
+  type GameCommand,
 } from "@farmgame/engine";
 import type { SprayType } from "@farmgame/engine";
 import { Icon, type IconName } from "../ui/Icon";
@@ -25,6 +28,20 @@ const TOOLS: { id: ToolId; label: string; icon: IconName }[] = [
   { id: "spray", label: "Spray", icon: "spray" },
   { id: "bulldoze", label: "Remove", icon: "remove" },
 ];
+
+/** Labor cost the player will pay per tool action — drives the badge on each
+ *  palette button. Looked up via the engine's laborCost() so it stays a single
+ *  source of truth. */
+const TOOL_REPRESENTATIVE_COMMAND: Partial<Record<ToolId, GameCommand>> = {
+  buy_land: { type: "BUY_PLOT", plotX: 0, plotY: 0 },
+  designate_field: { type: "DESIGNATE_FIELD", tileIndices: [] },
+  plow: { type: "PLOW_FIELD", fieldId: 0 },
+  plant: { type: "PLANT_FIELD", fieldId: 0, cropId: "wheat" },
+  harvest: { type: "HARVEST_FIELD", fieldId: 0 },
+  build: { type: "BUILD", buildingType: "silo", tileIndex: 0 },
+  spray: { type: "SPRAY", fieldId: 0, sprayType: "herbicide" },
+  bulldoze: { type: "REMOVE_FIELD", fieldId: 0 },
+};
 
 const TOOL_HINTS: Record<ToolId, string> = {
   pointer: "Click to inspect",
@@ -77,6 +94,16 @@ export function ToolPalette() {
   const setSelectedAnimalType = useUIStore((s) => s.setSelectedAnimalType);
   const selectedSprayType = useUIStore((s) => s.selectedSprayType);
   const setSelectedSprayType = useUIStore((s) => s.setSelectedSprayType);
+  const state = useGameStore((s) => s.state);
+
+  const laborLeft = state ? state.labor.capacity - state.labor.used : 0;
+  function toolCost(id: ToolId): number {
+    const cmd = TOOL_REPRESENTATIVE_COMMAND[id];
+    return cmd ? laborCost(cmd) : 0;
+  }
+  function toolDisabled(id: ToolId): boolean {
+    return toolCost(id) > laborLeft;
+  }
 
   // Sub-palettes (plant/build/spray/place_animal) have richer buttons with
   // sub-text, so the palette widens when one of those tools is active. The
@@ -101,16 +128,44 @@ export function ToolPalette() {
         transition: "width 140ms ease",
       }}
     >
-      {TOOLS.map((tool) => (
-        <button
-          key={tool.id}
-          onClick={() => setSelectedTool(tool.id)}
-          style={buttonStyle(selectedTool === tool.id)}
-        >
-          <Icon name={tool.icon} size={18} color={selectedTool === tool.id ? "#4ecca3" : "#ccc"} />
-          <span>{tool.label}</span>
-        </button>
-      ))}
+      {TOOLS.map((tool) => {
+        const cost = toolCost(tool.id);
+        const cantAfford = toolDisabled(tool.id);
+        const active = selectedTool === tool.id;
+        const iconColor = cantAfford ? "#555" : active ? "#4ecca3" : "#ccc";
+        return (
+          <button
+            key={tool.id}
+            onClick={() => setSelectedTool(tool.id)}
+            title={cost > 0 ? `${tool.label} — ${cost} labor` : tool.label}
+            style={{
+              ...buttonStyle(active),
+              opacity: cantAfford ? 0.6 : 1,
+              position: "relative",
+            }}
+          >
+            <Icon name={tool.icon} size={18} color={iconColor} />
+            <span style={{ color: cantAfford ? "#666" : undefined }}>{tool.label}</span>
+            {cost > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  right: 4,
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: cantAfford ? "#ff8c42" : "#7a8a9a",
+                  background: "#0a1628",
+                  borderRadius: 2,
+                  padding: "0 3px",
+                }}
+              >
+                {cost}
+              </span>
+            )}
+          </button>
+        );
+      })}
 
       {/* Tool hint */}
       <div

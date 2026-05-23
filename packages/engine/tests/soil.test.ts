@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, applyCommand, nextTick } from "../src/index.js";
+import { createGameState, applyCommand, nextTurn } from "../src/index.js";
 import type { GameState, SoilNutrients } from "../src/index.js";
 
 function dirtTiles(state: GameState, n: number): number[] {
@@ -91,7 +91,7 @@ describe("recovery & fertilizer", () => {
       ...s,
       world: { ...s.world, tiles: s.world.tiles.map((t, j) => (j === i ? { ...t, soilQuality: 0.7, nutrients: { n: 0.2, p: 0.2, k: 0.2 } } : t)) },
     };
-    for (let k = 0; k < 30; k++) s = nextTick(s).state;
+    for (let k = 0; k < 30; k++) s = nextTurn(s).state;
     expect(s.world.tiles[i].nutrients.n).toBeGreaterThan(0.22);
   });
 

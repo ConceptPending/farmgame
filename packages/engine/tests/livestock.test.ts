@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   createGameState,
-  nextTick,
+  nextTurn,
   applyCommand,
   computeNetWorth,
   animalValue,
   ANIMAL_CATALOG,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
 } from "../src/index.js";
 import { withPenned } from "./helpers.js";
 
@@ -51,23 +51,23 @@ describe("buying and selling", () => {
 describe("growth, feed, and breeding", () => {
   it("animals grow toward maturity each tick", () => {
     const s = withPenned("cow", 1);
-    const after = nextTick(s).state;
+    const after = nextTurn(s).state;
     expect(after.animals[0].age).toBe(1);
     expect(after.animals[0].maturity).toBeGreaterThan(0);
   });
 
   it("consumes grain feed at a season boundary", () => {
-    const s = { ...withPenned("chicken", 2), inventory: { wheat: 100 }, day: DAYS_PER_SEASON };
-    const after = nextTick(s).state; // season rolls over → feed charged
-    expect(after.day).toBe(1);
+    const s = { ...withPenned("chicken", 2), inventory: { wheat: 100 }, monthOfSeason: MONTHS_PER_SEASON };
+    const after = nextTurn(s).state; // season rolls over → feed charged
+    expect(after.monthOfSeason).toBe(1);
     expect(after.inventory.wheat).toBe(100 - 2 * ANIMAL_CATALOG.chicken.feedPerSeason);
   });
 
   it("starves unfed animals over time", () => {
     let s = { ...withPenned("chicken", 1), inventory: {} }; // no grain
     let starved = false;
-    for (let i = 0; i < DAYS_PER_SEASON * 3; i++) {
-      const r = nextTick(s);
+    for (let i = 0; i < MONTHS_PER_SEASON * 3; i++) {
+      const r = nextTurn(s);
       s = r.state;
       if (r.notifications.some((n) => /starved/.test(n.message))) starved = true;
     }
@@ -86,10 +86,10 @@ describe("identity (name + lifetime)", () => {
     expect(r1.state.animals[0].name).toBe(r2.state.animals[0].name);
   });
 
-  it("lifetime daysAlive increments every tick", () => {
+  it("lifetime monthsAlive increments every tick", () => {
     const s = withPenned("cow", 1);
-    const after = nextTick(s).state;
-    expect(after.animals[0].lifetime.daysAlive).toBe(1);
+    const after = nextTurn(s).state;
+    expect(after.animals[0].lifetime.monthsAlive).toBe(1);
   });
 
   it("lifetime products accumulate after a producing season", () => {
@@ -98,9 +98,9 @@ describe("identity (name + lifetime)", () => {
       ...base,
       animals: base.animals.map((a) => ({ ...a, maturity: 1 })),
       inventory: { wheat: 100 },
-      day: DAYS_PER_SEASON,
+      monthOfSeason: MONTHS_PER_SEASON,
     };
-    const after = nextTick(s).state;
+    const after = nextTurn(s).state;
     expect(after.animals[0].lifetime.products).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
   });
 
@@ -133,9 +133,9 @@ describe("determinism", () => {
     const build = () => ({ ...withPenned("chicken", 4), inventory: { wheat: 100000 } });
     let a = build();
     let b = build();
-    for (let i = 0; i < DAYS_PER_SEASON * 4; i++) {
-      a = nextTick(a).state;
-      b = nextTick(b).state;
+    for (let i = 0; i < MONTHS_PER_SEASON * 4; i++) {
+      a = nextTurn(a).state;
+      b = nextTurn(b).state;
     }
     expect(a.animals.length).toBe(b.animals.length);
     expect(a.money).toBe(b.money);

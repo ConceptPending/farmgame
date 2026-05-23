@@ -1,19 +1,27 @@
 // Core
-export { nextTick } from "./tick.js";
+export { nextTurn } from "./tick.js";
 export {
   createGameState,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
+  MONTHS_PER_YEAR,
+  MONTH_PHASES,
+  BASE_LABOR_CAPACITY,
   SEASONS,
   BASE_INVENTORY_CAPACITY,
   SILO_CAPACITY_BONUS,
   DEFAULT_GOAL_NET_WORTH,
   LOAN_LIMIT,
+  monthPhase,
+  absoluteMonth,
   type GameState,
   type GameStatus,
+  type LaborBudget,
+  type MonthPhase,
   type Notification,
   type TickResult,
   type CreateGameOptions,
 } from "./state.js";
+export { laborCost, canAfford } from "./entities/labor.js";
 
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";

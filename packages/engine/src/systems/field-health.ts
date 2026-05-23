@@ -26,17 +26,19 @@ export function fieldHealthSystem(state: GameState): {
 
     let { weeds, pests, health } = field;
 
-    // Weed growth: faster in warm/wet weather
-    let weedGrowth = 0.01;
-    if (weather.temperature > 70) weedGrowth += 0.005;
-    if (weather.rainfall > 0.2) weedGrowth += 0.005;
-    if (state.season === "summer") weedGrowth += 0.005;
+    // Weed growth per monthly turn. Pre-scaled from the old per-day values
+    // (× ~9) so a season of three turns has roughly the same net pressure
+    // as the old 28-day season. PR M will tune.
+    let weedGrowth = 0.09;
+    if (weather.temperature > 70) weedGrowth += 0.045;
+    if (weather.rainfall > 0.2) weedGrowth += 0.045;
+    if (state.season === "summer") weedGrowth += 0.045;
     weeds = Math.min(1, weeds + weedGrowth);
 
-    // Pest growth: faster in warm weather, near forest
-    let pestGrowth = 0.008;
-    if (weather.temperature > 75) pestGrowth += 0.005;
-    if (state.season === "summer") pestGrowth += 0.003;
+    // Pest growth per monthly turn. Same scaling as weeds.
+    let pestGrowth = 0.07;
+    if (weather.temperature > 75) pestGrowth += 0.045;
+    if (state.season === "summer") pestGrowth += 0.025;
 
     // Check if any field tile is near forest (within 4 tiles)
     let nearForest = false;
@@ -52,7 +54,7 @@ export function fieldHealthSystem(state: GameState): {
       }
       if (nearForest) break;
     }
-    if (nearForest) pestGrowth += 0.01;
+    if (nearForest) pestGrowth += 0.09;
 
     // Pest vulnerability from crop type
     const def = field.cropId ? getCropDef(field.cropId) : null;
@@ -62,13 +64,13 @@ export function fieldHealthSystem(state: GameState): {
 
     pests = Math.min(1, pests + pestGrowth);
 
-    // Health degradation from weeds and pests
-    if (weeds > 0.5) health -= (weeds - 0.5) * 0.02;
-    if (pests > 0.5) health -= (pests - 0.5) * 0.03;
+    // Health degradation from weeds and pests, per monthly turn.
+    if (weeds > 0.5) health -= (weeds - 0.5) * 0.18;
+    if (pests > 0.5) health -= (pests - 0.5) * 0.27;
 
     // Pests at critical levels can kill crops
     if (pests > 0.8) {
-      health -= 0.05;
+      health -= 0.45;
     }
 
     health = Math.max(0, Math.min(1, health));

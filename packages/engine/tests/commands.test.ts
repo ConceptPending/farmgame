@@ -479,20 +479,29 @@ describe("SELL", () => {
   });
 });
 
-describe("PAUSE / RESUME / SET_SPEED", () => {
-  it("pauses and resumes", () => {
+describe("END_TURN", () => {
+  it("advances the calendar by one monthly turn", () => {
     const state = stateWithSeed();
-    const paused = applyCommand(state, { type: "PAUSE" });
-    expect(paused.state.paused).toBe(true);
-    const resumed = applyCommand(paused.state, { type: "RESUME" });
-    expect(resumed.state.paused).toBe(false);
+    const r = applyCommand(state, { type: "END_TURN" });
+    expect(r.success).toBe(true);
+    // monthOfSeason advances from 1 → 2 (no season rollover yet at turn 1).
+    expect(r.state.monthOfSeason).toBe(2);
+    expect(r.state.season).toBe(state.season);
+    expect(r.state.tick).toBe(state.tick + 1);
   });
 
-  it("sets speed", () => {
+  it("resets the labor budget", () => {
     const state = stateWithSeed();
-    for (const speed of [1, 2, 3] as const) {
-      const result = applyCommand(state, { type: "SET_SPEED", speed });
-      expect(result.state.speed).toBe(speed);
-    }
+    // Consume some labor with a real action first.
+    const tiles = state.world.tiles
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => t.owned && t.terrain !== "water" && t.terrain !== "rock")
+      .slice(0, 4)
+      .map(({ i }) => i);
+    const s = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: tiles }).state;
+    expect(s.labor.used).toBeGreaterThan(0);
+    const ended = applyCommand(s, { type: "END_TURN" });
+    expect(ended.state.labor.used).toBe(0);
+    expect(ended.state.labor.capacity).toBe(s.labor.capacity);
   });
 });

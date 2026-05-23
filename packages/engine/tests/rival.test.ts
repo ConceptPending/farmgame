@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   createGameState,
-  nextTick,
+  nextTurn,
   applyCommand,
   standings,
   rivalOwning,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
 } from "../src/index.js";
 import type { RivalConfig } from "../src/index.js";
 
@@ -53,7 +53,7 @@ describe("rival behavior over a season", () => {
   it("grows net worth and depresses its focus good's price", () => {
     let s = createGameState({ seed: 5, goal: { type: "sandbox" }, rivals: [rival({ startingPlots: 3 })] });
     const nwBefore = s.rivals[0].netWorth;
-    for (let i = 0; i < DAYS_PER_SEASON + 2; i++) s = nextTick(s).state;
+    for (let i = 0; i < MONTHS_PER_SEASON + 2; i++) s = nextTurn(s).state;
     expect(s.rivals[0].netWorth).toBeGreaterThan(nwBefore);
     // sustained pressure keeps wheat's demand (price) below the no-rival ceiling
     expect(s.market.demand.wheat).toBeLessThan(0.97);
@@ -64,12 +64,12 @@ describe("competitive goals", () => {
   it("tycoon_race: lost when a rival reaches the target first", () => {
     const base = createGameState({ seed: 5, goal: { type: "tycoon_race", target: 10000 }, rivals: [rival()] });
     const s = { ...base, rivals: base.rivals.map((r) => ({ ...r, netWorth: 20000 })) };
-    expect(nextTick(s).state.status).toBe("lost");
+    expect(nextTurn(s).state.status).toBe("lost");
   });
 
   it("tycoon_race: won when you reach the target", () => {
     const s = createGameState({ seed: 5, startingMoney: 50000, goal: { type: "tycoon_race", target: 1 }, rivals: [rival()] });
-    expect(nextTick(s).state.status).toBe("won");
+    expect(nextTurn(s).state.status).toBe("won");
   });
 
   it("market_leader: leading the good for enough seasons wins", () => {
@@ -83,7 +83,7 @@ describe("competitive goals", () => {
     s = { ...s, inventory: { wheat: 1000 } };
     for (let season = 0; season < 3 && s.status === "playing"; season++) {
       s = applyCommand(s, { type: "SELL", cropId: "wheat", quantity: 10 }).state;
-      for (let i = 0; i < DAYS_PER_SEASON; i++) s = nextTick(s).state;
+      for (let i = 0; i < MONTHS_PER_SEASON; i++) s = nextTurn(s).state;
     }
     expect(s.status).toBe("won");
   });
@@ -102,9 +102,9 @@ describe("standings & determinism", () => {
     const build = () => createGameState({ seed: 9, goal: { type: "sandbox" }, rivals: [rival({ startingPlots: 2 })] });
     let a = build();
     let b = build();
-    for (let i = 0; i < DAYS_PER_SEASON * 3; i++) {
-      a = nextTick(a).state;
-      b = nextTick(b).state;
+    for (let i = 0; i < MONTHS_PER_SEASON * 3; i++) {
+      a = nextTurn(a).state;
+      b = nextTurn(b).state;
     }
     expect(a.rivals[0].netWorth).toBe(b.rivals[0].netWorth);
     expect(a.rivals[0].ownedPlots).toEqual(b.rivals[0].ownedPlots);

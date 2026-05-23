@@ -20,6 +20,8 @@ import type { EquipmentType } from "./entities/equipment.js";
 import {
   EQUIPMENT_CATALOG, createEquipment, workableTiles, cultivatedTiles, EQUIPMENT_SALVAGE,
 } from "./entities/equipment.js";
+import { laborCost } from "./entities/labor.js";
+import { nextTurn } from "./tick.js";
 
 export interface CommandResult {
   state: GameState;
@@ -211,7 +213,7 @@ function handlePlantField(state: GameState, fieldId: number, cropId: CropId): Co
       money: state.money - totalCost,
       fields: state.fields.map((f) =>
         f.id === fieldId
-          ? { ...f, state: "planted" as const, cropId, growth: 0, growthTicks: 0 }
+          ? { ...f, state: "planted" as const, cropId, growth: 0, growthMonths: 0 }
           : f,
       ),
     },
@@ -282,7 +284,7 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
               state: "plowed" as const,
               cropId: null,
               growth: 0,
-              growthTicks: 0,
+              growthMonths: 0,
               health: 1.0,
               weeds: Math.min(f.weeds, 0.3),
               pests: 0,
@@ -734,6 +736,37 @@ function handleRepayLoan(state: GameState, amount: number): CommandResult {
 }
 
 export function applyCommand(state: GameState, command: GameCommand): CommandResult {
+  // END_TURN bypasses labor accounting — it doesn't perform work, it resolves
+  // the month and refreshes labor for the next one.
+  if (command.type === "END_TURN") {
+    const result = nextTurn(state);
+    return { state: result.state, success: true, notifications: result.notifications };
+  }
+
+  // Labor gate — every other command is rejected up front when the cost would
+  // exceed the player's remaining monthly budget. The UI mirrors this by
+  // disabling buttons; this is the safety net for keyboard/macro/API callers.
+  const cost = laborCost(command);
+  if (cost > 0 && state.labor.used + cost > state.labor.capacity) {
+    return fail(
+      state,
+      `Not enough labor: this action needs ${cost} (${state.labor.capacity - state.labor.used} left this month).`,
+    );
+  }
+
+  const sub = applyCommandInner(state, command);
+  // Only commit labor when the underlying action succeeded — a failed plant
+  // (wrong season, no money…) shouldn't burn the budget.
+  if (sub.success && cost > 0) {
+    return {
+      ...sub,
+      state: { ...sub.state, labor: { ...sub.state.labor, used: sub.state.labor.used + cost } },
+    };
+  }
+  return sub;
+}
+
+function applyCommandInner(state: GameState, command: GameCommand): CommandResult {
   switch (command.type) {
     case "BUY_PLOT":
       return handleBuyPlot(state, command.plotX, command.plotY);
@@ -773,11 +806,9 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return handleTakeLoan(state, command.amount);
     case "REPAY_LOAN":
       return handleRepayLoan(state, command.amount);
-    case "PAUSE":
-      return { state: { ...state, paused: true }, success: true, notifications: [] };
-    case "RESUME":
-      return { state: { ...state, paused: false }, success: true, notifications: [] };
-    case "SET_SPEED":
-      return { state: { ...state, speed: command.speed }, success: true, notifications: [] };
+    case "END_TURN":
+      // Handled in the outer applyCommand wrapper — this case is unreachable
+      // but kept for exhaustiveness.
+      return { state, success: true, notifications: [] };
   }
 }

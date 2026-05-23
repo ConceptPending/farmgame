@@ -18,10 +18,24 @@ import { generateWorld } from "./data/world-gen.js";
 
 export type GameStatus = "playing" | "won" | "lost";
 
+/** Position within a season (early/mid/late = monthOfSeason 1/2/3). */
+export type MonthPhase = "early" | "mid" | "late";
+
+/** Monthly labor budget — replenished at the start of every turn. */
+export interface LaborBudget {
+  /** Labor units already committed to actions this turn. */
+  used: number;
+  /** Max labor available per turn (base + equipment bonuses, applied at turn start). */
+  capacity: number;
+}
+
 export interface GameState {
+  /** Monotonic turn counter (one tick per month). Kept as `tick` for backcompat
+   *  with market price-history snapshots; conceptually it is now "turns elapsed". */
   tick: number;
   season: Season;
-  day: number;
+  /** Position within the current season: 1=early, 2=mid, 3=late. */
+  monthOfSeason: number;
   year: number;
   money: number;
   /** Outstanding loan principal owed to the bank. */
@@ -33,8 +47,8 @@ export interface GameState {
   /** "playing" until the player wins (hits the goal) or loses (bankruptcy). */
   status: GameStatus;
   rng: RngState;
-  paused: boolean;
-  speed: 1 | 2 | 3;
+  /** Labor budget for the current turn (resets each turn). */
+  labor: LaborBudget;
   world: WorldState;
   fields: Field[];
   buildings: Building[];
@@ -67,13 +81,31 @@ export interface TickResult {
   notifications: Notification[];
 }
 
-export const DAYS_PER_SEASON = 28;
+/** Three monthly turns per season (Early / Mid / Late). */
+export const MONTHS_PER_SEASON = 3;
+/** Twelve turns per year (4 seasons × 3 months). */
+export const MONTHS_PER_YEAR = MONTHS_PER_SEASON * 4;
 export const SEASONS: readonly Season[] = [
   "spring",
   "summer",
   "fall",
   "winter",
 ];
+export const MONTH_PHASES: readonly MonthPhase[] = ["early", "mid", "late"];
+
+/** Base monthly labor capacity before equipment bonuses. */
+export const BASE_LABOR_CAPACITY = 12;
+
+/** Map a 1..3 month-of-season to the phase tag. */
+export function monthPhase(monthOfSeason: number): MonthPhase {
+  return MONTH_PHASES[Math.max(0, Math.min(MONTH_PHASES.length - 1, monthOfSeason - 1))];
+}
+
+/** Absolute month 1..12 from a (season, monthOfSeason) pair. */
+export function absoluteMonth(season: Season, monthOfSeason: number): number {
+  const seasonIdx = SEASONS.indexOf(season);
+  return seasonIdx * MONTHS_PER_SEASON + monthOfSeason;
+}
 
 export const BASE_INVENTORY_CAPACITY = 100;
 export const SILO_CAPACITY_BONUS = 100;
@@ -137,7 +169,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
   return {
     tick: 0,
     season: "spring",
-    day: 1,
+    monthOfSeason: 1,
     year: 1,
     money: startingMoney,
     loan: 0,
@@ -145,8 +177,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     expenseMultiplier,
     status: "playing",
     rng,
-    paused: false,
-    speed: 1,
+    labor: { used: 0, capacity: BASE_LABOR_CAPACITY },
     world: worldResult.world,
     fields: [],
     buildings: [],

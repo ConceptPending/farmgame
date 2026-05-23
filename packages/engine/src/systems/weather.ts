@@ -1,5 +1,6 @@
 import type { Season } from "../entities/crop.js";
-import type { WeatherCondition, ForecastDay, WeatherState } from "../entities/weather.js";
+import type { WeatherCondition, ForecastMonth, WeatherState } from "../entities/weather.js";
+import { FORECAST_HORIZON } from "../entities/weather.js";
 import type { GameState, Notification } from "../state.js";
 import type { RngState } from "../rng.js";
 import { nextFloat, nextInt } from "../rng.js";
@@ -119,9 +120,9 @@ export function weatherSystem(state: GameState): {
 
   const rainfall = rainfallForCondition(condition);
 
-  // Generate 5-day forecast
-  const forecast: ForecastDay[] = [];
-  for (let i = 0; i < 5; i++) {
+  // Rolling forecast over the next few monthly turns.
+  const forecast: ForecastMonth[] = [];
+  for (let i = 0; i < FORECAST_HORIZON; i++) {
     const fc = generateCondition(rng, state.season);
     rng = fc.rng;
     const fTemp = generateTemperature(rng, state.season);

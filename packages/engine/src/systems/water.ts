@@ -9,13 +9,16 @@ export function waterSystem(state: GameState): {
   const { world, weather, buildings } = state;
   const newTiles = [...world.tiles];
 
-  // Base evaporation rate (higher in summer/windy conditions)
-  let evapRate = 0.02;
-  if (state.season === "summer") evapRate = 0.04;
-  if (weather.wind > 15) evapRate += 0.01;
-  if (weather.condition === "drought") evapRate = 0.06;
+  // Base evaporation rate per monthly turn. Tuned so 3 turns of clear
+  // weather drains roughly the same as a full old-game season did (28 days
+  // × 0.02). PR M will play-test and adjust.
+  let evapRate = 0.18;
+  if (state.season === "summer") evapRate = 0.36;
+  if (weather.wind > 15) evapRate += 0.09;
+  if (weather.condition === "drought") evapRate = 0.55;
 
-  // Rainfall adds moisture
+  // Rainfall over the month adds moisture. Weather.rainfall is now the
+  // month's averaged intensity, so the multiplier doesn't need scaling.
   const rainAdd = weather.rainfall * 0.3;
 
   // Collect water pump positions for irrigation

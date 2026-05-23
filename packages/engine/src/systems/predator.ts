@@ -30,7 +30,7 @@ export function predatorSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
 } {
-  if (state.animals.length === 0 || state.day !== 1) {
+  if (state.animals.length === 0 || state.monthOfSeason !== 1) {
     return { state, notifications: [] };
   }
   const penned = pennedTiles(state);

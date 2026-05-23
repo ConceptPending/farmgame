@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGameState, nextTick } from "../src/index.js";
+import { createGameState, nextTurn } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
 import type { GameState } from "../src/index.js";
 
@@ -24,7 +24,7 @@ describe("field health system", () => {
     const { state, fieldId } = stateWithField();
     let s = state;
     for (let i = 0; i < 15; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
     }
     const field = s.fields.find((f) => f.id === fieldId);
     if (field && field.state !== "dead") {
@@ -36,7 +36,7 @@ describe("field health system", () => {
     const { state, fieldId } = stateWithField();
     let s = state;
     for (let i = 0; i < 15; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
     }
     const field = s.fields.find((f) => f.id === fieldId);
     if (field && field.state !== "dead") {
@@ -48,7 +48,7 @@ describe("field health system", () => {
     const { state } = stateWithField();
     let s = state;
     for (let i = 0; i < 100; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
       for (const field of s.fields) {
         expect(field.weeds).toBeGreaterThanOrEqual(0);
         expect(field.weeds).toBeLessThanOrEqual(1);
@@ -60,7 +60,7 @@ describe("field health system", () => {
     const { state } = stateWithField();
     let s = state;
     for (let i = 0; i < 100; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
       for (const field of s.fields) {
         expect(field.pests).toBeGreaterThanOrEqual(0);
         expect(field.pests).toBeLessThanOrEqual(1);
@@ -77,7 +77,7 @@ describe("field health system", () => {
         f.id === fieldId ? { ...f, weeds: 0.8, pests: 0.8 } : f,
       ),
     };
-    s = nextTick(s).state;
+    s = nextTurn(s).state;
     const field = s.fields.find((f) => f.id === fieldId);
     if (field) {
       expect(field.health).toBeLessThan(1);
@@ -138,7 +138,7 @@ describe("field health system", () => {
 
     let s = state;
     for (let i = 0; i < 20; i++) {
-      s = nextTick(s).state;
+      s = nextTurn(s).state;
     }
     const field = s.fields.find((f) => f.id === fieldId)!;
     expect(field.weeds).toBe(0);

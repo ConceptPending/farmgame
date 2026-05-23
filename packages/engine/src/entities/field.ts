@@ -8,7 +8,8 @@ export interface Field {
   cropId: CropId | null;
   state: FieldState;
   growth: number;
-  growthTicks: number;
+  /** Monthly turns elapsed since planting (0 when fallow). */
+  growthMonths: number;
   health: number;
   moisture: number;
   weeds: number;
@@ -22,7 +23,7 @@ export function createField(id: number, tileIndices: number[]): Field {
     cropId: null,
     state: "fallow",
     growth: 0,
-    growthTicks: 0,
+    growthMonths: 0,
     health: 1.0,
     moisture: 0.5,
     weeds: 0,

@@ -1,14 +1,18 @@
 import type { GameState, Notification } from "../state.js";
-import { DAYS_PER_SEASON, SEASONS } from "../state.js";
+import { MONTHS_PER_SEASON, SEASONS } from "../state.js";
 
+/**
+ * Advances the calendar by one monthly turn. Rolls over the season once we
+ * pass the third (late) month, and the year when winter rolls back to spring.
+ */
 export function seasonSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
 } {
   const notifications: Notification[] = [];
-  const nextDay = state.day + 1;
+  const nextMonth = state.monthOfSeason + 1;
 
-  if (nextDay > DAYS_PER_SEASON) {
+  if (nextMonth > MONTHS_PER_SEASON) {
     const currentIdx = SEASONS.indexOf(state.season);
     const nextIdx = (currentIdx + 1) % SEASONS.length;
     const nextSeason = SEASONS[nextIdx];
@@ -20,13 +24,13 @@ export function seasonSystem(state: GameState): {
     });
 
     return {
-      state: { ...state, season: nextSeason, day: 1, year: newYear },
+      state: { ...state, season: nextSeason, monthOfSeason: 1, year: newYear },
       notifications,
     };
   }
 
   return {
-    state: { ...state, day: nextDay },
+    state: { ...state, monthOfSeason: nextMonth },
     notifications,
   };
 }

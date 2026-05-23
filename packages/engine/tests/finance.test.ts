@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   createGameState,
-  nextTick,
+  nextTurn,
   applyCommand,
   computeNetWorth,
   computeSeasonalExpenses,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
   LOAN_LIMIT,
 } from "../src/index.js";
 
@@ -49,12 +49,12 @@ describe("seasonal expenses", () => {
   it("charges expenses at a season boundary", () => {
     let s = freshState({ startingMoney: 100000, goalNetWorth: 1e12 });
     let fired = false;
-    for (let i = 0; i < DAYS_PER_SEASON; i++) {
-      const r = nextTick(s);
+    for (let i = 0; i < MONTHS_PER_SEASON; i++) {
+      const r = nextTurn(s);
       s = r.state;
       if (r.notifications.some((n) => /Seasonal expenses/.test(n.message))) fired = true;
     }
-    expect(s.day).toBe(1); // a new season began
+    expect(s.monthOfSeason).toBe(1); // a new season began
     expect(fired).toBe(true);
   });
 });
@@ -62,28 +62,28 @@ describe("seasonal expenses", () => {
 describe("win / lose", () => {
   it("declares victory when net worth reaches the goal", () => {
     const s = freshState({ goalNetWorth: 1 });
-    const r = nextTick(s);
+    const r = nextTurn(s);
     expect(r.state.status).toBe("won");
     expect(r.notifications.some((n) => /win/i.test(n.message))).toBe(true);
   });
 
   it("stops advancing once the game is over", () => {
-    const won = nextTick(freshState({ goalNetWorth: 1 })).state;
-    const again = nextTick(won);
+    const won = nextTurn(freshState({ goalNetWorth: 1 })).state;
+    const again = nextTurn(won);
     expect(again.state).toBe(won); // early-return returns the same state
     expect(again.notifications).toHaveLength(0);
   });
 
   it("declares bankruptcy when debt exceeds borrowing capacity", () => {
     const s = { ...freshState(), money: -(LOAN_LIMIT + 10000), loan: 0 };
-    const r = nextTick(s);
+    const r = nextTurn(s);
     expect(r.state.status).toBe("lost");
     expect(r.notifications.some((n) => /bankrupt/i.test(n.message))).toBe(true);
   });
 
   it("does not declare bankruptcy while borrowing could still cover the gap", () => {
     const s = { ...freshState(), money: -1000, loan: 0, goalNetWorth: 1e12 };
-    const r = nextTick(s);
+    const r = nextTurn(s);
     expect(r.state.status).toBe("playing");
   });
 });

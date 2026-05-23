@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createGameState,
   applyCommand,
-  nextTick,
+  nextTurn,
   createAnimal,
   createBuilding,
   pennedTiles,
@@ -14,7 +14,7 @@ import {
   FENCE_BREACH,
   FEED_TROUGH_FACTOR,
   ANIMAL_CATALOG,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
 } from "../src/index.js";
 import type { GameState } from "../src/index.js";
 import { pennedFarm } from "./helpers.js";
@@ -53,14 +53,18 @@ describe("enclosure detection", () => {
 describe("containment & escape", () => {
   it("keeps a penned, fed animal put across seasons", () => {
     const { state, pen } = pennedFarm();
+    const founderId = state.nextAnimalId;
     let s: GameState = {
       ...state,
-      animals: [createAnimal(state.nextAnimalId, "sheep", pen)],
+      animals: [createAnimal(founderId, "sheep", pen)],
       inventory: { wheat: 100000 },
     };
-    for (let i = 0; i < DAYS_PER_SEASON * 6; i++) s = nextTick(s).state;
-    expect(s.animals).toHaveLength(1);
-    expect(s.animals[0].tileIndex).toBe(pen);
+    for (let i = 0; i < MONTHS_PER_SEASON * 6; i++) s = nextTurn(s).state;
+    // The original sheep must still be alive and inside the pen. The herd may
+    // grow (breeding is allowed) — that's not what this test is checking.
+    const founder = s.animals.find((a) => a.id === founderId);
+    expect(founder).toBeDefined();
+    expect(founder!.tileIndex).toBe(pen);
   });
 
   it("a loose, fed animal eventually gets lost (wandering or predator)", () => {
@@ -71,8 +75,8 @@ describe("containment & escape", () => {
       inventory: { wheat: 100000 }, // fed, so any loss is from wandering or predators
     };
     let lost = false;
-    for (let i = 0; i < DAYS_PER_SEASON * 60 && s.animals.length > 0; i++) {
-      const r = nextTick(s);
+    for (let i = 0; i < MONTHS_PER_SEASON * 60 && s.animals.length > 0; i++) {
+      const r = nextTurn(s);
       s = r.state;
       if (r.notifications.some((n) => /wander|predator/i.test(n.message))) lost = true;
     }
@@ -109,14 +113,14 @@ describe("pasture grazing", () => {
       world: { ...state.world, tiles },
       animals: [createAnimal(state.nextAnimalId, "chicken", pen)],
       inventory: { wheat: 100 },
-      day: DAYS_PER_SEASON,
+      monthOfSeason: MONTHS_PER_SEASON,
     };
     const ungrazed = {
       ...grazed,
       world: { ...grazed.world, tiles: state.world.tiles },
     };
-    const grazedAfter = nextTick(grazed).state;
-    const ungrazedAfter = nextTick(ungrazed).state;
+    const grazedAfter = nextTurn(grazed).state;
+    const ungrazedAfter = nextTurn(ungrazed).state;
     // Pasture should have left at least one extra unit of wheat unused.
     expect(grazedAfter.inventory.wheat ?? 0).toBeGreaterThan(ungrazedAfter.inventory.wheat ?? 0);
     expect(pastureGrazingOffset(grazed).get(grazed.animals[0].id) ?? 0).toBeGreaterThan(0);
@@ -136,11 +140,11 @@ describe("amenity bonuses", () => {
       buildings: [...state.buildings, trough],
       animals: [animalsAt],
       inventory: { wheat: 100 },
-      day: DAYS_PER_SEASON,
+      monthOfSeason: MONTHS_PER_SEASON,
     };
     const without = { ...withTrough, buildings: state.buildings };
-    const a = nextTick(withTrough).state.inventory.wheat ?? 0;
-    const b = nextTick(without).state.inventory.wheat ?? 0;
+    const a = nextTurn(withTrough).state.inventory.wheat ?? 0;
+    const b = nextTurn(without).state.inventory.wheat ?? 0;
     expect(a).toBeGreaterThan(b);
     // Roughly the trough should save ~25% of the base feed.
     expect(a - b).toBeGreaterThanOrEqual(Math.floor(baseFeed * (1 - FEED_TROUGH_FACTOR)));
@@ -192,10 +196,10 @@ describe("comfort & density", () => {
       ...createAnimal(state.nextAnimalId + i, "chicken", pen),
       health: 0.05,
     }));
-    let s = { ...state, animals, inventory: { wheat: 1000 }, day: DAYS_PER_SEASON };
+    let s = { ...state, animals, inventory: { wheat: 1000 }, monthOfSeason: MONTHS_PER_SEASON };
     let stressDeaths = 0;
-    for (let i = 0; i < DAYS_PER_SEASON * 3 && s.animals.length > 0; i++) {
-      const r = nextTick(s);
+    for (let i = 0; i < MONTHS_PER_SEASON * 3 && s.animals.length > 0; i++) {
+      const r = nextTurn(s);
       s = r.state;
       stressDeaths += r.notifications.filter((n) => /cramped pen/i.test(n.message)).length;
     }
@@ -254,7 +258,7 @@ describe("predators", () => {
     let s: GameState = {
       ...state,
       animals: [createAnimal(state.nextAnimalId, "sheep", pen)],
-      day: 1,
+      monthOfSeason: 1,
     };
     for (let i = 0; i < 60; i++) s = predatorSystem(s).state;
     expect(s.animals).toHaveLength(1);
@@ -267,7 +271,7 @@ describe("predators", () => {
     let s: GameState = {
       ...base,
       animals: [createAnimal(base.nextAnimalId, "sheep", openOwned(base))],
-      day: 1,
+      monthOfSeason: 1,
     };
     let taken = false;
     for (let i = 0; i < 80 && s.animals.length > 0; i++) {
@@ -299,7 +303,7 @@ describe("barns shelter from predators", () => {
       return {
         ...base,
         animals: herd,
-        day: 1,
+        monthOfSeason: 1,
         buildings: withBarn ? [createBuilding(1, "barn", herdTile + 1)] : [],
       };
     };

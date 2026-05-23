@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   createGameState,
-  nextTick,
+  nextTurn,
   applyCommand,
   createBuilding,
   computeNetWorth,
   getGoodInfo,
   ANIMAL_CATALOG,
   PRODUCT_CATALOG,
-  DAYS_PER_SEASON,
+  MONTHS_PER_SEASON,
 } from "../src/index.js";
 import type { GameState } from "../src/index.js";
 
@@ -39,18 +39,18 @@ describe("production", () => {
       ...s,
       animals: s.animals.map((a) => ({ ...a, maturity: 1 })),
       inventory: { wheat: 20 },
-      day: DAYS_PER_SEASON,
+      monthOfSeason: MONTHS_PER_SEASON,
     };
-    const after = nextTick(s).state;
-    expect(after.day).toBe(1);
+    const after = nextTurn(s).state;
+    expect(after.monthOfSeason).toBe(1);
     expect(after.inventory.eggs).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
     expect(after.inventory.wheat).toBe(20 - ANIMAL_CATALOG.chicken.feedPerSeason);
   });
 
   it("immature animals do not produce", () => {
     let s = applyCommand(withBarn(), { type: "BUY_ANIMAL", animalType: "chicken" }).state;
-    s = { ...s, animals: s.animals.map((a) => ({ ...a, maturity: 0.1 })), inventory: { wheat: 20 }, day: DAYS_PER_SEASON };
-    const after = nextTick(s).state;
+    s = { ...s, animals: s.animals.map((a) => ({ ...a, maturity: 0.1 })), inventory: { wheat: 20 }, monthOfSeason: MONTHS_PER_SEASON };
+    const after = nextTurn(s).state;
     expect(after.inventory.eggs).toBeUndefined();
   });
 });
