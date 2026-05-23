@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
-import { isAudioEnabled, playSound, setAudioEnabled } from "../../lib/sounds";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG, goalProgress } from "@farmgame/engine";
@@ -9,6 +8,7 @@ import { OverlaySelector } from "./OverlaySelector";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 import { Icon } from "../ui/Icon";
 import { useAnimatedNumber, useNumberPulse, usePulseOnChange } from "./juice-hooks";
+import { autoSave, quickLoad, quickSave } from "../../lib/save-game";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -32,14 +32,24 @@ const stepBtnStyle: CSSProperties = {
 
 const divider: CSSProperties = { width: 1, height: 18, background: "#0f3460" };
 
+const iconBtnStyle: CSSProperties = {
+  padding: "2px 6px",
+  fontSize: 11,
+  borderRadius: 3,
+  cursor: "pointer",
+  border: "1px solid #444",
+  background: "#222",
+  color: "#9db4d0",
+};
+
 export function HUD() {
   const state = useGameStore((s) => s.state);
   const notifications = useGameStore((s) => s.notifications);
   const dispatch = useGameStore((s) => s.dispatch);
   const autoplay = useGameStore((s) => s.autoplay);
   const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
-  const autoPauseOnEvents = useGameStore((s) => s.autoPauseOnEvents);
-  const setAutoPauseOnEvents = useGameStore((s) => s.setAutoPauseOnEvents);
+  const loadGameState = useGameStore((s) => s.loadGameState);
+  const addNotification = useGameStore((s) => s.addNotification);
   const advanceDays = useGameStore((s) => s.advanceDays);
   const advanceToEvent = useGameStore((s) => s.advanceToEvent);
   const selectedTool = useUIStore((s) => s.selectedTool);
@@ -47,6 +57,25 @@ export function HUD() {
   const activePanel = useUIStore((s) => s.activePanel);
   const onboardingDismissed = useUIStore((s) => s.onboardingDismissed);
   const reopenOnboarding = useUIStore((s) => s.reopenOnboarding);
+
+  // Autosave on every season change. The first render after a fresh game
+  // primes `lastSeason` without writing — we only write on real transitions.
+  const lastSeasonRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!state) {
+      lastSeasonRef.current = null;
+      return;
+    }
+    const key = `${state.year}-${state.season}`;
+    if (lastSeasonRef.current === null) {
+      lastSeasonRef.current = key;
+      return;
+    }
+    if (lastSeasonRef.current !== key) {
+      lastSeasonRef.current = key;
+      autoSave(state);
+    }
+  }, [state]);
 
   if (!state) return null;
 
@@ -224,22 +253,51 @@ export function HUD() {
                 {speed}×
               </button>
             ))}
+          </div>
+
+          <div style={divider} />
+
+          {/* Quicksave / Quickload — single-click escape hatches for the */}
+          {/* full Settings panel when you just want to checkpoint and keep playing. */}
+          <div style={{ display: "flex", gap: 4 }}>
             <button
-              onClick={() => setAutoPauseOnEvents(!autoPauseOnEvents)}
-              title="Auto-pause when something needs attention"
-              style={{
-                padding: "2px 6px",
-                fontSize: 11,
-                borderRadius: 3,
-                cursor: "pointer",
-                border: autoPauseOnEvents ? "1px solid #4ecca3" : "1px solid #444",
-                background: autoPauseOnEvents ? "#1a4040" : "#222",
-                color: autoPauseOnEvents ? "#4ecca3" : "#888",
+              onClick={() => {
+                const meta = quickSave(state);
+                addNotification({
+                  type: meta ? "success" : "error",
+                  message: meta ? "Quicksaved." : "Could not quicksave — storage may be full.",
+                });
               }}
+              title="Quicksave (writes to the quicksave slot)"
+              aria-label="Quicksave"
+              style={iconBtnStyle}
             >
-              <Icon name="bell" size={11} />
+              <Icon name="save" size={12} />
             </button>
-            <AudioToggleButton />
+            <button
+              onClick={() => {
+                const r = quickLoad();
+                if (!r.ok) {
+                  addNotification({
+                    type: "warning",
+                    message:
+                      r.error.kind === "not_found"
+                        ? "No quicksave to load."
+                        : r.error.kind === "version_mismatch"
+                          ? "Quicksave is from an older version."
+                          : "Quicksave is unreadable.",
+                  });
+                  return;
+                }
+                loadGameState(r.payload.state);
+                addNotification({ type: "info", message: "Quicksave loaded." });
+              }}
+              title="Quickload (loads the quicksave slot)"
+              aria-label="Quickload"
+              style={iconBtnStyle}
+            >
+              <Icon name="load" size={12} />
+            </button>
           </div>
 
           <div style={divider} />
@@ -273,6 +331,19 @@ export function HUD() {
                 ?
               </button>
             )}
+            <button
+              onClick={() => openPanel("settings")}
+              title="Settings (save, load, audio, preferences)"
+              aria-label="Settings"
+              style={{
+                ...iconBtnStyle,
+                ...(activePanel === "settings"
+                  ? { border: "1px solid #9db4d0", background: "#1a4040", color: "#9db4d0" }
+                  : {}),
+              }}
+            >
+              <Icon name="settings" size={12} />
+            </button>
           </div>
         </div>
       </div>
@@ -373,33 +444,3 @@ function PanelButton({
   );
 }
 
-/** Toggle for the synthesised UI sounds. Off by default; persisted in localStorage. */
-function AudioToggleButton() {
-  const [on, setOn] = useState(false);
-  // Hydrate from localStorage on mount (the sounds module already handles this).
-  useEffect(() => setOn(isAudioEnabled()), []);
-  const toggle = () => {
-    const next = !on;
-    setAudioEnabled(next);
-    setOn(next);
-    // Play a sample on enable so the user knows what they just opted into.
-    if (next) playSound("plant");
-  };
-  return (
-    <button
-      onClick={toggle}
-      title={on ? "Sounds on (click to mute)" : "Sounds off (click to enable)"}
-      style={{
-        padding: "2px 6px",
-        fontSize: 11,
-        borderRadius: 3,
-        cursor: "pointer",
-        border: on ? "1px solid #4ecca3" : "1px solid #444",
-        background: on ? "#1a4040" : "#222",
-        color: on ? "#4ecca3" : "#888",
-      }}
-    >
-      <Icon name={on ? "volume" : "volume-mute"} size={11} />
-    </button>
-  );
-}

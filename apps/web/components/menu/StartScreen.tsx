@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
 import {
   SCENARIOS,
@@ -13,11 +13,24 @@ import {
 import type { GoalType } from "@farmgame/engine";
 import { Icon } from "../ui/Icon";
 import { StartScreenBackdrop } from "./StartScreenBackdrop";
+import { mostRecentSave, readSave, type SaveMeta } from "../../lib/save-game";
 
 export function StartScreen() {
   const startGame = useGameStore((s) => s.startGame);
+  const loadGameState = useGameStore((s) => s.loadGameState);
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [selected, setSelected] = useState<string>("prosperity");
+
+  // "Continue" surfaces the most-recently-written save (across all slots).
+  // Re-read whenever the start screen mounts — a player who just quit a
+  // running game expects to see their fresh autosave here.
+  const [continueSave, setContinueSave] = useState<SaveMeta | null>(null);
+  useEffect(() => setContinueSave(mostRecentSave()), []);
+  const doContinue = () => {
+    if (!continueSave) return;
+    const r = readSave(continueSave.slotId);
+    if (r.ok) loadGameState(r.payload.state);
+  };
 
   // custom-game fields
   const [goalType, setGoalType] = useState<GoalType>("net_worth");
@@ -80,6 +93,22 @@ export function StartScreen() {
         </h1>
         <p style={{ color: "#7a8a9a", margin: "6px 0 0" }}>A small farm against four seasons and a fickle market.</p>
       </div>
+
+      {/* Continue from the most recent save (autosave wins by recency, usually). */}
+      {continueSave && (
+        <button onClick={doContinue} style={continueBtn}>
+          <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#4ecca3" }}>
+              Continue → {continueSave.name}
+            </span>
+            <span style={{ fontSize: 11, color: "#7a8a9a", marginTop: 2 }}>
+              {continueSave.summary.season} Y{continueSave.summary.year} d{continueSave.summary.day}
+              {" · $"}{continueSave.summary.money.toLocaleString()}
+              {" · "}{continueSave.summary.fields} fields, {continueSave.summary.animals} animals
+            </span>
+          </span>
+        </button>
+      )}
 
       {/* Difficulty */}
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -225,3 +254,14 @@ const startBtn = (enabled: boolean): React.CSSProperties => ({
   background: enabled ? "#1a4040" : "#16213e",
   color: enabled ? "#4ecca3" : "#556",
 });
+
+const continueBtn: React.CSSProperties = {
+  padding: "10px 18px",
+  borderRadius: 6,
+  cursor: "pointer",
+  border: "1px solid #2a4a4a",
+  background: "#15302e",
+  color: "#cdd5e0",
+  textAlign: "left",
+  minWidth: 360,
+};

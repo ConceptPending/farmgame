@@ -46,6 +46,8 @@ interface GameStore {
 
   /** Start a new game from a scenario/difficulty config. */
   startGame: (config: CreateGameOptions) => void;
+  /** Drop a previously-saved GameState into the store (replaces current game). */
+  loadGameState: (state: GameState) => void;
   /** Return to the start screen (state = null). */
   returnToMenu: () => void;
   dispatch: (command: GameCommand) => void;
@@ -285,6 +287,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = createGameState({ seed: Date.now(), ...config });
     set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastConfig: config });
     if (get().autoplay) get().startLoop();
+  },
+
+  loadGameState: (state: GameState) => {
+    get().stopLoop();
+    // Re-pause an autoplaying game on load so the player can take stock first.
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [] });
   },
 
   returnToMenu: () => {
