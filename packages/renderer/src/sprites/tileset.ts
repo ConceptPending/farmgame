@@ -47,6 +47,21 @@ export const SPRITES = {
   water_trough: { col: 6, row: 3 },
   feed_trough: { col: 7, row: 3 },
 
+  // Fence connectivity variants (row 2). 16 sprites keyed by a 4-bit
+  // neighbour mask: bit 0 = N, 1 = E, 2 = S, 3 = W. Each variant draws
+  // a central post plus rail stubs extending only toward neighbours
+  // that are also fences, so adjacent fences read as a continuous
+  // fence line. The legacy `fence` sprite above stays for the building
+  // catalog icon; the live map uses these.
+  fence_0:  { col: 0,  row: 2 }, fence_1:  { col: 1,  row: 2 },
+  fence_2:  { col: 2,  row: 2 }, fence_3:  { col: 3,  row: 2 },
+  fence_4:  { col: 4,  row: 2 }, fence_5:  { col: 5,  row: 2 },
+  fence_6:  { col: 6,  row: 2 }, fence_7:  { col: 7,  row: 2 },
+  fence_8:  { col: 8,  row: 2 }, fence_9:  { col: 9,  row: 2 },
+  fence_10: { col: 10, row: 2 }, fence_11: { col: 11, row: 2 },
+  fence_12: { col: 12, row: 2 }, fence_13: { col: 13, row: 2 },
+  fence_14: { col: 14, row: 2 }, fence_15: { col: 15, row: 2 },
+
   // Weather icons (row 4)
   weather_clear: { col: 0, row: 4 },
   weather_cloudy: { col: 1, row: 4 },
@@ -110,6 +125,11 @@ export async function generateTileset(app: Application): Promise<void> {
   drawBarn(g, 5, 3);
   drawWaterTrough(g, 6, 3);
   drawFeedTrough(g, 7, 3);
+
+  // --- Row 2: 16 fence connectivity variants ---
+  for (let mask = 0; mask < 16; mask++) {
+    drawFenceVariant(g, mask, 2, mask);
+  }
 
   // --- Row 4: Weather icons ---
   drawWeatherClear(g, 0, 4);
@@ -602,15 +622,66 @@ function drawIrrigation(g: Graphics, col: number, row: number) {
 }
 
 function drawFence(g: Graphics, col: number, row: number) {
+  // Legacy single-tile fence sprite — kept for the building-catalog icon
+  // (Build sub-palette). The live map uses drawFenceVariant for each tile.
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x4a8c3f);
   softShadow(g, x + 8, y + 14, 6, 1.4);
-  // Fence posts and rail
   g.rect(x + 2, y + 4, 2, 10).fill(0x8b6914);
   g.rect(x + 12, y + 4, 2, 10).fill(0x8b6914);
   g.rect(x + 2, y + 6, 12, 2).fill(0xa07828);
   g.rect(x + 2, y + 10, 12, 2).fill(0xa07828);
+}
+
+/**
+ * One of 16 fence variants. `mask` is a 4-bit neighbour bitmask:
+ * bit 0 = N, 1 = E, 2 = S, 3 = W. Each set bit adds a rail stub
+ * extending from the central post to that tile edge — so two adjacent
+ * fences read as a continuous fence line and a corner reads as an
+ * L-bend without any special-case code.
+ *
+ * Deliberately NO background fill: the tile's terrain shows through,
+ * so a fence on a dirt pen tile no longer reads as a green patch
+ * inside a brown pen.
+ */
+function drawFenceVariant(g: Graphics, col: number, row: number, mask: number) {
+  const x = col * TILE_SIZE;
+  const y = row * TILE_SIZE;
+  const N = (mask & 1) !== 0;
+  const E = (mask & 2) !== 0;
+  const S = (mask & 4) !== 0;
+  const W = (mask & 8) !== 0;
+
+  // Top + bottom rail colour and post colour, matching the legacy fence.
+  const POST = 0x8b6914;
+  const RAIL = 0xa07828;
+
+  // Central post — always drawn so a lone fence still reads as one.
+  g.rect(x + 7, y + 4, 2, 10).fill(POST);
+  softShadow(g, x + 8, y + 14, 5, 1.2);
+
+  // Horizontal rails extend through the post toward east / west neighbours.
+  // Two parallel rails at y=6 and y=10, matching the legacy fence rhythm.
+  if (E) {
+    g.rect(x + 8, y + 6, 8, 2).fill(RAIL);
+    g.rect(x + 8, y + 10, 8, 2).fill(RAIL);
+  }
+  if (W) {
+    g.rect(x + 0, y + 6, 8, 2).fill(RAIL);
+    g.rect(x + 0, y + 10, 8, 2).fill(RAIL);
+  }
+  // Vertical rails extend above / below the post toward north / south
+  // neighbours. Two parallel rails at x=6 and x=10 mirror the horizontal
+  // spacing so the line reads consistent at corners and intersections.
+  if (N) {
+    g.rect(x + 5, y + 0, 2, 7).fill(RAIL);
+    g.rect(x + 9, y + 0, 2, 7).fill(RAIL);
+  }
+  if (S) {
+    g.rect(x + 5, y + 9, 2, 7).fill(RAIL);
+    g.rect(x + 9, y + 9, 2, 7).fill(RAIL);
+  }
 }
 
 function drawWeatherClear(g: Graphics, col: number, row: number) {

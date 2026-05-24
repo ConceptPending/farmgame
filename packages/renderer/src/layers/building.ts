@@ -1,6 +1,6 @@
 import { Container, Sprite } from "pixi.js";
 import type { GameState, BuildingType } from "@farmgame/engine";
-import { tileCoords } from "@farmgame/engine";
+import { tileCoords, tileIndex } from "@farmgame/engine";
 import { TILE_SIZE, getTileTexture } from "../sprites/tileset.js";
 import type { SPRITES } from "../sprites/tileset.js";
 
@@ -17,6 +17,23 @@ const BUILDING_SPRITE_MAP: Record<BuildingType, SpriteKey> = {
   feed_trough: "feed_trough",
 };
 
+/** Compute the 4-bit neighbour mask for a fence at `(x, y)` against the
+ *  set of all fence tile indices. bit 0 = N, 1 = E, 2 = S, 3 = W. */
+function fenceVariantKey(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fences: Set<number>,
+): SpriteKey {
+  let mask = 0;
+  if (y > 0          && fences.has(tileIndex(x, y - 1, width))) mask |= 1; // N
+  if (x < width - 1  && fences.has(tileIndex(x + 1, y, width))) mask |= 2; // E
+  if (y < height - 1 && fences.has(tileIndex(x, y + 1, width))) mask |= 4; // S
+  if (x > 0          && fences.has(tileIndex(x - 1, y, width))) mask |= 8; // W
+  return `fence_${mask}` as SpriteKey;
+}
+
 export class BuildingLayer {
   readonly container: Container;
   private spritePool: Sprite[] = [];
@@ -29,11 +46,25 @@ export class BuildingLayer {
   update(state: GameState): void {
     let spriteIdx = 0;
 
+    // Pre-compute the set of fence tile indices once per update so each
+    // fence's connectivity mask is an O(1) lookup against four neighbours.
+    const fenceTiles = new Set<number>();
+    for (const b of state.buildings) {
+      if (b.type === "fence") fenceTiles.add(b.tileIndex);
+    }
+
     for (const building of state.buildings) {
-      const spriteKey = BUILDING_SPRITE_MAP[building.type];
+      let spriteKey: SpriteKey | undefined = BUILDING_SPRITE_MAP[building.type];
       if (!spriteKey) continue;
 
       const { x, y } = tileCoords(building.tileIndex, state.world.width);
+
+      // Fences pick a variant based on their neighbours so adjacent fences
+      // read as a continuous line.
+      if (building.type === "fence") {
+        spriteKey = fenceVariantKey(x, y, state.world.width, state.world.height, fenceTiles);
+      }
+
       const sprite = this.getOrCreateSprite(spriteIdx);
       sprite.texture = getTileTexture(spriteKey);
       sprite.x = x * TILE_SIZE;
