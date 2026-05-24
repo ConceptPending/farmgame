@@ -20,6 +20,7 @@ import { TurnSummaryPanel } from "../components/game/TurnSummaryPanel";
 import { SeasonSummaryPanel } from "../components/game/SeasonSummaryPanel";
 import { DebugReportPanel } from "../components/game/DebugReportPanel";
 import { ScenarioIntroCard } from "../components/game/ScenarioIntroCard";
+import { EarlyLettuceHint } from "../components/game/EarlyLettuceHint";
 import { StartScreen } from "../components/menu/StartScreen";
 
 export default function Home() {
@@ -52,6 +53,7 @@ export default function Home() {
       <SeasonSummaryPanel />
       <DebugReportPanel />
       <ScenarioIntroCard />
+      <EarlyLettuceHint />
     </div>
   );
 }
