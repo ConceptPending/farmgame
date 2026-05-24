@@ -48,6 +48,10 @@ interface GameStore {
    *  Populated on the season-rollover turn (when `season_change` fires).
    *  Cleared when the panel is dismissed. */
   lastSeasonCauses: Cause[];
+  /** Suggestion ids the player has already been shown this game.
+   *  SeasonSummaryPanel filters its suggestions against this set to avoid
+   *  repeating the same advice every season. Reset on new game / load. */
+  seenSuggestionIds: string[];
   /** Per-turn telemetry snapshots — drives the Debug panel's run trace.
    *  Reset on new game / load; appended after every END_TURN. */
   turnSnapshots: TurnSnapshot[];
@@ -71,6 +75,8 @@ interface GameStore {
   clearTurnSummary: () => void;
   /** Dismiss the season-summary panel (clears lastSeasonCauses). */
   clearSeasonSummary: () => void;
+  /** Mark suggestion ids as seen so they don't repeat in future season summaries. */
+  markSuggestionsSeen: (ids: string[]) => void;
 }
 
 type Get = () => GameStore;
@@ -251,20 +257,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastTurnCauses: [],
   currentSeasonCauses: [],
   lastSeasonCauses: [],
+  seenSuggestionIds: [],
   turnSnapshots: [],
   lastConfig: null,
 
   startGame: (config: CreateGameOptions) => {
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [], lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [], lastConfig: config });
   },
 
   loadGameState: (state: GameState) => {
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [] });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [] });
   },
 
   returnToMenu: () => {
-    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [] });
+    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [] });
   },
 
   dispatch: (command: GameCommand) => {
@@ -339,6 +346,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearTurnSummary: () => set({ lastTurnCauses: [] }),
   clearSeasonSummary: () => set({ lastSeasonCauses: [] }),
+  markSuggestionsSeen: (ids) => {
+    const seen = get().seenSuggestionIds;
+    const next = [...seen];
+    for (const id of ids) if (!next.includes(id)) next.push(id);
+    set({ seenSuggestionIds: next });
+  },
 }));
 
 // Debug/automation hook: lets the playtest harness drive the real game.

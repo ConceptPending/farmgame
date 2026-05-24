@@ -265,8 +265,12 @@ function setInitialMoisture(tiles: Tile[]): void {
         }
       }
 
-      const waterBonus = minWaterDist < Infinity ? Math.max(0, 1 - minWaterDist / 8) * 0.5 : 0;
-      tile.moisture = Math.min(1, 0.2 + waterBonus);
+      // PR V: baseline 0.2 → 0.4 so fields start meaningfully damp. With
+      // the 0.135 evap, a base of 0.2 meant turn-2 dry-out before any
+      // weather could recover; 0.4 gives ~3 turns of buffer in clear
+      // weather (about one season of grace).
+      const waterBonus = minWaterDist < Infinity ? Math.max(0, 1 - minWaterDist / 8) * 0.4 : 0;
+      tile.moisture = Math.min(1, 0.4 + waterBonus);
     }
   }
 }

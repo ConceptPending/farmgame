@@ -59,7 +59,10 @@ export function cropSystem(state: GameState): {
         tempDegF: weather.temperature,
       });
     }
-    if (field.moisture < def.waterNeed * 0.5) {
+    // Threshold tuned from 0.5 → 0.4 in PR V: with the gentler evap rates
+    // landed in this same PR, a 0.4× threshold gives drought enough breathing
+    // room to feel like an *event* rather than a baseline.
+    if (field.moisture < def.waterNeed * 0.4) {
       causes.push({
         kind: "drought_stress",
         fieldId: field.id,
@@ -83,10 +86,10 @@ export function cropSystem(state: GameState): {
     if (tempDiff > 0) tempMult = Math.max(0.2, 1 - tempDiff / 40);
     growthRate *= tempMult;
 
-    // Moisture modifier
+    // Moisture modifier — same threshold as the drought_stress cause above.
     const moistureDiff = Math.abs(field.moisture - def.waterNeed);
     let moistureMult = 1;
-    if (field.moisture < def.waterNeed * 0.5) {
+    if (field.moisture < def.waterNeed * 0.4) {
       moistureMult = 0.3 + def.droughtTolerance * 0.4; // severe drought
     } else if (moistureDiff > 0.3) {
       moistureMult = 0.7;

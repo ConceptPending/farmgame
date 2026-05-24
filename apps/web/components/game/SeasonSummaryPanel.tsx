@@ -78,8 +78,11 @@ function summariseCategory(cat: CauseCategory, causes: Cause[]): string[] {
     const frostKill = causes.filter((c) => c.kind === "frost_kill").length;
     const ready = causes.filter((c) => c.kind === "ready_to_harvest").length;
     const died = causes.filter((c) => c.kind === "crop_died_health").length;
-    if (drought > 0) lines.push(`Drought hit your fields ${drought}× this season.`);
-    if (heat > 0) lines.push(`Heat-stressed your crops ${heat}× this season.`);
+    // PR V copy fix: "Drought hit your fields N×" read as "all fields, N times"
+    // in playtest. The metric is field-turn events; "N field-turns of drought"
+    // is the honest framing. Same for heat.
+    if (drought > 0) lines.push(`${drought} field-turn${drought === 1 ? "" : "s"} of drought stress.`);
+    if (heat > 0) lines.push(`${heat} field-turn${heat === 1 ? "" : "s"} of heat stress.`);
     if (frostDamage > 0) lines.push(`Frost damaged ${frostDamage} field${frostDamage === 1 ? "" : "s"}.`);
     if (frostKill > 0) lines.push(`Frost killed ${frostKill} field${frostKill === 1 ? "" : "s"}.`);
     if (ready > 0) lines.push(`${ready} field${ready === 1 ? "" : "s"} reached harvest.`);
@@ -153,6 +156,8 @@ export function SeasonSummaryPanel() {
   const causes = useGameStore((s) => s.lastSeasonCauses);
   const clear = useGameStore((s) => s.clearSeasonSummary);
   const state = useGameStore((s) => s.state);
+  const seenSuggestionIds = useGameStore((s) => s.seenSuggestionIds);
+  const markSuggestionsSeen = useGameStore((s) => s.markSuggestionsSeen);
 
   const [suppressed, setSuppressed] = useState(false);
   useEffect(() => {
@@ -174,10 +179,13 @@ export function SeasonSummaryPanel() {
   const prevYear = sc && sc.kind === "season_change" && idx === 0 ? sc.year - 1 : (sc && sc.kind === "season_change" ? sc.year : state?.year ?? 1);
   const header = `${prev.charAt(0).toUpperCase() + prev.slice(1)} of Year ${prevYear}`;
 
-  // Compute suggestions.
+  // Compute suggestions, then filter out any the player has already been
+  // shown this game. "Once" is the PR V agreement: a single nudge per
+  // problem, then trust them to act on it. Reset on new game / load.
   const prices = state?.market.prices ?? {};
   const totals = summariseSeasonForSuggestions(causes, prices);
-  const suggestions = deriveSeasonSuggestions(totals);
+  const allSuggestions = deriveSeasonSuggestions(totals);
+  const suggestions = allSuggestions.filter((s) => !seenSuggestionIds.includes(s.id));
 
   const toggleSuppress = (next: boolean) => {
     if (typeof window !== "undefined") {
@@ -186,6 +194,13 @@ export function SeasonSummaryPanel() {
     }
     setSuppressed(next);
     if (next) clear();
+  };
+
+  // When Continue is clicked (or panel dismissed), mark every visible
+  // suggestion as seen so it doesn't repeat next season.
+  const dismiss = () => {
+    if (suggestions.length > 0) markSuggestionsSeen(suggestions.map((s) => s.id));
+    clear();
   };
 
   return (
@@ -219,7 +234,7 @@ export function SeasonSummaryPanel() {
             {header} <span style={{ color: "#7a8a9a", fontWeight: 400, fontSize: 12 }}>· season summary</span>
           </h3>
           <button
-            onClick={clear}
+            onClick={dismiss}
             aria-label="Dismiss"
             title="Continue (Esc)"
             style={{
@@ -284,7 +299,7 @@ export function SeasonSummaryPanel() {
             Don't show season summaries again this game
           </label>
           <button
-            onClick={clear}
+            onClick={dismiss}
             style={{
               padding: "5px 16px", fontSize: 12, fontWeight: 700, borderRadius: 4, cursor: "pointer",
               border: "1px solid #4ecca3", background: "#1a4040", color: "#4ecca3",
