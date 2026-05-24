@@ -9,17 +9,20 @@ export function waterSystem(state: GameState): {
   const { world, weather, buildings } = state;
   const newTiles = [...world.tiles];
 
-  // Base evaporation rate per monthly turn. Tuned so 3 turns of clear
-  // weather drains roughly the same as a full old-game season did (28 days
-  // × 0.02). PR M will play-test and adjust.
-  let evapRate = 0.18;
-  if (state.season === "summer") evapRate = 0.36;
-  if (weather.wind > 15) evapRate += 0.09;
-  if (weather.condition === "drought") evapRate = 0.55;
+  // Base evaporation rate per monthly turn. Initial PR L values were
+  // tuned for round-trip equivalence with the old per-day system; PR V
+  // playtest showed they made drought a near-constant pressure (≈1 crop
+  // cycle of growth lost per season). Numbers below are ~25% gentler.
+  let evapRate = 0.135;
+  if (state.season === "summer") evapRate = 0.27;
+  if (weather.wind > 15) evapRate += 0.07;
+  if (weather.condition === "drought") evapRate = 0.41;
 
-  // Rainfall over the month adds moisture. Weather.rainfall is now the
-  // month's averaged intensity, so the multiplier doesn't need scaling.
-  const rainAdd = weather.rainfall * 0.3;
+  // Rainfall over the month adds moisture. Bumped from 0.3 → 0.55 in PR V
+  // alongside the evap reductions and the initial-moisture lift; pre-fix,
+  // a rain turn in spring added 0.12 vs the 0.135 evap of that same turn,
+  // so fields could never net-recover moisture without a storm.
+  const rainAdd = weather.rainfall * 0.55;
 
   // Collect moisture sources — pumps and windmills both push water out, with
   // their own radii and ditch-network reach. A windmill is a strict upgrade

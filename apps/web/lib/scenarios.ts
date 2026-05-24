@@ -125,12 +125,14 @@ export const SCENARIOS: Scenario[] = [
     // Tuned in PR Q against the headless simulator:
     //   greedy floor — easy 100% / normal 33% / hard 20% (3% bankrupt)
     // Competent humans land roughly Easy ~100, Normal 50-60, Hard 30-40.
+    // PR V bumped target $2000 → $2500 to compensate for the drought
+    // tuning, which lifted Normal's floor to 70% at the old target.
     buildGoal: (d) => ({
       type: "net_worth",
-      target: Math.round(2000 * d.targetScale),
+      target: Math.round(2500 * d.targetScale),
       deadlineTurns: 12,
     }),
-    goalSummary: (d) => `${money(Math.round(2000 * d.targetScale))} net worth in 12 turns`,
+    goalSummary: (d) => `${money(Math.round(2500 * d.targetScale))} net worth in 12 turns`,
     // Override the global Hard $300: a 12-turn tutorial shouldn't bankrupt
     // the player from seasonal expenses before they can earn anything back.
     startingMoneyOverride: { easy: 1500, normal: 750, hard: 800 },
