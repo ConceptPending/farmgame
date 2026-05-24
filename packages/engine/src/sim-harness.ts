@@ -24,6 +24,7 @@ import {
 } from "./index.js";
 import { CROP_CATALOG } from "./data/crops.js";
 import type { CropId } from "./entities/crop.js";
+import type { Cause } from "./entities/cause.js";
 import { takeSnapshot, aggregateRun, type RunReport, type TurnSnapshot } from "./telemetry.js";
 
 /** A turn-by-turn decision function. Returns commands to dispatch this turn,
@@ -48,18 +49,35 @@ export function simulateGame(opts: SimulateOptions): RunReport {
 
   for (let i = 0; i < maxTurns; i++) {
     if (state.status !== "playing") break;
-    // Run policy commands. Each may fail (no money, wrong season, no labor);
-    // a failure just stops that command — the loop continues.
-    const commands = policy(state);
-    for (const cmd of commands) {
-      const r = applyCommand(state, cmd);
-      if (r.success) state = r.state;
+
+    // Causes from every command this turn — accumulated so the snapshot's
+    // outcome counters (harvests, animal births, etc.) reflect work the
+    // *commands* did, not just what END_TURN's tick pipeline produced.
+    const turnCauses: Cause[] = [];
+
+    // We run the policy twice per turn so a policy that issues HARVEST and
+    // SELL in the same call sees the post-harvest inventory before its SELL
+    // loop fires. Without this, the first pass's SELL reads stale (often
+    // empty) inventory and the just-harvested produce sits unsold for a
+    // turn. Most pass-2 commands are no-ops (already plowed / planted) —
+    // they fail-silent and that's fine.
+    for (let pass = 0; pass < 2; pass++) {
+      const commands = policy(state);
+      for (const cmd of commands) {
+        const r = applyCommand(state, cmd);
+        if (r.success) {
+          state = r.state;
+          if (r.causes) turnCauses.push(...r.causes);
+        }
+      }
     }
+
     // Close the turn.
     const endResult = applyCommand(state, { type: "END_TURN" });
     if (endResult.success) {
       state = endResult.state;
-      snapshots.push(takeSnapshot(state, endResult.causes ?? []));
+      if (endResult.causes) turnCauses.push(...endResult.causes);
+      snapshots.push(takeSnapshot(state, turnCauses));
     } else {
       break;
     }
