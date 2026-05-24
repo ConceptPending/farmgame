@@ -33,9 +33,9 @@ describe("takeSnapshot", () => {
     ];
     const snap = takeSnapshot(s, fakeCauses);
     expect(snap.outcomes.cropsReady).toBe(2);
-    // frost_kill counts both as a death and as frost-loss.
+    // frost_kill counts both as a death and as a frost pressure-turn.
     expect(snap.outcomes.cropDeaths).toBe(1);
-    expect(snap.yieldLoss.frost).toBeGreaterThan(0);
+    expect(snap.pressureTurns.frost).toBe(1);
     expect(snap.outcomes.animalBirths).toBe(1);
   });
 });

@@ -244,8 +244,12 @@ function CurrentRun({ report, snapshots }: { report: RunReport; snapshots: TurnS
         value={`${report.outcomes.marketEvents} market · ${report.outcomes.randomEvents} random`}
       />
       <Stat
-        label="Yield loss"
-        value={`frost ${report.yieldLossTotals.frost.toFixed(1)} · weeds ${report.yieldLossTotals.weeds.toFixed(1)} · pests ${report.yieldLossTotals.pests.toFixed(1)} · drought ${report.yieldLossTotals.drought.toFixed(1)}`}
+        label="Pressure turns"
+        value={`frost ${report.pressureTurnTotals.frost} · weeds ${report.pressureTurnTotals.weeds} · pests ${report.pressureTurnTotals.pests} · drought ${report.pressureTurnTotals.drought} · heat ${report.pressureTurnTotals.heat}`}
+      />
+      <Stat
+        label="Growth lost (crop cycles)"
+        value={`moisture ${report.growthLostTotals.moisture.toFixed(2)} · temp ${report.growthLostTotals.temperature.toFixed(2)} · health ${report.growthLostTotals.health.toFixed(2)}`}
       />
       <div style={{ gridColumn: "1 / -1", marginTop: 6 }}>
         <div style={{ fontSize: 10, letterSpacing: 0.5, color: "#7a8a9a", marginBottom: 4 }}>

@@ -4,6 +4,7 @@ import {
   applyCommand,
   nextTurn,
   createField,
+  takeSnapshot,
   causeCategory,
   causeCopy,
   causePriority,
@@ -107,6 +108,96 @@ describe("cause emission", () => {
     s = { ...s, labor: { used: s.labor.capacity, capacity: s.labor.capacity } };
     const r = nextTurn(s);
     expect(r.causes.find((c) => c.kind === "labor_unused")).toBeUndefined();
+  });
+});
+
+describe("growth_delayed cause (PR U)", () => {
+  it("fires with a moisture-dominated breakdown when a field is drought-stressed", () => {
+    // A wheat field with very low moisture but full health and ideal temp.
+    // Wheat's droughtTolerance = 0.7 → growthRate factor = 0.3 + 0.28 = 0.58
+    // (well below 1), and the attribution should put most of the shortfall
+    // on `fromMoisture`.
+    const base = createGameState({ seed: 9, startingMoney: 5000 });
+    const fld = {
+      ...createField(1, ownedDirt(base, 4)),
+      state: "growing" as const,
+      cropId: "wheat" as const,
+      growth: 0.4,
+      health: 1.0,
+      moisture: 0.05, // way below 0.5 × 0.3 = 0.15 threshold
+    };
+    const s: GameState = {
+      ...base,
+      fields: [fld],
+      weather: { ...base.weather, condition: "clear", temperature: 65 },
+    };
+    const r = cropSystem(s);
+    const delayed = r.causes.find((c) => c.kind === "growth_delayed");
+    expect(delayed).toBeDefined();
+    if (delayed && delayed.kind === "growth_delayed") {
+      expect(delayed.totalMultiplier).toBeLessThan(0.7);
+      expect(delayed.totalMultiplier).toBeGreaterThan(0.5);
+      // Moisture is the only stressor → it gets ~100% of the attribution.
+      expect(delayed.fromMoisture).toBeGreaterThan(delayed.fromTemperature);
+      expect(delayed.fromMoisture).toBeGreaterThan(delayed.fromHealth);
+      // growthBarLost should be roughly baseProgress(0.5) × (1 - mult)(~0.42) ≈ 0.21
+      expect(delayed.growthBarLost).toBeGreaterThan(0.15);
+      expect(delayed.growthBarLost).toBeLessThan(0.3);
+    }
+  });
+
+  it("does NOT fire on a perfect-conditions turn", () => {
+    const base = createGameState({ seed: 9, startingMoney: 5000 });
+    const fld = {
+      ...createField(1, ownedDirt(base, 4)),
+      state: "growing" as const,
+      cropId: "wheat" as const,
+      growth: 0.5,
+      health: 1.0,
+      moisture: 0.5, // matches wheat's waterNeed
+    };
+    const s: GameState = {
+      ...base,
+      fields: [fld],
+      weather: { ...base.weather, condition: "clear", temperature: 65 },
+    };
+    const r = cropSystem(s);
+    expect(r.causes.find((c) => c.kind === "growth_delayed")).toBeUndefined();
+  });
+
+  it("snapshot.growthLost.moisture accumulates from growth_delayed causes", () => {
+    const base = createGameState({ seed: 9, startingMoney: 5000 });
+    const fakeCauses = [
+      {
+        kind: "growth_delayed" as const,
+        fieldId: 1,
+        cropId: "wheat" as const,
+        totalMultiplier: 0.6,
+        fromTemperature: 0,
+        fromMoisture: 0.4,
+        fromHealth: 0,
+        growthBarLost: 0.2,
+      },
+      {
+        kind: "growth_delayed" as const,
+        fieldId: 2,
+        cropId: "wheat" as const,
+        totalMultiplier: 0.7,
+        fromTemperature: 0.15,
+        fromMoisture: 0.15,
+        fromHealth: 0,
+        growthBarLost: 0.15,
+      },
+    ];
+    const snap = takeSnapshot(base, fakeCauses);
+    // Field 1: 0.4 × 0.2 = 0.08
+    // Field 2: 0.15 × 0.15 = 0.0225
+    // Total moisture loss: 0.1025
+    expect(snap.growthLost.moisture).toBeCloseTo(0.1025, 3);
+    // Temperature: 0.15 × 0.15 = 0.0225 (only field 2 had temp loss)
+    expect(snap.growthLost.temperature).toBeCloseTo(0.0225, 3);
+    // Health: zero this turn.
+    expect(snap.growthLost.health).toBe(0);
   });
 });
 

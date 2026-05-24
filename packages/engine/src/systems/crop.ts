@@ -69,7 +69,8 @@ export function cropSystem(state: GameState): {
       });
     }
 
-    // Growth rate modifiers
+    // Growth rate modifiers — also tracked individually so the season
+    // summary can attribute lost-growth back to weather / soil / health.
     let growthRate = 1.0;
 
     // Temperature modifier
@@ -78,21 +79,23 @@ export function cropSystem(state: GameState): {
       : weather.temperature > def.idealTempMax
         ? weather.temperature - def.idealTempMax
         : 0;
-    if (tempDiff > 0) {
-      growthRate *= Math.max(0.2, 1 - tempDiff / 40);
-    }
+    let tempMult = 1;
+    if (tempDiff > 0) tempMult = Math.max(0.2, 1 - tempDiff / 40);
+    growthRate *= tempMult;
 
     // Moisture modifier
     const moistureDiff = Math.abs(field.moisture - def.waterNeed);
+    let moistureMult = 1;
     if (field.moisture < def.waterNeed * 0.5) {
-      // Severe drought
-      growthRate *= 0.3 + def.droughtTolerance * 0.4;
+      moistureMult = 0.3 + def.droughtTolerance * 0.4; // severe drought
     } else if (moistureDiff > 0.3) {
-      growthRate *= 0.7;
+      moistureMult = 0.7;
     }
+    growthRate *= moistureMult;
 
     // Health modifier
-    growthRate *= Math.max(0.3, field.health);
+    const healthMult = Math.max(0.3, field.health);
+    growthRate *= healthMult;
 
     // Compute growth *first* so a crop reaching maturity this turn is allowed
     // to harvest even if its health is low — the yield formula already
@@ -102,6 +105,29 @@ export function cropSystem(state: GameState): {
     const newGrowthMonths = field.growthMonths + 1;
     const baseProgress = 1 / def.growthMonths;
     const newGrowth = Math.min(1, field.growth + baseProgress * growthRate);
+
+    // Emit a structured "growth was multiplied by X this turn" record when
+    // any modifier dragged growth below normal. Lost-bar attribution is
+    // proportional to how much each contributor reduced 1.0 → multiplier.
+    if (growthRate < 0.995) {
+      const lossT = 1 - tempMult;
+      const lossM = 1 - moistureMult;
+      const lossH = 1 - healthMult;
+      const sumLoss = lossT + lossM + lossH;
+      const totalShortfall = 1 - growthRate;
+      const share = (l: number) => (sumLoss > 0 ? (l / sumLoss) * totalShortfall : 0);
+      const growthBarLost = baseProgress * totalShortfall;
+      causes.push({
+        kind: "growth_delayed",
+        fieldId: field.id,
+        cropId: field.cropId,
+        totalMultiplier: growthRate,
+        fromTemperature: share(lossT),
+        fromMoisture: share(lossM),
+        fromHealth: share(lossH),
+        growthBarLost,
+      });
+    }
 
     if (newGrowth >= 1) {
       notifications.push({

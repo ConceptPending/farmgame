@@ -17,6 +17,7 @@ import { AnimalHoverTooltip } from "../components/game/AnimalHoverTooltip";
 import { OnboardingCoach } from "../components/game/OnboardingCoach";
 import { SettingsPanel } from "../components/game/SettingsPanel";
 import { TurnSummaryPanel } from "../components/game/TurnSummaryPanel";
+import { SeasonSummaryPanel } from "../components/game/SeasonSummaryPanel";
 import { DebugReportPanel } from "../components/game/DebugReportPanel";
 import { ScenarioIntroCard } from "../components/game/ScenarioIntroCard";
 import { StartScreen } from "../components/menu/StartScreen";
@@ -48,6 +49,7 @@ export default function Home() {
       <GameOverOverlay />
       <AnimalHoverTooltip />
       <TurnSummaryPanel />
+      <SeasonSummaryPanel />
       <DebugReportPanel />
       <ScenarioIntroCard />
     </div>

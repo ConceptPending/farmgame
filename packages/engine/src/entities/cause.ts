@@ -26,6 +26,21 @@ export type Cause =
   | { kind: "pest_pressure"; fieldId: number; pests: number; healthLost: number }
   | { kind: "crop_died_health"; fieldId: number; cropId: CropId }
   | { kind: "ready_to_harvest"; fieldId: number; cropId: CropId }
+  /** A growing field had its per-turn growth multiplied by `totalMultiplier`
+   *  (< 1) for one of the listed reasons. The contributions sum to roughly
+   *  `1 - totalMultiplier`; PR U uses these to attribute season-level
+   *  growth loss back to weather / health / soil reasons. */
+  | {
+      kind: "growth_delayed";
+      fieldId: number;
+      cropId: CropId;
+      totalMultiplier: number;
+      fromTemperature: number;
+      fromMoisture: number;
+      fromHealth: number;
+      /** What fraction of one full growth bar was lost this turn. */
+      growthBarLost: number;
+    }
 
   // Harvest yield breakdown -------------------------------------------
   | {
@@ -111,6 +126,7 @@ export function causeCategory(cause: Cause): CauseCategory {
     case "heat_stress":
     case "crop_died_health":
     case "ready_to_harvest":
+    case "growth_delayed":
       return "weather_crop";
     case "harvest_complete":
       return "harvest";
@@ -181,6 +197,17 @@ export function causeCopy(cause: Cause): string {
       return `The crop in field #${cause.fieldId} died from poor health.`;
     case "ready_to_harvest":
       return `Field #${cause.fieldId} is ready to harvest.`;
+    case "growth_delayed": {
+      // Single-line attribution for the per-turn TurnSummaryPanel. The
+      // season-level "drought cost ~X of a wheat cycle" copy is composed by
+      // the season summary itself from the aggregated growthBarLost values.
+      const reasons: string[] = [];
+      if (cause.fromMoisture > 0.05) reasons.push(`moisture −${Math.round(cause.fromMoisture * 100)}%`);
+      if (cause.fromTemperature > 0.05) reasons.push(`temperature −${Math.round(cause.fromTemperature * 100)}%`);
+      if (cause.fromHealth > 0.05) reasons.push(`health −${Math.round(cause.fromHealth * 100)}%`);
+      const tail = reasons.length > 0 ? ` (${reasons.join(", ")})` : "";
+      return `Field #${cause.fieldId} grew at ${Math.round(cause.totalMultiplier * 100)}% rate this turn${tail}.`;
+    }
     case "harvest_complete": {
       const parts: string[] = [];
       if (cause.reductions.weeds > 0.05) parts.push(`weeds −${Math.round(cause.reductions.weeds * 100)}%`);
@@ -277,6 +304,9 @@ export function causePriority(cause: Cause): number {
       return 70;
     case "harvest_complete":
       return 60;
+    case "growth_delayed":
+      // Informational; useful per turn but not the most important signal.
+      return 20;
     case "market_event_spike":
     case "market_event_crash":
     case "rival_supply_pressure":
