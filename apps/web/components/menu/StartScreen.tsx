@@ -221,7 +221,10 @@ const card = (selected: boolean, available: boolean): React.CSSProperties => ({
   borderRadius: 8,
   cursor: available ? "pointer" : "not-allowed",
   opacity: available ? 1 : 0.5,
-  border: selected ? "2px solid #4ecca3" : "1px solid #2a3a4a",
+  // Constant 2px border on every card; only the colour changes on selection.
+  // Previously swapped 1px → 2px on select, which shifted the row by a pixel
+  // each time the player clicked a different scenario.
+  border: selected ? "2px solid #4ecca3" : "2px solid #2a3a4a",
   background: selected ? "#15302e" : "#16213e",
   minHeight: 96,
 });
