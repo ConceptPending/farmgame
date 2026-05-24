@@ -41,6 +41,13 @@ interface GameStore {
   /** Causes from the most recent End Turn — drives the TurnSummaryPanel.
    *  Cleared when the panel is dismissed. Empty between turns. */
   lastTurnCauses: Cause[];
+  /** Causes accumulating across the current season's turns. Resets to []
+   *  on the season-rollover turn after being moved to `lastSeasonCauses`. */
+  currentSeasonCauses: Cause[];
+  /** Causes from the just-finished season — drives the SeasonSummaryPanel.
+   *  Populated on the season-rollover turn (when `season_change` fires).
+   *  Cleared when the panel is dismissed. */
+  lastSeasonCauses: Cause[];
   /** Per-turn telemetry snapshots — drives the Debug panel's run trace.
    *  Reset on new game / load; appended after every END_TURN. */
   turnSnapshots: TurnSnapshot[];
@@ -62,6 +69,8 @@ interface GameStore {
   takeFXEvents: () => FXEvent[];
   /** Dismiss the turn-summary panel (clears lastTurnCauses). */
   clearTurnSummary: () => void;
+  /** Dismiss the season-summary panel (clears lastSeasonCauses). */
+  clearSeasonSummary: () => void;
 }
 
 type Get = () => GameStore;
@@ -240,20 +249,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextNotificationId: 1,
   fxEvents: [],
   lastTurnCauses: [],
+  currentSeasonCauses: [],
+  lastSeasonCauses: [],
   turnSnapshots: [],
   lastConfig: null,
 
   startGame: (config: CreateGameOptions) => {
     const state = createGameState({ seed: Date.now(), ...config });
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [], lastConfig: config });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [], lastConfig: config });
   },
 
   loadGameState: (state: GameState) => {
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [] });
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [] });
   },
 
   returnToMenu: () => {
-    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], turnSnapshots: [] });
+    set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], turnSnapshots: [] });
   },
 
   dispatch: (command: GameCommand) => {
@@ -273,11 +284,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
       else if (command.type === "SELL" && result.state.money > state.money) playSound("money");
       // Causal summary — END_TURN populates it; other commands append to it
       // so a harvest's breakdown is visible without waiting for the next turn.
+      // Season-boundary turns are special: the season summary panel takes
+      // precedence (Option B), so we MOVE the buffered season causes into
+      // `lastSeasonCauses` and clear `lastTurnCauses` to suppress the turn
+      // panel for that turn.
       if (result.causes && result.causes.length > 0) {
-        const next = command.type === "END_TURN"
-          ? result.causes
-          : [...get().lastTurnCauses, ...result.causes];
-        set({ lastTurnCauses: next });
+        const isEndTurn = command.type === "END_TURN";
+        const seasonChanged = isEndTurn && result.causes.some((c) => c.kind === "season_change");
+        const nextTurnBuf = isEndTurn ? result.causes : [...get().lastTurnCauses, ...result.causes];
+        const nextSeasonBuf = isEndTurn ? [...get().currentSeasonCauses, ...result.causes] : get().currentSeasonCauses;
+
+        if (seasonChanged) {
+          // Move accumulated season causes to lastSeasonCauses; clear the
+          // turn-panel buffer so the season panel is the only modal that
+          // fires this turn.
+          set({
+            lastTurnCauses: [],
+            lastSeasonCauses: nextSeasonBuf,
+            currentSeasonCauses: [],
+          });
+        } else {
+          set({ lastTurnCauses: nextTurnBuf, currentSeasonCauses: nextSeasonBuf });
+        }
       }
       // Telemetry snapshot after each END_TURN — feeds the Debug panel's
       // per-turn trace. Stored unconditionally; cost is one struct per turn.
@@ -310,6 +338,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearTurnSummary: () => set({ lastTurnCauses: [] }),
+  clearSeasonSummary: () => set({ lastSeasonCauses: [] }),
 }));
 
 // Debug/automation hook: lets the playtest harness drive the real game.

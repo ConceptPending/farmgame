@@ -57,13 +57,23 @@ export interface TurnSnapshot {
   /** Game's win/lose state after this turn. */
   status: GameStatus;
 
-  /** Health damage from each cause kind, summed across this turn. 0..N. */
-  yieldLoss: {
+  /** Count of pressure events (turns where each stressor fired). Useful for
+   *  "how often did this happen", separate from how much damage it did. */
+  pressureTurns: {
     frost: number;
     drought: number;
     heat: number;
     weeds: number;
     pests: number;
+  };
+
+  /** Actual growth-bar fraction lost to each cause this turn (proportional
+   *  attribution from `growth_delayed`). Sum across a run = real growth-lost
+   *  measured in crop-cycle equivalents. */
+  growthLost: {
+    temperature: number;
+    moisture: number;
+    health: number;
   };
 
   /** Counts of standout outcomes this turn. */
@@ -98,13 +108,22 @@ export interface RunReport {
   /** Average per-turn labor utilisation, 0..1. */
   laborUtilisation: number;
 
-  /** Yield-loss totals across the run, by cause. */
-  yieldLossTotals: {
+  /** Pressure-event counts across the run, by stressor. */
+  pressureTurnTotals: {
     frost: number;
     drought: number;
     heat: number;
     weeds: number;
     pests: number;
+  };
+
+  /** Real growth-bar loss across the run (sum of per-turn `growth_delayed`
+   *  attributions). Measured in crop-cycle equivalents — e.g. 0.5 = lost
+   *  half a wheat cycle's worth of growth. */
+  growthLostTotals: {
+    temperature: number;
+    moisture: number;
+    health: number;
   };
 
   /** Standout outcome totals. */
@@ -156,7 +175,8 @@ function countOwnedPlots(state: GameState): number {
 
 /** Build a TurnSnapshot from the post-tick state + the causes that turn fired. */
 export function takeSnapshot(state: GameState, causes: Cause[]): TurnSnapshot {
-  const yieldLoss = { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 };
+  const pressureTurns = { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 };
+  const growthLost = { temperature: 0, moisture: 0, health: 0 };
   const outcomes = {
     cropDeaths: 0,
     cropsReady: 0,
@@ -182,12 +202,19 @@ export function takeSnapshot(state: GameState, causes: Cause[]): TurnSnapshot {
       laborSeen = true;
     }
     switch (c.kind) {
-      case "frost_damage": yieldLoss.frost += c.healthLost; break;
-      case "frost_kill": yieldLoss.frost += 1; outcomes.cropDeaths++; break;
-      case "drought_stress": yieldLoss.drought += 0.1; break;
-      case "heat_stress": yieldLoss.heat += 0.1; break;
-      case "weed_pressure": yieldLoss.weeds += c.healthLost; break;
-      case "pest_pressure": yieldLoss.pests += c.healthLost; break;
+      case "frost_damage": pressureTurns.frost++; break;
+      case "frost_kill": pressureTurns.frost++; outcomes.cropDeaths++; break;
+      case "drought_stress": pressureTurns.drought++; break;
+      case "heat_stress": pressureTurns.heat++; break;
+      case "weed_pressure": pressureTurns.weeds++; break;
+      case "pest_pressure": pressureTurns.pests++; break;
+      case "growth_delayed":
+        // Attribute the turn's lost bar to the dominant inputs. The shares
+        // are absolute fractions of 1.0 growth bar; sum to growthBarLost.
+        growthLost.temperature += c.fromTemperature * c.growthBarLost;
+        growthLost.moisture += c.fromMoisture * c.growthBarLost;
+        growthLost.health += c.fromHealth * c.growthBarLost;
+        break;
       case "crop_died_health": outcomes.cropDeaths++; break;
       case "ready_to_harvest": outcomes.cropsReady++; break;
       case "harvest_complete": outcomes.harvests++; break;
@@ -234,7 +261,8 @@ export function takeSnapshot(state: GameState, causes: Cause[]): TurnSnapshot {
     laborUsed: laborSeen ? laborUsed : laborCapacity,
     laborCapacity,
     status: state.status,
-    yieldLoss,
+    pressureTurns,
+    growthLost,
     outcomes,
   };
 }
@@ -260,7 +288,8 @@ export function aggregateRun(input: RunReportInput): RunReport {
       moneyByTurn: [],
       laborWastedTotal: 0,
       laborUtilisation: 0,
-      yieldLossTotals: { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 },
+      pressureTurnTotals: { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 },
+      growthLostTotals: { temperature: 0, moisture: 0, health: 0 },
       outcomes: { cropDeaths: 0, cropsReady: 0, harvests: 0, animalDeaths: 0, animalBirths: 0, marketEvents: 0, randomEvents: 0 },
       finalMoney: 0, finalNetWorth: 0, finalLoan: 0,
     };
@@ -268,7 +297,8 @@ export function aggregateRun(input: RunReportInput): RunReport {
 
   const last = snapshots[snapshots.length - 1];
 
-  const yieldLossTotals = { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 };
+  const pressureTurnTotals = { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 };
+  const growthLostTotals = { temperature: 0, moisture: 0, health: 0 };
   const outcomes = {
     cropDeaths: 0, cropsReady: 0, harvests: 0,
     animalDeaths: 0, animalBirths: 0,
@@ -279,11 +309,14 @@ export function aggregateRun(input: RunReportInput): RunReport {
   let laborUsedTotal = 0;
 
   for (const snap of snapshots) {
-    yieldLossTotals.frost += snap.yieldLoss.frost;
-    yieldLossTotals.drought += snap.yieldLoss.drought;
-    yieldLossTotals.heat += snap.yieldLoss.heat;
-    yieldLossTotals.weeds += snap.yieldLoss.weeds;
-    yieldLossTotals.pests += snap.yieldLoss.pests;
+    pressureTurnTotals.frost += snap.pressureTurns.frost;
+    pressureTurnTotals.drought += snap.pressureTurns.drought;
+    pressureTurnTotals.heat += snap.pressureTurns.heat;
+    pressureTurnTotals.weeds += snap.pressureTurns.weeds;
+    pressureTurnTotals.pests += snap.pressureTurns.pests;
+    growthLostTotals.temperature += snap.growthLost.temperature;
+    growthLostTotals.moisture += snap.growthLost.moisture;
+    growthLostTotals.health += snap.growthLost.health;
     outcomes.cropDeaths += snap.outcomes.cropDeaths;
     outcomes.cropsReady += snap.outcomes.cropsReady;
     outcomes.harvests += snap.outcomes.harvests;
@@ -305,7 +338,8 @@ export function aggregateRun(input: RunReportInput): RunReport {
     moneyByTurn: snapshots.map((s) => s.money),
     laborWastedTotal,
     laborUtilisation: laborCapacityTotal === 0 ? 0 : laborUsedTotal / laborCapacityTotal,
-    yieldLossTotals,
+    pressureTurnTotals,
+    growthLostTotals,
     outcomes,
     finalMoney: last.money,
     finalNetWorth: last.netWorth,
