@@ -78,7 +78,8 @@ const buttonStyle = (active: boolean): React.CSSProperties => ({
   gap: 2,
   padding: "6px 4px",
   fontSize: 11,
-  border: active ? "2px solid #4ecca3" : "1px solid #444",
+  // Constant 2px border to avoid a 1px layout shift when switching tools.
+  border: active ? "2px solid #4ecca3" : "2px solid #444",
   borderRadius: 4,
   background: active ? "#1a4040" : "#222",
   color: active ? "#4ecca3" : "#ccc",
