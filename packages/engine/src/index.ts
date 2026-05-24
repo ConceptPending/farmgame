@@ -31,7 +31,7 @@ export { causeCategory, causePriority, causeCopy } from "./entities/cause.js";
 export type { TurnSnapshot, RunReport, RunReportInput } from "./telemetry.js";
 export { takeSnapshot, aggregateRun } from "./telemetry.js";
 export type { Policy, SimulateOptions, BatchReport, BatchOptions } from "./sim-harness.js";
-export { simulateGame, simulateBatch, greedyWheatPolicy } from "./sim-harness.js";
+export { simulateGame, simulateBatch, greedyWheatPolicy, expansionPolicy } from "./sim-harness.js";
 
 // Goals
 export type { Goal, GoalType, GoalProgress } from "./entities/goal.js";
