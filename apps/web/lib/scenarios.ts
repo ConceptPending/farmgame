@@ -46,6 +46,11 @@ export interface Scenario {
    *  be forgiving without changing the global difficulty defaults — e.g.
    *  First Harvest gives Hard players $800 instead of the global $300. */
   startingMoneyOverride?: Partial<Record<Difficulty, number>>;
+  /** Optional per-difficulty expense-multiplier override. Long scenarios
+   *  (Prosperity, Race the Clock, …) compound the global Hard 1.3× into
+   *  a bankruptcy trap over 36+ turns; this lets them opt down to 1.15
+   *  on Hard without changing what "Hard" means on short scenarios. */
+  expenseMultiplierOverride?: Partial<Record<Difficulty, number>>;
 }
 
 const NET_WORTH_BASE = 40000;
@@ -70,6 +75,11 @@ export const SCENARIOS: Scenario[] = [
     rivals: 0,
     buildGoal: (d) => ({ type: "net_worth", target: Math.round(NET_WORTH_BASE * d.targetScale) }),
     goalSummary: (d) => `Reach ${money(Math.round(NET_WORTH_BASE * d.targetScale))} net worth`,
+    // Long scenario (60+ turns of expansion-bot play): global Hard 1.3×
+    // compounds into a $4K+ deficit before harvest income catches up. Dial
+    // down to 1.15× and add a starting-cash cushion on Hard only.
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 800 },
   },
   {
     id: "land_baron",
@@ -79,6 +89,8 @@ export const SCENARIOS: Scenario[] = [
     rivals: 2,
     buildGoal: (d) => ({ type: "land_baron", plots: Math.round(LAND_BARON_BASE * d.targetScale) }),
     goalSummary: (d) => `Own ${Math.round(LAND_BARON_BASE * d.targetScale)} plots`,
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 800 },
   },
   {
     id: "tycoon_rush",
@@ -88,6 +100,9 @@ export const SCENARIOS: Scenario[] = [
     rivals: 3,
     buildGoal: (d) => ({ type: "tycoon_race", target: Math.round(NET_WORTH_BASE * d.targetScale) }),
     goalSummary: (d) => `First to ${money(Math.round(NET_WORTH_BASE * d.targetScale))}`,
+    // 3 rivals on a 48-turn scenario; bigger cushion needed.
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 1000 },
   },
   {
     id: "market_mogul",
@@ -97,6 +112,8 @@ export const SCENARIOS: Scenario[] = [
     rivals: 2,
     buildGoal: () => ({ type: "market_leader", good: "wheat", seasons: 4 }),
     goalSummary: () => "Top wheat seller for 4 seasons",
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 800 },
   },
   // Turn-limited scenarios — added in PR M when deadline_turns landed.
   {
@@ -130,6 +147,8 @@ export const SCENARIOS: Scenario[] = [
       deadlineTurns: 24,
     }),
     goalSummary: (d) => `${money(Math.round(15000 * d.targetScale))} net worth in 24 turns`,
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 800 },
   },
   {
     id: "race_the_clock",
@@ -144,6 +163,10 @@ export const SCENARIOS: Scenario[] = [
     }),
     goalSummary: (d) =>
       `First to ${money(Math.round(NET_WORTH_BASE * d.targetScale))} (36-turn limit)`,
+    // Heaviest scenario in the catalog (deadline + 3 rivals + 36 turns of
+    // Hard expenses). Extra cash cushion on top of the lower multiplier.
+    expenseMultiplierOverride: { hard: 1.15 },
+    startingMoneyOverride: { hard: 1000 },
   },
 ];
 
@@ -154,10 +177,11 @@ export function buildConfig(
 ): CreateGameOptions {
   const d = DIFF[difficulty];
   const overrideMoney = scenario.startingMoneyOverride?.[difficulty];
+  const overrideMult = scenario.expenseMultiplierOverride?.[difficulty];
   return {
     seed: opts?.seed,
     startingMoney: overrideMoney ?? d.startingMoney,
-    expenseMultiplier: d.expenseMultiplier,
+    expenseMultiplier: overrideMult ?? d.expenseMultiplier,
     goal: scenario.buildGoal(d),
     rivals: makeRivals(scenario.rivals, d.rivalAggr),
   };
