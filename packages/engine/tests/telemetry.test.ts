@@ -7,6 +7,7 @@ import {
   simulateGame,
   simulateBatch,
   greedyWheatPolicy,
+  expansionPolicy,
 } from "../src/index.js";
 
 describe("takeSnapshot", () => {
@@ -80,6 +81,48 @@ describe("simulateGame (greedy wheat baseline)", () => {
     });
     expect(r.finalStatus).toBe("playing");
     expect(r.finalMoney).toBeGreaterThan(0);
+  });
+});
+
+describe("expansionPolicy", () => {
+  it("is deterministic for a given seed", () => {
+    const a = simulateGame({
+      config: { seed: 11, startingMoney: 5000, goal: { type: "sandbox" } },
+      policy: expansionPolicy, maxTurns: 24,
+    });
+    const b = simulateGame({
+      config: { seed: 11, startingMoney: 5000, goal: { type: "sandbox" } },
+      policy: expansionPolicy, maxTurns: 24,
+    });
+    expect(a.finalNetWorth).toBe(b.finalNetWorth);
+    expect(a.finalMoney).toBe(b.finalMoney);
+  });
+
+  it("beats greedy in median net worth on long, modest-cash scenarios", () => {
+    // Where expansion *should* pay off: long horizon (60 turns), modest
+    // starting cash so the bot has to grow earnings via capacity, not just
+    // sit on its starting bankroll. On rich short scenarios the expansion
+    // bot can lose to greedy by over-investing — that's accurate human
+    // behaviour to model, not a bug.
+    const cfg = { startingMoney: 500, expenseMultiplier: 1.0, goal: { type: "sandbox" as const } };
+    const greedy = simulateBatch({ config: cfg, runs: 20, startSeed: 1, maxTurns: 60, policy: greedyWheatPolicy });
+    const expansion = simulateBatch({ config: cfg, runs: 20, startSeed: 1, maxTurns: 60, policy: expansionPolicy });
+    expect(expansion.medianFinalNetWorth).toBeGreaterThan(greedy.medianFinalNetWorth);
+  });
+
+  it("doesn't bankrupt itself on Homestead Hard (the floor PR Q already pinned for greedy)", () => {
+    const batch = simulateBatch({
+      config: {
+        startingMoney: 300,
+        expenseMultiplier: 1.3,
+        goal: { type: "sandbox" },
+      },
+      runs: 20, startSeed: 1, maxTurns: 36,
+      policy: expansionPolicy,
+    });
+    // Expansion may run cash negative for a turn but shouldn't structurally
+    // bankrupt itself more often than greedy did at the same config.
+    expect(batch.bankruptcyRate).toBeLessThanOrEqual(0.1);
   });
 });
 

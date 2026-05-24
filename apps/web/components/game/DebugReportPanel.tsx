@@ -17,11 +17,28 @@ import { useGameStore } from "../../stores/game-store";
 import {
   aggregateRun,
   simulateBatch,
+  greedyWheatPolicy,
+  expansionPolicy,
   type RunReport,
   type TurnSnapshot,
   type BatchReport,
+  type Policy,
 } from "@farmgame/engine";
 import { SCENARIOS, DIFFICULTIES, type Difficulty, buildConfig } from "../../lib/scenarios";
+
+type PolicyId = "greedy" | "expansion";
+const POLICY_BY_ID: Record<PolicyId, Policy> = {
+  greedy: greedyWheatPolicy,
+  expansion: expansionPolicy,
+};
+const POLICY_DESCRIPTION: Record<PolicyId, string> = {
+  greedy:
+    "Greedy floor — designates, plows, plants wheat/lettuce/clover, harvests, sells. " +
+    "Never buys land or equipment. Measures the minimum a scenario asks of the player.",
+  expansion:
+    "Greedy + buys cheapest equipment then adjacent plots when cash ≥ cost + $600. " +
+    "Tests whether expansion is a viable path the scenario rewards.",
+};
 
 const SCENARIO_MAX_TURNS: Record<string, number> = {
   homestead: 24,
@@ -40,6 +57,7 @@ export function DebugReportPanel() {
   const [open, setOpen] = useState(false);
   const [batch, setBatch] = useState<BatchReport[] | null>(null);
   const [running, setRunning] = useState(false);
+  const [policyId, setPolicyId] = useState<PolicyId>("greedy");
 
   // Open via URL ?debug=1 or via Ctrl/Cmd+Shift+D.
   useEffect(() => {
@@ -77,6 +95,7 @@ export function DebugReportPanel() {
           startSeed: 1,
           maxTurns: SCENARIO_MAX_TURNS[sc.id] ?? 36,
           scenarioId: `${sc.id}/${d.id}`,
+          policy: POLICY_BY_ID[policyId],
         });
         results.push(report);
         // Yield between scenarios so the UI stays responsive.
@@ -165,15 +184,33 @@ export function DebugReportPanel() {
             )}
           </Section>
 
-          <Section label="Baseline batch (greedy wheat policy)">
+          <Section label="Baseline batch">
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: "#7a8a9a" }}>POLICY</span>
+              <select
+                value={policyId}
+                onChange={(e) => setPolicyId(e.target.value as PolicyId)}
+                disabled={running}
+                style={{
+                  fontFamily: "inherit",
+                  fontSize: 11,
+                  padding: "2px 6px",
+                  background: "#0f1a2e",
+                  color: "#cdd5e0",
+                  border: "1px solid #2a3f6a",
+                  borderRadius: 3,
+                }}
+              >
+                <option value="greedy">greedy</option>
+                <option value="expansion">expansion</option>
+              </select>
+            </div>
+            <div style={{ fontSize: 10, color: "#556677", marginBottom: 6 }}>
+              {POLICY_DESCRIPTION[policyId]}
+            </div>
             <button onClick={runBatch} disabled={running} style={primaryBtn}>
               {running ? "Running…" : "Run baseline batch (20 seeds × scenarios × difficulties)"}
             </button>
-            <div style={{ fontSize: 10, color: "#556677", marginTop: 4 }}>
-              The greedy policy doesn't buy land, equipment, or animals — it's the
-              minimum floor. Anywhere it can't win, players still might; anywhere
-              it goes bankrupt, the scenario is likely too punitive.
-            </div>
             {batch && <BatchTable batches={batch} />}
           </Section>
         </div>
