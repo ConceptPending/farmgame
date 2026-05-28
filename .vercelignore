@@ -1,0 +1,15 @@
+# Local-only assets that don't belong in deployments.
+.claude/
+docs/
+tools/
+.github/
+
+# Local env + state
+.env
+.env.local
+.turbo/
+
+# Test fixtures aren't needed for the build (build does not run tests).
+**/tests/
+**/*.test.ts
+**/*.test.tsx
