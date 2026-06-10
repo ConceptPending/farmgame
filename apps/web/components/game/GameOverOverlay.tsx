@@ -53,21 +53,25 @@ export function GameOverOverlay() {
           </span>
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-          <button
-            onClick={() => startGame(lastConfig ?? {})}
-            style={{
-              padding: "8px 24px",
-              fontSize: 14,
-              border: "1px solid #4ecca3",
-              borderRadius: 5,
-              background: "#1a4040",
-              color: "#4ecca3",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            Play Again
-          </button>
+          {/* Loaded games don't carry their scenario config — offering "Play
+              Again" there restarted a *different* game's scenario. */}
+          {lastConfig !== null && (
+            <button
+              onClick={() => startGame(lastConfig)}
+              style={{
+                padding: "8px 24px",
+                fontSize: 14,
+                border: "1px solid #4ecca3",
+                borderRadius: 5,
+                background: "#1a4040",
+                color: "#4ecca3",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Play Again
+            </button>
+          )}
           <button
             onClick={() => returnToMenu()}
             style={{

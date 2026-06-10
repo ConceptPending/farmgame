@@ -11,7 +11,7 @@
  * Persists "don't show again this game" to localStorage.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { causeCategory, causeCopy, causePriority, type Cause, type CauseCategory } from "@farmgame/engine";
 import {
@@ -165,6 +165,32 @@ export function SeasonSummaryPanel() {
     setSuppressed(window.localStorage.getItem(SUPPRESS_KEY) === "1");
   }, []);
 
+  // Compute suggestions above the early return so `dismiss` (close button,
+  // scrim, and the Esc handler below) exists at hook level.
+  const prices = state?.market.prices ?? {};
+  const totals = summariseSeasonForSuggestions(causes, prices);
+  const allSuggestions = deriveSeasonSuggestions(totals);
+  const suggestions = allSuggestions.filter((s) => !seenSuggestionIds.includes(s.id));
+
+  // Dismissal marks every visible suggestion as seen so it doesn't repeat
+  // next season.
+  const dismiss = () => {
+    if (suggestions.length > 0) markSuggestionsSeen(suggestions.map((s) => s.id));
+    clear();
+  };
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+
+  // The close button advertises "Continue (Esc)" — honor it. Dismissing an
+  // already-empty summary is a no-op.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (suppressed || causes.length === 0) return null;
 
   const grouped = groupCauses(causes);
@@ -179,14 +205,8 @@ export function SeasonSummaryPanel() {
   const prevYear = sc && sc.kind === "season_change" && idx === 0 ? sc.year - 1 : (sc && sc.kind === "season_change" ? sc.year : state?.year ?? 1);
   const header = `${prev.charAt(0).toUpperCase() + prev.slice(1)} of Year ${prevYear}`;
 
-  // Compute suggestions, then filter out any the player has already been
-  // shown this game. "Once" is the PR V agreement: a single nudge per
-  // problem, then trust them to act on it. Reset on new game / load.
-  const prices = state?.market.prices ?? {};
-  const totals = summariseSeasonForSuggestions(causes, prices);
-  const allSuggestions = deriveSeasonSuggestions(totals);
-  const suggestions = allSuggestions.filter((s) => !seenSuggestionIds.includes(s.id));
-
+  // (Suggestions are computed above the early return; "once per game" is the
+  // PR V agreement — a single nudge per problem, then trust them to act.)
   const toggleSuppress = (next: boolean) => {
     if (typeof window !== "undefined") {
       if (next) window.localStorage.setItem(SUPPRESS_KEY, "1");
@@ -196,16 +216,9 @@ export function SeasonSummaryPanel() {
     if (next) clear();
   };
 
-  // When Continue is clicked (or panel dismissed), mark every visible
-  // suggestion as seen so it doesn't repeat next season.
-  const dismiss = () => {
-    if (suggestions.length > 0) markSuggestionsSeen(suggestions.map((s) => s.id));
-    clear();
-  };
-
   return (
     <div
-      onClick={(e) => { if (e.target === e.currentTarget) clear(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) dismiss(); }}
       style={{
         position: "fixed", inset: 0, zIndex: 160,
         display: "flex", alignItems: "center", justifyContent: "center",

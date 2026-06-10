@@ -97,6 +97,16 @@ export function TurnSummaryPanel() {
     setSuppressed(window.localStorage.getItem(SUPPRESS_KEY) === "1");
   }, []);
 
+  // The close button advertises "Continue (Esc)" — honor it. Clearing an
+  // already-empty summary is a no-op, so no visibility guard is needed.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clear();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clear]);
+
   const grouped = groupCauses(causes);
   const hasAnything = Array.from(grouped.values()).some((g) => g.length > 0);
   if (!hasAnything || suppressed) return null;

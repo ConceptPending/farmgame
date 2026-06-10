@@ -65,7 +65,9 @@ interface GameStore {
   loadGameState: (state: GameState) => void;
   /** Return to the start screen (state = null). */
   returnToMenu: () => void;
-  dispatch: (command: GameCommand) => void;
+  /** Apply a command; returns whether it succeeded (callers that batch
+   *  commands — e.g. the fence-drag stroke — stop on the first failure). */
+  dispatch: (command: GameCommand) => boolean;
   /** End the current monthly turn — resolves the month and refreshes labor. */
   endTurn: () => void;
   addNotification: (notification: Notification) => void;
@@ -272,16 +274,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   loadGameState: (state: GameState) => {
-    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [] });
+    // lastConfig is nulled: saves don't carry their scenario config, so a
+    // "Play Again" after loading would restart some *other* game's scenario.
+    set({ state, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [], lastConfig: null });
   },
 
   returnToMenu: () => {
     set({ state: null, notifications: [], nextNotificationId: 1, fxEvents: [], lastTurnCauses: [], currentSeasonCauses: [], lastSeasonCauses: [], seenSuggestionIds: [], turnSnapshots: [] });
   },
 
-  dispatch: (command: GameCommand) => {
+  dispatch: (command: GameCommand): boolean => {
     const { state } = get();
-    if (!state) return;
+    if (!state) return false;
 
     let result: ReturnType<typeof applyCommand>;
     try {
@@ -294,7 +298,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pushStamped(get, set, [
         { type: "error", message: "Something went wrong applying that action." },
       ]);
-      return;
+      return false;
     }
     if (result.success) {
       set({ state: result.state });
@@ -348,8 +352,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const snap = takeSnapshot(result.state, result.causes ?? []);
         set({ turnSnapshots: [...get().turnSnapshots, snap] });
       }
+      return true;
     } else {
       pushStamped(get, set, [{ type: "error", message: result.error ?? "Command failed" }]);
+      return false;
     }
   },
 

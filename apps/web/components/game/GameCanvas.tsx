@@ -74,11 +74,15 @@ export function GameCanvas() {
               }
               if (indices.length > 0) dispatch({ type: "DESIGNATE_FIELD", tileIndices: indices });
             } else if (useUIStore.getState().selectedBuildingType === "fence") {
-              // Drag to fence the perimeter of the rectangle — build a pen in one stroke.
-              for (let y = minY; y <= maxY; y++) {
+              // Drag to fence the perimeter of the rectangle — build a pen in
+              // one stroke. Stop at the first failure: once money or labor
+              // runs out mid-stroke, every remaining tile would fail with the
+              // same error and flood the toast log.
+              outer: for (let y = minY; y <= maxY; y++) {
                 for (let x = minX; x <= maxX; x++) {
                   if (x === minX || x === maxX || y === minY || y === maxY) {
-                    dispatch({ type: "BUILD", buildingType: "fence", tileIndex: tileIndex(x, y, w) });
+                    const ok = dispatch({ type: "BUILD", buildingType: "fence", tileIndex: tileIndex(x, y, w) });
+                    if (!ok) break outer;
                   }
                 }
               }
