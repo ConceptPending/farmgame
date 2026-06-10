@@ -1,6 +1,7 @@
 import { Graphics, RenderTexture, Texture, Rectangle, type Application } from "pixi.js";
 import { ALL_CROP_IDS } from "@farmgame/engine";
 import { CROP_VISUALS, type CropVisual } from "./crop-sprites.js";
+import { seededRng } from "../util.js";
 
 export const TILE_SIZE = 16;
 const SHEET_COLS = 16;
@@ -61,14 +62,6 @@ export const SPRITES = {
   fence_10: { col: 10, row: 2 }, fence_11: { col: 11, row: 2 },
   fence_12: { col: 12, row: 2 }, fence_13: { col: 13, row: 2 },
   fence_14: { col: 14, row: 2 }, fence_15: { col: 15, row: 2 },
-
-  // Weather icons (row 4)
-  weather_clear: { col: 0, row: 4 },
-  weather_cloudy: { col: 1, row: 4 },
-  weather_rain: { col: 2, row: 4 },
-  weather_storm: { col: 3, row: 4 },
-  weather_frost: { col: 4, row: 4 },
-  weather_drought: { col: 5, row: 4 },
 
   // Animals (row 5)
   animal_chicken: { col: 0, row: 5 },
@@ -150,14 +143,6 @@ export async function generateTileset(app: Application): Promise<void> {
     drawFenceVariant(g, mask, 2, mask);
   }
 
-  // --- Row 4: Weather icons ---
-  drawWeatherClear(g, 0, 4);
-  drawWeatherCloudy(g, 1, 4);
-  drawWeatherRain(g, 2, 4);
-  drawWeatherStorm(g, 3, 4);
-  drawWeatherFrost(g, 4, 4);
-  drawWeatherDrought(g, 5, 4);
-
   // --- Row 5: Animals ---
   drawChicken(g, 0, 5);
   drawPig(g, 1, 5);
@@ -194,17 +179,6 @@ export function getTileTexture(key: string): Texture {
 }
 
 // --- Drawing helpers ---
-
-/** Tiny deterministic RNG so each tile variant scatters its noise repeatably. */
-function seededRng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /**
  * Soft contact shadow: a translucent black ellipse beneath an object. Shadows
@@ -702,74 +676,6 @@ function drawFenceVariant(g: Graphics, col: number, row: number, mask: number) {
     g.rect(x + 5, y + 9, 2, 7).fill(RAIL);
     g.rect(x + 9, y + 9, 2, 7).fill(RAIL);
   }
-}
-
-function drawWeatherClear(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x87ceeb);
-  g.circle(x + 8, y + 8, 4).fill(0xffdd00);
-  // Rays
-  for (let a = 0; a < 8; a++) {
-    const angle = (a / 8) * Math.PI * 2;
-    const rx = x + 8 + Math.cos(angle) * 6;
-    const ry = y + 8 + Math.sin(angle) * 6;
-    g.rect(Math.round(rx), Math.round(ry), 1, 1).fill(0xffdd00);
-  }
-}
-
-function drawWeatherCloudy(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x87ceeb);
-  g.circle(x + 6, y + 9, 4).fill(0xcccccc);
-  g.circle(x + 10, y + 8, 3).fill(0xbbbbbb);
-  g.circle(x + 8, y + 7, 3).fill(0xdddddd);
-}
-
-function drawWeatherRain(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x5a7a9a);
-  g.circle(x + 8, y + 5, 4).fill(0x888888);
-  // Raindrops
-  g.rect(x + 4, y + 11, 1, 3).fill(0x3498db);
-  g.rect(x + 8, y + 12, 1, 3).fill(0x3498db);
-  g.rect(x + 12, y + 10, 1, 3).fill(0x3498db);
-}
-
-function drawWeatherStorm(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0x3a4a5a);
-  g.circle(x + 8, y + 5, 4).fill(0x555555);
-  // Lightning bolt
-  g.rect(x + 7, y + 9, 2, 2).fill(0xffff00);
-  g.rect(x + 8, y + 11, 2, 2).fill(0xffff00);
-  g.rect(x + 7, y + 13, 2, 2).fill(0xffff00);
-}
-
-function drawWeatherFrost(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0xa8d8ea);
-  // Snowflake-ish
-  g.rect(x + 7, y + 3, 2, 10).fill(0xffffff);
-  g.rect(x + 3, y + 7, 10, 2).fill(0xffffff);
-  g.rect(x + 5, y + 5, 1, 1).fill(0xffffff);
-  g.rect(x + 10, y + 5, 1, 1).fill(0xffffff);
-  g.rect(x + 5, y + 10, 1, 1).fill(0xffffff);
-  g.rect(x + 10, y + 10, 1, 1).fill(0xffffff);
-}
-
-function drawWeatherDrought(g: Graphics, col: number, row: number) {
-  const x = col * TILE_SIZE;
-  const y = row * TILE_SIZE;
-  g.rect(x, y, TILE_SIZE, TILE_SIZE).fill(0xd4a017);
-  g.circle(x + 8, y + 6, 4).fill(0xff6600);
-  // Heat waves
-  g.rect(x + 3, y + 12, 4, 1).fill(0xff8800);
-  g.rect(x + 9, y + 13, 4, 1).fill(0xff8800);
 }
 
 function drawWaterTrough(g: Graphics, col: number, row: number) {

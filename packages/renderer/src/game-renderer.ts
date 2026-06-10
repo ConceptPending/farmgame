@@ -11,7 +11,7 @@ import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
 import { Camera } from "./camera.js";
 import { InputHandler, type InputEvent } from "./input.js";
-import { generateTileset, destroyTileset, TILE_SIZE } from "./sprites/tileset.js";
+import { generateTileset, destroyTileset } from "./sprites/tileset.js";
 
 export interface RendererOptions {
   canvas: HTMLCanvasElement;
@@ -42,8 +42,6 @@ export class GameRenderer {
   private animationTickerId: number | null = null;
   private lastState: GameState | null = null;
   private dragStartTileIndex: number | null = null;
-
-  static readonly CELL_SIZE = TILE_SIZE;
 
   constructor() {
     this.app = new Application();
@@ -141,7 +139,7 @@ export class GameRenderer {
       const now = performance.now();
       const dt = now - lastTs;
       lastTs = now;
-      this.weatherEffects.tick();
+      this.weatherEffects.tick(dt);
       this.animalLayer.tick(dt);
       this.gridOverlay.tick(dt);
       if (this.fxSource && this.lastState) {

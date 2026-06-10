@@ -4,13 +4,7 @@ import { tileCoords } from "@farmgame/engine";
 import { TILE_SIZE, getTileTexture } from "../sprites/tileset.js";
 import { getCropSpriteKey } from "../sprites/crop-sprites.js";
 
-/** Stable per-tile hash used to jitter crop placement so a planted field
- *  doesn't read as the same sprite stamped eight times. */
-function tileHash(idx: number): number {
-  let h = Math.imul(idx ^ 0x9e3779b9, 2654435761) >>> 0;
-  h ^= h >>> 13;
-  return h >>> 0;
-}
+import { tileHash } from "../util.js";
 
 export class CropLayer {
   readonly container: Container;

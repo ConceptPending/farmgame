@@ -1,17 +1,7 @@
 import { Container, Graphics } from "pixi.js";
 import type { Season } from "@farmgame/engine";
 import { TILE_SIZE } from "../sprites/tileset.js";
-
-/** Tiny deterministic RNG (Mulberry32) so each season's overlay is stable. */
-function seededRng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { seededRng } from "../util.js";
 
 /**
  * World-space overlay that gives each season a distinct map-level look on top

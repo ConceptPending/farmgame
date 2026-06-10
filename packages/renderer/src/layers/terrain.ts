@@ -182,13 +182,6 @@ export class TerrainLayer {
     }
   }
 
-  /** Force a full terrain refresh (call after buy_land). */
-  markDirty(): void {
-    this.lastTerrainKey = "";
-    this.lastOwnershipKey = "";
-    this.lastFieldStateKey = "";
-  }
-
   private rebuild(state: GameState) {
     this.container.removeChildren();
     this.sprites = [];

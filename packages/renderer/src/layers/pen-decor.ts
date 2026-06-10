@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import type { GameState } from "@farmgame/engine";
 import { pennedTiles } from "@farmgame/engine";
 import { TILE_SIZE } from "../sprites/tileset.js";
+import { tileHash } from "../util.js";
 
 /**
  * World-space decoration drawn inside player pens: hay near barns, mud near
@@ -81,13 +82,6 @@ function neighborTiles(idx: number, w: number): number[] {
 
 function tilePx(idx: number, w: number): { x: number; y: number } {
   return { x: (idx % w) * TILE_SIZE, y: ((idx / w) | 0) * TILE_SIZE };
-}
-
-/** Tiny deterministic per-tile hash so footprint positions don't flicker. */
-function tileHash(idx: number): number {
-  let h = Math.imul(idx ^ 0x9e3779b9, 2654435761) >>> 0;
-  h ^= h >>> 13;
-  return h >>> 0;
 }
 
 function drawHay(g: Graphics, idx: number, w: number) {

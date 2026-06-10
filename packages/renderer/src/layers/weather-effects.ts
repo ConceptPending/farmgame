@@ -20,7 +20,8 @@ export class WeatherEffects {
   private lastCondition: WeatherCondition | null = null;
   private worldWidth = 0;
   private worldHeight = 0;
-  private frameCount = 0;
+  /** Time since the last particle step, ms. */
+  private accumulatedMs = 0;
 
   constructor() {
     this.container = new Container();
@@ -43,14 +44,20 @@ export class WeatherEffects {
   }
 
   /** Called on animation frame — only does work when particles exist. */
-  tick(): void {
+  tick(dt: number): void {
     if (this.particles.length === 0) return;
 
-    // Throttle particle draw to ~20fps
-    this.frameCount++;
-    if (this.frameCount % 3 !== 0) return;
+    // Step at a fixed ~20 Hz regardless of display refresh rate. The old
+    // version throttled by frame count (every 3rd frame) and moved particles
+    // a fixed distance per drawn frame — rain fell twice as fast on a 120 Hz
+    // monitor and crawled in throttled tabs.
+    this.accumulatedMs += dt;
+    if (this.accumulatedMs < 50) return;
+    // Clamp so a backgrounded tab doesn't teleport particles on wake.
+    const step = Math.min(this.accumulatedMs, 150) / 50;
+    this.accumulatedMs = 0;
 
-    this.animateParticles();
+    this.animateParticles(step);
     this.drawParticles();
   }
 
@@ -85,15 +92,15 @@ export class WeatherEffects {
     }
   }
 
-  private animateParticles() {
+  private animateParticles(step: number) {
     const isFrost = this.lastCondition === "frost";
     const isStorm = this.lastCondition === "storm";
     for (const p of this.particles) {
-      p.y += p.speed;
+      p.y += p.speed * step;
       if (isFrost) {
-        p.x += Math.sin(p.y * 0.02) * 0.3;
+        p.x += Math.sin(p.y * 0.02) * 0.3 * step;
       } else if (isStorm) {
-        p.x += 1;
+        p.x += step;
       }
       if (p.y > this.worldHeight) { p.y = -5; p.x = Math.random() * this.worldWidth; }
       if (p.x > this.worldWidth) p.x = 0;

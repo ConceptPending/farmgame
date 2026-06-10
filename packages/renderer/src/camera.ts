@@ -87,12 +87,28 @@ export class Camera {
     e.preventDefault();
   };
 
+  /** True when a key event originates in a text-entry element — the camera
+   *  must not steal w/a/s/d/+/- from inputs (save names etc.). */
+  private static isTypingTarget(e: KeyboardEvent): boolean {
+    const t = e.target as HTMLElement | null;
+    if (!t) return false;
+    return t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable;
+  }
+
   private onKeyDown = (e: KeyboardEvent) => {
+    if (Camera.isTypingTarget(e)) return;
     this.keys.add(e.key.toLowerCase());
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
     this.keys.delete(e.key.toLowerCase());
+  };
+
+  /** Alt-tabbing away while holding a key would otherwise leave the camera
+   *  panning forever — the keyup fires in another window. */
+  private onWindowBlur = () => {
+    this.keys.clear();
+    this.isDragging = false;
   };
 
   attach(world: Container, canvas: HTMLCanvasElement): void {
@@ -114,12 +130,15 @@ export class Camera {
     this.clamp();
 
     canvas.addEventListener("mousedown", this.onMouseDown);
-    canvas.addEventListener("mousemove", this.onMouseMove);
-    canvas.addEventListener("mouseup", this.onMouseUp);
+    // Move/up live on window so releasing the button outside the canvas ends
+    // the pan instead of leaving the camera glued to the cursor on re-entry.
+    window.addEventListener("mousemove", this.onMouseMove);
+    window.addEventListener("mouseup", this.onMouseUp);
     canvas.addEventListener("wheel", this.onWheel, { passive: false });
     canvas.addEventListener("contextmenu", this.onContextMenu);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onWindowBlur);
 
     // Start keyboard pan loop
     this.startPanLoop();
@@ -183,12 +202,13 @@ export class Camera {
     }
     if (!this.canvas) return;
     this.canvas.removeEventListener("mousedown", this.onMouseDown);
-    this.canvas.removeEventListener("mousemove", this.onMouseMove);
-    this.canvas.removeEventListener("mouseup", this.onMouseUp);
+    window.removeEventListener("mousemove", this.onMouseMove);
+    window.removeEventListener("mouseup", this.onMouseUp);
     this.canvas.removeEventListener("wheel", this.onWheel);
     this.canvas.removeEventListener("contextmenu", this.onContextMenu);
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onWindowBlur);
     this.target = null;
     this.canvas = null;
   }
