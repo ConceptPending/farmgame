@@ -16,7 +16,12 @@ function hydrate(): void {
   if (hydrated) return;
   hydrated = true;
   if (typeof window === "undefined") return;
-  enabled = window.localStorage.getItem(STORAGE_KEY) === "on";
+  try {
+    enabled = window.localStorage.getItem(STORAGE_KEY) === "on";
+  } catch {
+    // Storage access can throw (private mode, iframe denial) — sound stays off.
+    enabled = false;
+  }
 }
 
 function ensureCtx(): AudioContext | null {
@@ -40,7 +45,11 @@ export function setAudioEnabled(on: boolean): void {
   hydrate();
   enabled = on;
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, on ? "on" : "off");
+    try {
+      window.localStorage.setItem(STORAGE_KEY, on ? "on" : "off");
+    } catch {
+      // Toggle still applies for this session; it just won't persist.
+    }
   }
 }
 

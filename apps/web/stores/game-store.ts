@@ -12,6 +12,7 @@ import {
   type TurnSnapshot,
 } from "@farmgame/engine";
 import { playSound } from "../lib/sounds";
+import { autoSave } from "../lib/save-game";
 
 /** Notification + the in-game time it fired. Drives the event log timeline. */
 export interface StampedNotification extends Notification {
@@ -249,6 +250,10 @@ function pushStamped(get: Get, set: Set, newOnes: Notification[], stampState?: G
   set({ notifications: trimmed, nextNotificationId: id });
 }
 
+/** Warn about autosave failure at most once per session — the cause (quota,
+ *  private mode) won't change turn to turn, and a toast per season is nagging. */
+let autosaveFailureWarned = false;
+
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   notifications: [],
@@ -278,7 +283,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { state } = get();
     if (!state) return;
 
-    const result = applyCommand(state, command);
+    let result: ReturnType<typeof applyCommand>;
+    try {
+      result = applyCommand(state, command);
+    } catch (err) {
+      // The engine should never throw — a throw here means corrupt state or an
+      // engine bug. Keep the current state and surface it instead of letting
+      // the exception unwind through a DOM event handler.
+      console.error("applyCommand threw", command, err);
+      pushStamped(get, set, [
+        { type: "error", message: "Something went wrong applying that action." },
+      ]);
+      return;
+    }
     if (result.success) {
       set({ state: result.state });
       pushStamped(get, set, groupNotifications(result.notifications), result.state);
@@ -310,6 +327,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             lastSeasonCauses: nextSeasonBuf,
             currentSeasonCauses: [],
           });
+          // Autosave on the season boundary — keyed on the season_change cause
+          // so loading a save can't retrigger it (the old HUD-effect version
+          // overwrote the autosave whenever loaded state had a different
+          // season). Skip once the game is over: the autosave should stay the
+          // last playable recovery point.
+          if (result.state.status === "playing" && autoSave(result.state) === null && !autosaveFailureWarned) {
+            autosaveFailureWarned = true;
+            pushStamped(get, set, [
+              { type: "warning", message: "Autosave failed — storage may be full or unavailable. Save manually to be safe." },
+            ], result.state);
+          }
         } else {
           set({ lastTurnCauses: nextTurnBuf, currentSeasonCauses: nextSeasonBuf });
         }

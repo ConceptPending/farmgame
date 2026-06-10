@@ -145,6 +145,18 @@ describe("DESIGNATE_FIELD", () => {
     const { state: s1 } = createTestField(state);
     expect(s1.nextFieldId).toBe(state.nextFieldId + 1);
   });
+
+  it("rejects duplicate tile indices (yield-multiplication exploit)", () => {
+    const state = stateWithSeed();
+    const idx = findOwnedDirtTile(state);
+    const result = applyCommand(state, {
+      type: "DESIGNATE_FIELD",
+      tileIndices: [idx, idx, idx, idx],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Duplicate");
+    expect(result.state).toBe(state);
+  });
 });
 
 describe("PLOW_FIELD", () => {
@@ -462,6 +474,19 @@ describe("SELL", () => {
     const priceBefore = state.market.prices["wheat"];
     const result = applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 50 });
     expect(result.state.market.prices["wheat"]).toBeLessThan(priceBefore);
+  });
+
+  it("rejects negative quantity (inventory-minting exploit)", () => {
+    const state = stateWithSeed();
+    const result = applyCommand(state, { type: "SELL", cropId: "wheat", quantity: -50 });
+    expect(result.success).toBe(false);
+    expect(result.state).toBe(state);
+  });
+
+  it("rejects zero and fractional quantities", () => {
+    const state = { ...stateWithSeed(), inventory: { wheat: 10 } };
+    expect(applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 0 }).success).toBe(false);
+    expect(applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 2.5 }).success).toBe(false);
   });
 
   it("uses market price not base price for revenue", () => {

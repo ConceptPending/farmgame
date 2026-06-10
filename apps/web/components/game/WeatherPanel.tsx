@@ -56,14 +56,15 @@ export function WeatherPanel() {
     return () => clearTimeout(t);
   }, [seasonExpandUntil]);
 
+  // Sting on a hazardous-weather arrival: brief coloured border flash.
+  // Must run unconditionally (before the !state return below).
+  const conditionPulse = usePulseOnChange(state?.weather.condition ?? "clear", 850);
+
   if (!state) return null;
   const { weather } = state;
 
   const seasonExpanded = seasonExpandUntil > performance.now();
   const expanded = pinned || hovering || seasonExpanded;
-
-  // Sting on a hazardous-weather arrival: brief coloured border flash.
-  const conditionPulse = usePulseOnChange(weather.condition, 850);
   const stingColor: Partial<Record<WeatherCondition, string>> = {
     storm: "#ff6b6b",
     frost: "#9fc3e8",

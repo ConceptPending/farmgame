@@ -137,11 +137,8 @@ describe("simulateBatch", () => {
     expect(batch.runs).toBe(4);
     expect(batch.reports).toHaveLength(4);
     expect(batch.winRate + batch.lossRate + batch.unfinishedRate).toBeCloseTo(1, 5);
-    expect(batch.medianFinalMoney).toBe(
-      [...batch.reports]
-        .sort((a, b) => a.finalMoney - b.finalMoney)
-        [Math.floor(4 / 2)].finalMoney,
-    );
+    const sorted = [...batch.reports].sort((a, b) => a.finalMoney - b.finalMoney);
+    expect(batch.medianFinalMoney).toBe(sorted[Math.floor(4 / 2)].finalMoney);
   });
 
   it("a deadline scenario the greedy baseline cannot meet shows a high loss rate", () => {

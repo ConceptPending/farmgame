@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { useGameStore } from "../../stores/game-store";
 import { useUIStore } from "../../stores/ui-store";
 import { TOOL_CATALOG, goalProgress, monthPhase, MONTHS_PER_YEAR, MONTHS_PER_SEASON } from "@farmgame/engine";
@@ -8,7 +8,7 @@ import { OverlaySelector } from "./OverlaySelector";
 import { NOTIFICATION_COLOR, NOTIFICATION_GLYPH } from "./notifications";
 import { Icon } from "../ui/Icon";
 import { useAnimatedNumber, useNumberPulse, usePulseOnChange } from "./juice-hooks";
-import { autoSave, quickLoad, quickSave } from "../../lib/save-game";
+import { quickLoad, quickSave } from "../../lib/save-game";
 import type { WeatherCondition } from "@farmgame/engine";
 
 const CONDITION_ICONS: Record<WeatherCondition, string> = {
@@ -51,24 +51,14 @@ export function HUD() {
   const onboardingDismissed = useUIStore((s) => s.onboardingDismissed);
   const reopenOnboarding = useUIStore((s) => s.reopenOnboarding);
 
-  // Autosave on every season change. Primes the ref on the first render so a
-  // fresh game doesn't write before any transition.
-  const lastSeasonRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!state) {
-      lastSeasonRef.current = null;
-      return;
-    }
-    const key = `${state.year}-${state.season}`;
-    if (lastSeasonRef.current === null) {
-      lastSeasonRef.current = key;
-      return;
-    }
-    if (lastSeasonRef.current !== key) {
-      lastSeasonRef.current = key;
-      autoSave(state);
-    }
-  }, [state]);
+  // (Autosave lives in the game store now, keyed on the season_change cause —
+  // a season-key effect here re-fired on save loads and clobbered the autosave.)
+
+  // Juice — hooks must run unconditionally (before the !state return below).
+  const moneyDisplay = useAnimatedNumber(state?.money ?? 0, 450);
+  const moneyDir = useNumberPulse(state?.money ?? 0, 700);
+  const seasonPulse = usePulseOnChange(state?.season ?? "spring", 800);
+  const laborPulse = usePulseOnChange(state?.labor.used ?? 0, 350);
 
   if (!state) return null;
 
@@ -96,10 +86,6 @@ export function HUD() {
         ? "#ffa454"
         : "#9db4d0";
 
-  // Juice
-  const moneyDisplay = useAnimatedNumber(state.money, 450);
-  const moneyDir = useNumberPulse(state.money, 700);
-  const seasonPulse = usePulseOnChange(state.season, 800);
   const moneyBaseColor = state.money < 0 ? "#ff6b6b" : "#4ecca3";
   const moneyColor = moneyDir === "up" ? "#7ee0b8" : moneyDir === "down" ? "#ff9090" : moneyBaseColor;
   const moneyShadow = moneyDir === "up"
@@ -110,7 +96,6 @@ export function HUD() {
 
   // Labor display + pulse on remaining-units change.
   const laborRemaining = state.labor.capacity - state.labor.used;
-  const laborPulse = usePulseOnChange(state.labor.used, 350);
   const laborColor = laborRemaining === 0 ? "#ff8c42" : laborRemaining < 3 ? "#ffdd57" : "#9db4d0";
 
   // Turn position within the year, for the "Turn N / 12" label.

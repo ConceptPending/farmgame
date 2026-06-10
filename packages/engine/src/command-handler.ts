@@ -122,6 +122,9 @@ function handleDesignateField(state: GameState, tileIndices: number[]): CommandR
   if (tileIndices.length === 0) {
     return fail(state, "Must select at least one tile");
   }
+  if (new Set(tileIndices).size !== tileIndices.length) {
+    return fail(state, "Duplicate tiles in field selection");
+  }
 
   // All tiles must be owned, clear terrain (dirt/grass), and not already in a field or building
   for (const idx of tileIndices) {
@@ -540,6 +543,10 @@ function handleSpreadManure(state: GameState, fieldId: number): CommandResult {
 function handleSell(state: GameState, goodId: string, quantity: number): CommandResult {
   const def = getGoodInfo(goodId);
   if (!def) return fail(state, `Unknown good: ${goodId}`);
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return fail(state, "Quantity must be a positive whole number");
+  }
 
   const available = state.inventory[goodId] ?? 0;
   if (available < quantity) {
