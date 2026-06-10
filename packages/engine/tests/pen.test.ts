@@ -75,13 +75,52 @@ describe("containment & escape", () => {
       inventory: { wheat: 100000 }, // fed, so any loss is from wandering or predators
     };
     let lost = false;
+    const lossCauses: string[] = [];
     for (let i = 0; i < MONTHS_PER_SEASON * 60 && s.animals.length > 0; i++) {
       const r = nextTurn(s);
       s = r.state;
       if (r.notifications.some((n) => /wander|predator/i.test(n.message))) lost = true;
+      for (const c of r.causes) {
+        if (c.kind === "animal_lost_predator" || c.kind === "animal_lost_wandered") {
+          lossCauses.push(c.kind);
+        }
+      }
     }
     expect(lost).toBe(true);
     expect(s.animals).toHaveLength(0);
+    // The loss is recorded as a structured cause, not just a toast — telemetry
+    // counts these into animalDeaths.
+    expect(lossCauses.length).toBeGreaterThan(0);
+  });
+});
+
+describe("fence wear causes", () => {
+  it("seasonal decay emits fence_decay, and crossing the threshold emits fence_breach", () => {
+    const { state, pen } = pennedFarm();
+    const breachTile = pen - 1;
+    // One fence sits just above the breach line; any decay tips it over.
+    // monthOfSeason 3 → the next turn rolls the season (boundary turn).
+    const s: GameState = {
+      ...state,
+      monthOfSeason: 3,
+      animals: [createAnimal(state.nextAnimalId, "sheep", pen)],
+      inventory: { wheat: 100000 },
+      buildings: state.buildings.map((b) =>
+        b.tileIndex === breachTile ? { ...b, condition: FENCE_BREACH + 0.01 } : b,
+      ),
+    };
+    const r = nextTurn(s);
+    const decay = r.causes.find((c) => c.kind === "fence_decay");
+    expect(decay).toBeDefined();
+    if (decay?.kind === "fence_decay") {
+      expect(decay.averagePct).toBeGreaterThan(0);
+      expect(decay.averagePct).toBeLessThan(1);
+    }
+    const breach = r.causes.find((c) => c.kind === "fence_breach");
+    expect(breach).toBeDefined();
+    if (breach?.kind === "fence_breach") {
+      expect(breach.tileIndex).toBe(breachTile);
+    }
   });
 });
 

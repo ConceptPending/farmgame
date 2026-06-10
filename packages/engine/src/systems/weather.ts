@@ -98,6 +98,57 @@ function rainfallForCondition(condition: WeatherCondition): number {
   }
 }
 
+const SEASON_ORDER: Season[] = ["spring", "summer", "fall", "winter"];
+const MONTHS_PER_SEASON = 3;
+
+/** The season in effect `monthsAhead` monthly turns from (season, monthOfSeason). */
+export function seasonAt(season: Season, monthOfSeason: number, monthsAhead: number): Season {
+  const seasonsAhead = Math.floor((monthOfSeason - 1 + monthsAhead) / MONTHS_PER_SEASON);
+  return SEASON_ORDER[(SEASON_ORDER.indexOf(season) + seasonsAhead) % SEASON_ORDER.length];
+}
+
+function generateForecastMonth(
+  rng: RngState,
+  season: Season,
+): { month: ForecastMonth; rng: RngState } {
+  const fc = generateCondition(rng, season);
+  let r = fc.rng;
+  const t1 = generateTemperature(r, season);
+  r = t1.rng;
+  const t2 = generateTemperature(r, season);
+  r = t2.rng;
+  return {
+    month: {
+      condition: fc.condition,
+      tempHigh: Math.max(t1.temp, t2.temp),
+      tempLow: Math.min(t1.temp, t2.temp),
+      rainfall: rainfallForCondition(fc.condition),
+    },
+    rng: r,
+  };
+}
+
+/**
+ * Draw an initial forecast for a new game, one entry per upcoming monthly
+ * turn with each entry using *that month's* season profile. Called from
+ * createGameState so the very first turns honor a real forecast instead of
+ * the placeholder "clear" entries.
+ */
+export function primeForecast(
+  season: Season,
+  monthOfSeason: number,
+  rng: RngState,
+): { forecast: ForecastMonth[]; rng: RngState } {
+  const forecast: ForecastMonth[] = [];
+  let r = rng;
+  for (let i = 1; i <= FORECAST_HORIZON; i++) {
+    const g = generateForecastMonth(r, seasonAt(season, monthOfSeason, i));
+    forecast.push(g.month);
+    r = g.rng;
+  }
+  return { forecast, rng: r };
+}
+
 export function weatherSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
@@ -105,14 +156,28 @@ export function weatherSystem(state: GameState): {
   const notifications: Notification[] = [];
   let rng = state.rng;
 
-  // Generate today's weather
-  const condResult = generateCondition(rng, state.season);
-  rng = condResult.rng;
-  const condition = condResult.condition;
-
-  const tempResult = generateTemperature(rng, state.season);
-  rng = tempResult.rng;
-  const temperature = tempResult.temp;
+  // This month's weather honors the standing forecast: the entry at the head
+  // of the queue was issued for this month (with this month's season profile),
+  // so promoting it is what makes the forecast *predictive* rather than
+  // decorative. The temperature lands inside the forecast range.
+  const standing = state.weather.forecast;
+  let condition: WeatherCondition;
+  let temperature: number;
+  if (standing.length >= FORECAST_HORIZON) {
+    const due = standing[0];
+    condition = due.condition;
+    const tempRoll = nextFloat(rng);
+    rng = tempRoll.rng;
+    temperature = Math.round(due.tempLow + tempRoll.value * (due.tempHigh - due.tempLow));
+  } else {
+    // Unprimed (legacy save) — draw fresh; the queue refills below.
+    const condResult = generateCondition(rng, state.season);
+    rng = condResult.rng;
+    condition = condResult.condition;
+    const tempResult = generateTemperature(rng, state.season);
+    rng = tempResult.rng;
+    temperature = tempResult.temp;
+  }
 
   const windResult = nextInt(rng, 0, 30);
   rng = windResult.rng;
@@ -120,22 +185,15 @@ export function weatherSystem(state: GameState): {
 
   const rainfall = rainfallForCondition(condition);
 
-  // Rolling forecast over the next few monthly turns.
-  const forecast: ForecastMonth[] = [];
-  for (let i = 0; i < FORECAST_HORIZON; i++) {
-    const fc = generateCondition(rng, state.season);
-    rng = fc.rng;
-    const fTemp = generateTemperature(rng, state.season);
-    rng = fTemp.rng;
-    const fTemp2 = generateTemperature(rng, state.season);
-    rng = fTemp2.rng;
-
-    forecast.push({
-      condition: fc.condition,
-      tempHigh: Math.max(fTemp.temp, fTemp2.temp),
-      tempLow: Math.min(fTemp.temp, fTemp2.temp),
-      rainfall: rainfallForCondition(fc.condition),
-    });
+  // Roll the forecast queue: drop the promoted head, append one fresh entry
+  // for the month FORECAST_HORIZON turns out — drawn with that month's season
+  // profile, so a late-fall forecast correctly shows winter frost odds.
+  let forecast = standing.slice(1);
+  while (forecast.length < FORECAST_HORIZON) {
+    const ahead = forecast.length + 1;
+    const g = generateForecastMonth(rng, seasonAt(state.season, state.monthOfSeason, ahead));
+    rng = g.rng;
+    forecast = [...forecast, g.month];
   }
 
   const weather: WeatherState = { temperature, rainfall, wind, condition, forecast };

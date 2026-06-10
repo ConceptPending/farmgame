@@ -13,6 +13,7 @@ import type { MarketState } from "./entities/market.js";
 import type { RngState } from "./rng.js";
 import { createRng, nextInt } from "./rng.js";
 import { createWeatherState } from "./entities/weather.js";
+import { primeForecast } from "./systems/weather.js";
 import { createMarketState } from "./entities/market.js";
 import { allBasePrices } from "./data/goods.js";
 import { generateWorld } from "./data/world-gen.js";
@@ -170,6 +171,14 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
 
   const basePrices = allBasePrices();
 
+  // Real forecast from turn 1: the weather system promotes the head of this
+  // queue each turn, so the placeholder "clear" entries would otherwise make
+  // every game's first two turns clear regardless of seed.
+  const weather = createWeatherState();
+  const primed = primeForecast("spring", 1, rng);
+  rng = primed.rng;
+  weather.forecast = primed.forecast;
+
   return {
     tick: 0,
     season: "spring",
@@ -194,7 +203,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
     manure: 0,
     inventoryCapacity: BASE_INVENTORY_CAPACITY,
     market: createMarketState(Object.keys(basePrices), basePrices),
-    weather: createWeatherState(),
+    weather,
     nextFieldId: 1,
     nextBuildingId: 1,
     nextAnimalId: 1,

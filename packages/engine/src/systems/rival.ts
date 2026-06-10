@@ -105,7 +105,7 @@ export function rivalSystem(state: GameState): {
       }
     }
 
-    return { ...r, netWorth, ownedPlots, seasonSales };
+    return { ...r, netWorth, ownedPlots, seasonSales, prevSeasonSales: r.seasonSales };
   });
 
   return {

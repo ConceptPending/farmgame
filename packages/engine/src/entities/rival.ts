@@ -7,7 +7,13 @@ export interface RivalFarm {
   ownedPlots: number[]; // plot indices
   focusGoods: string[]; // crops/products they produce & sell
   aggressiveness: number; // 0..1 — expansion + selling rate
-  seasonSales: Record<string, number>; // last season's volume per good
+  seasonSales: Record<string, number>; // current season's volume per good
+  /** The season that just ended — what the market_leader streak compares
+   *  against. rivalSystem regenerates `seasonSales` for the incoming season
+   *  on the boundary turn *before* financeSystem judges the finished one, so
+   *  finance must read the stashed previous values. Optional: absent on
+   *  rivals from older saves (finance falls back to seasonSales). */
+  prevSeasonSales?: Record<string, number>;
 }
 
 export interface RivalConfig {

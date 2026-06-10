@@ -23,12 +23,16 @@ export function cropSystem(state: GameState): {
     const def = getCropDef(field.cropId);
     if (!def) return field;
 
-    // Frost check
+    // Frost check. Non-lethal damage reduces health and then falls through to
+    // the normal growth pass — the cold already slows growth via the
+    // temperature multiplier, and an early return here silently cost the crop
+    // a whole growth month with no growthMonths tick and no attribution.
+    let health = field.health;
     if (weather.condition === "frost" || weather.temperature < 32) {
       if (def.frostTolerance < 0.5) {
         const damage = (1 - def.frostTolerance) * 0.3;
-        const newHealth = Math.max(0, field.health - damage);
-        if (newHealth <= 0.1) {
+        health = Math.max(0, field.health - damage);
+        if (health <= 0.1) {
           notifications.push({
             type: "warning",
             message: `${def.name} in field #${field.id} killed by frost!`,
@@ -46,7 +50,6 @@ export function cropSystem(state: GameState): {
           cropId: field.cropId,
           healthLost: damage,
         });
-        return { ...field, health: newHealth };
       }
     }
 
@@ -97,7 +100,7 @@ export function cropSystem(state: GameState): {
     growthRate *= moistureMult;
 
     // Health modifier
-    const healthMult = Math.max(0.3, field.health);
+    const healthMult = Math.max(0.3, health);
     growthRate *= healthMult;
 
     // Compute growth *first* so a crop reaching maturity this turn is allowed
@@ -143,12 +146,13 @@ export function cropSystem(state: GameState): {
         state: "ready",
         growth: 1,
         growthMonths: newGrowthMonths,
+        health,
       };
     }
 
     // Still growing — *now* check whether the field is too damaged to
     // continue. Death is permanent so the threshold is conservative.
-    if (field.health < 0.2) {
+    if (health < 0.2) {
       notifications.push({
         type: "warning",
         message: `${def.name} in field #${field.id} has died from poor health!`,
@@ -162,6 +166,7 @@ export function cropSystem(state: GameState): {
       state: "growing",
       growth: newGrowth,
       growthMonths: newGrowthMonths,
+      health,
     };
   });
 

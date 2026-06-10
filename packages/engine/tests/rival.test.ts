@@ -58,6 +58,24 @@ describe("rival behavior over a season", () => {
     // sustained pressure keeps wheat's demand (price) below the no-rival ceiling
     expect(s.market.demand.wheat).toBeLessThan(0.97);
   });
+
+  it("stashes the finished season's sales in prevSeasonSales at the boundary", () => {
+    // financeSystem judges the market_leader streak on the boundary turn,
+    // *after* rivalSystem rolls seasonSales over to the incoming season —
+    // prevSeasonSales is what keeps that comparison apples-to-apples.
+    let s = createGameState({ seed: 5, goal: { type: "sandbox" }, rivals: [rival({ startingPlots: 2 })] });
+    // Tag the current season's sales so we can recognise them after the roll.
+    s = {
+      ...s,
+      rivals: s.rivals.map((r) => ({ ...r, seasonSales: { wheat: 7777 } })),
+    };
+    // Advance to the season boundary (spring months 2, 3, then summer month 1).
+    for (let i = 0; i < MONTHS_PER_SEASON; i++) s = nextTurn(s).state;
+    expect(s.monthOfSeason).toBe(1);
+    expect(s.rivals[0].prevSeasonSales).toEqual({ wheat: 7777 });
+    // And the live seasonSales was regenerated (not the tagged value).
+    expect(s.rivals[0].seasonSales.wheat).not.toBe(7777);
+  });
 });
 
 describe("competitive goals", () => {

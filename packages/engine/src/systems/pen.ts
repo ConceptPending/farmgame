@@ -1,6 +1,7 @@
 import type { GameState, Notification } from "../state.js";
 import type { Building } from "../entities/building.js";
 import type { Animal, AnimalType } from "../entities/animal.js";
+import type { Cause } from "../entities/cause.js";
 import { ANIMAL_CATALOG } from "../entities/animal.js";
 import { nextBool, nextInt, type RngState } from "../rng.js";
 
@@ -311,22 +312,40 @@ function wanderTarget(
  * Consumes no RNG (and makes no change) when there are no animals and no
  * fences, so games without livestock stay byte-for-byte identical.
  */
-export function penSystem(state: GameState): { state: GameState; notifications: Notification[] } {
+export function penSystem(state: GameState): {
+  state: GameState;
+  notifications: Notification[];
+  causes: Cause[];
+} {
   const hasFences = state.buildings.some((b) => b.type === "fence");
   if (state.animals.length === 0 && !hasFences) {
-    return { state, notifications: [] };
+    return { state, notifications: [], causes: [] };
   }
 
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   const seasonStart = state.monthOfSeason === 1;
 
   // Fence wear.
   let buildings = state.buildings;
   if (seasonStart && hasFences) {
     const decay = FENCE_DECAY * decayFactor(state.weather.condition);
-    buildings = buildings.map((b) =>
-      b.type === "fence" ? { ...b, condition: Math.max(0, b.condition - decay) } : b,
-    );
+    let conditionSum = 0;
+    let fenceCount = 0;
+    buildings = buildings.map((b) => {
+      if (b.type !== "fence") return b;
+      const condition = Math.max(0, b.condition - decay);
+      // A fence crossing the breach threshold this season opens a gap.
+      if (b.condition > FENCE_BREACH && condition <= FENCE_BREACH) {
+        causes.push({ kind: "fence_breach", tileIndex: b.tileIndex });
+      }
+      conditionSum += condition;
+      fenceCount++;
+      return { ...b, condition };
+    });
+    if (fenceCount > 0) {
+      causes.push({ kind: "fence_decay", averagePct: conditionSum / fenceCount });
+    }
   }
 
   // Escape — only loose (un-penned) animals are at risk, so a maintained pen
@@ -363,6 +382,7 @@ export function penSystem(state: GameState): { state: GameState; notifications: 
           type: "warning",
           message: `A ${ANIMAL_CATALOG[a.type].name.toLowerCase()} wandered off through a gap and was lost!`,
         });
+        causes.push({ kind: "animal_lost_wandered", species: a.type, name: a.name });
       }
     }
     animals = survivors;
@@ -378,5 +398,5 @@ export function penSystem(state: GameState): { state: GameState; notifications: 
     }
   }
 
-  return { state: { ...state, buildings, animals, rng }, notifications };
+  return { state: { ...state, buildings, animals, rng }, notifications, causes };
 }

@@ -241,10 +241,16 @@ export function financeSystem(state: GameState): {
     }
 
     // Update the market-leader streak from the season's sales, then reset.
+    // Rivals' sales for the *finished* season live in prevSeasonSales —
+    // rivalSystem already rolled seasonSales over to the incoming season
+    // earlier in this same boundary turn. (Fallback covers older saves.)
     if (current.goal.type === "market_leader") {
       const good = current.goal.good;
       const mine = current.seasonSales[good] ?? 0;
-      const topRival = current.rivals.reduce((m, r) => Math.max(m, r.seasonSales[good] ?? 0), 0);
+      const topRival = current.rivals.reduce(
+        (m, r) => Math.max(m, (r.prevSeasonSales ?? r.seasonSales)[good] ?? 0),
+        0,
+      );
       const leading = mine > 0 && mine >= topRival;
       current = { ...current, marketLeadStreak: leading ? current.marketLeadStreak + 1 : 0 };
     }

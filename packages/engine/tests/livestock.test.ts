@@ -104,6 +104,19 @@ describe("identity (name + lifetime)", () => {
     expect(after.animals[0].lifetime.products).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
   });
 
+  it("warns when production spoils because storage is full", () => {
+    const base = withPenned("chicken", 1);
+    const s = {
+      ...base,
+      animals: base.animals.map((a) => ({ ...a, maturity: 1 })),
+      // Non-feed goods jam the silo; just enough wheat to keep the hen fed.
+      inventory: { tomato: base.inventoryCapacity, wheat: 100 },
+      monthOfSeason: MONTHS_PER_SEASON,
+    };
+    const r = nextTurn(s);
+    expect(r.notifications.some((n) => /spoiled.*storage is full/i.test(n.message))).toBe(true);
+  });
+
   it("RENAME_ANIMAL updates the name (trimmed, non-empty required)", () => {
     const s = applyCommand(
       createGameState({ startingMoney: 5000, goalNetWorth: 1e12 }),

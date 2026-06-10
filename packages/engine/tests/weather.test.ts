@@ -21,6 +21,47 @@ describe("weather system", () => {
     }
   });
 
+  it("the forecast is predictive: forecast[0] becomes next turn's weather", () => {
+    // Across many turns and seeds, the head of the forecast queue must match
+    // the condition that actually arrives, and the temperature must land in
+    // the forecast range. This is the regression test for the old behavior
+    // where the forecast was redrawn every turn with no link to reality.
+    for (const seed of [1, 42, 777]) {
+      let state = createGameState({ seed });
+      for (let i = 0; i < 24; i++) {
+        const predicted = state.weather.forecast[0];
+        state = nextTurn(state).state;
+        expect(state.weather.condition).toBe(predicted.condition);
+        expect(state.weather.temperature).toBeGreaterThanOrEqual(predicted.tempLow);
+        expect(state.weather.temperature).toBeLessThanOrEqual(predicted.tempHigh);
+      }
+    }
+  });
+
+  it("forecast entries use the upcoming month's season profile", () => {
+    // Run to late fall (year 1, fall month 3): the 2-ahead forecast entry
+    // covers winter month 2. Winter frost odds are 0.4 vs fall's 0.1, so over
+    // many seeds the tail entries drawn at fall/winter boundaries must show
+    // frost at roughly winter rates — impossible under the old code, which
+    // always used the current season's profile.
+    let frosty = 0;
+    let total = 0;
+    for (let seed = 0; seed < 60; seed++) {
+      let state = createGameState({ seed });
+      // Advance to fall month 3 (8 turns from spring month 1: each turn
+      // advances the month first, so turn 8 lands on fall m3).
+      for (let i = 0; i < 8; i++) state = nextTurn(state).state;
+      expect(state.season).toBe("fall");
+      expect(state.monthOfSeason).toBe(3);
+      // forecast[1] covers winter month 2.
+      total++;
+      if (state.weather.forecast[1].condition === "frost") frosty++;
+    }
+    // Winter profile: 40% frost. Fall profile: 10%. With 60 samples, observing
+    // a frost share over 20% cleanly separates the two.
+    expect(frosty / total).toBeGreaterThan(0.2);
+  });
+
   it("spring temperatures are in reasonable range", () => {
     let state = createGameState({ seed: 42 });
     expect(state.season).toBe("spring");

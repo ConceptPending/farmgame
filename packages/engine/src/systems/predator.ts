@@ -1,5 +1,6 @@
 import type { GameState, Notification } from "../state.js";
 import type { WeatherCondition } from "../entities/weather.js";
+import type { Cause } from "../entities/cause.js";
 import { ANIMAL_CATALOG } from "../entities/animal.js";
 import { pennedTiles } from "./pen.js";
 import { nextBool } from "../rng.js";
@@ -29,14 +30,15 @@ const BARN_SHIELD_FACTOR = 0.5;
 export function predatorSystem(state: GameState): {
   state: GameState;
   notifications: Notification[];
+  causes: Cause[];
 } {
   if (state.animals.length === 0 || state.monthOfSeason !== 1) {
-    return { state, notifications: [] };
+    return { state, notifications: [], causes: [] };
   }
   const penned = pennedTiles(state);
   const loose = state.animals.filter((a) => !penned.has(a.tileIndex));
   if (loose.length === 0) {
-    return { state, notifications: [] };
+    return { state, notifications: [], causes: [] };
   }
 
   const W = state.world.width;
@@ -47,6 +49,7 @@ export function predatorSystem(state: GameState): {
   const weatherMult = WEATHER_MULT[state.weather.condition] ?? 1.0;
   let rng = state.rng;
   const notifications: Notification[] = [];
+  const causes: Cause[] = [];
   const lostIds = new Set<number>();
 
   for (const a of loose) {
@@ -62,12 +65,14 @@ export function predatorSystem(state: GameState): {
         type: "warning",
         message: `A predator took ${a.name} the ${ANIMAL_CATALOG[a.type].name.toLowerCase()}.`,
       });
+      causes.push({ kind: "animal_lost_predator", species: a.type, name: a.name });
     }
   }
 
-  if (lostIds.size === 0) return { state: { ...state, rng }, notifications };
+  if (lostIds.size === 0) return { state: { ...state, rng }, notifications, causes };
   return {
     state: { ...state, rng, animals: state.animals.filter((a) => !lostIds.has(a.id)) },
     notifications,
+    causes,
   };
 }

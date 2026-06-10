@@ -367,6 +367,22 @@ describe("BUILD / DEMOLISH", () => {
     expect(result.error).toContain("Not enough money");
   });
 
+  it("rejects demolishing a silo while inventory exceeds the reduced capacity", () => {
+    const state = stateWithSeed();
+    const tileIdx = findOwnedDirtTile(state);
+    const s1 = applyCommand(state, { type: "BUILD", buildingType: "silo", tileIndex: tileIdx }).state;
+    const siloId = s1.buildings[0].id;
+    // Fill storage past what base capacity could hold.
+    const over = { ...s1, inventory: { wheat: s1.inventoryCapacity - 10 } };
+    const blocked = applyCommand(over, { type: "DEMOLISH", buildingId: siloId });
+    expect(blocked.success).toBe(false);
+    expect(blocked.error).toContain("Sell goods first");
+    // With inventory back under base capacity the demolish goes through.
+    const slim = { ...s1, inventory: { wheat: 5 } };
+    const ok = applyCommand(slim, { type: "DEMOLISH", buildingId: siloId });
+    expect(ok.success).toBe(true);
+  });
+
   it("demolishes building", () => {
     const state = stateWithSeed();
     const tileIdx = findOwnedDirtTile(state);

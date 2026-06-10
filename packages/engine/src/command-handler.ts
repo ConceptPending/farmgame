@@ -173,7 +173,12 @@ function handleDesignateField(state: GameState, tileIndices: number[]): CommandR
 function handlePlowField(state: GameState, fieldId: number): CommandResult {
   const field = state.fields.find((f) => f.id === fieldId);
   if (!field) return fail(state, "Field not found");
-  if (field.state !== "fallow") return fail(state, "Field must be fallow to plow");
+  // Dead fields are plowable too — clearing the failed crop under the plow.
+  // (They were previously a trap: nothing transitioned dead → anything except
+  // the 3-command remove/designate/plow round trip.)
+  if (field.state !== "fallow" && field.state !== "dead") {
+    return fail(state, "Field must be fallow (or dead) to plow");
+  }
 
   // Mechanization limits how much land can be under cultivation at once.
   const capacity = workableTiles(state.equipment);
@@ -185,15 +190,33 @@ function handlePlowField(state: GameState, fieldId: number): CommandResult {
     );
   }
 
+  const clearingDead = field.state === "dead";
   return {
     state: {
       ...state,
       fields: state.fields.map((f) =>
-        f.id === fieldId ? { ...f, state: "plowed" as const } : f,
+        f.id === fieldId
+          ? {
+              ...f,
+              state: "plowed" as const,
+              // Plowing under a dead crop resets it to a fresh seedbed.
+              cropId: null,
+              growth: 0,
+              growthMonths: 0,
+              health: clearingDead ? 1.0 : f.health,
+            }
+          : f,
       ),
     },
     success: true,
-    notifications: [{ type: "info", message: `Plowed field #${fieldId}` }],
+    notifications: [
+      {
+        type: "info",
+        message: clearingDead
+          ? `Plowed the dead crop under in field #${fieldId}`
+          : `Plowed field #${fieldId}`,
+      },
+    ],
   };
 }
 
@@ -443,6 +466,15 @@ function handleDemolish(state: GameState, buildingId: number): CommandResult {
   let newCapacity = state.inventoryCapacity;
   if (building.type === "silo") {
     newCapacity = Math.max(BASE_INVENTORY_CAPACITY, newCapacity - SILO_CAPACITY_BONUS);
+    // Don't strand goods above capacity — over-full storage silently blocks
+    // harvests with no path back except selling, so make the player sell first.
+    const stored = totalInventory(state);
+    if (stored > newCapacity) {
+      return fail(
+        state,
+        `Storage holds ${stored} goods but would only fit ${newCapacity} without this silo. Sell goods first.`,
+      );
+    }
   }
 
   return {

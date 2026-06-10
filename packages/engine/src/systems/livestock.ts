@@ -63,11 +63,21 @@ export function livestockSystem(state: GameState): {
     const pasture = pastureGrazingOffset(state);
     const amenities = animalAmenities(state);
     const comfort = animalComfort(state);
+    let troughSaved = 0;
+    let pastureSaved = 0;
     const needed = animals.reduce((sum, a) => {
       const base = ANIMAL_CATALOG[a.type].feedPerSeason;
       const afterTrough = amenities.get(a.id)?.feed ? base * FEED_TROUGH_FACTOR : base;
+      troughSaved += base - afterTrough;
+      pastureSaved += Math.min(afterTrough, pasture.get(a.id) ?? 0);
       return sum + Math.max(0, afterTrough - (pasture.get(a.id) ?? 0));
     }, 0);
+    if (Math.round(pastureSaved) > 0) {
+      causes.push({ kind: "pasture_grazing_saved_feed", saved: Math.round(pastureSaved) });
+    }
+    if (Math.round(troughSaved) > 0) {
+      causes.push({ kind: "feed_trough_saved_feed", saved: Math.round(troughSaved) });
+    }
     const available = FEED_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
     const consumed = Math.min(needed, available);
 
@@ -122,6 +132,24 @@ export function livestockSystem(state: GameState): {
         type: "warning",
         message: `${crampedCount} animal${crampedCount > 1 ? "s are" : " is"} stressed in a cramped pen — give them more space.`,
       });
+    }
+
+    // Comfort status: record crowded/cramped herds per species so the season
+    // summary can attribute the health/breeding drag. Comfortable/cozy tiers
+    // stay quiet — no nagging players whose pens are fine.
+    {
+      const byTier = new Map<string, { species: Animal["type"]; tier: "crowded" | "cramped"; count: number }>();
+      for (const a of animals) {
+        const tier = comfort.get(a.id)?.tier;
+        if (tier !== "crowded" && tier !== "cramped") continue;
+        const key = `${a.type}:${tier}`;
+        const entry = byTier.get(key) ?? { species: a.type, tier, count: 0 };
+        entry.count++;
+        byTier.set(key, entry);
+      }
+      for (const e of byTier.values()) {
+        causes.push({ kind: "comfort_change", species: e.species, tier: e.tier, count: e.count });
+      }
     }
 
     if (fedRatio < 1 && animals.length > 0) {
@@ -183,16 +211,27 @@ export function livestockSystem(state: GameState): {
         const used = Object.values(inventory).reduce((s, n) => s + n, 0);
         let free = state.inventoryCapacity - used;
         const parts: string[] = [];
+        let stored = 0;
         for (const [pid, amt] of Object.entries(produced)) {
           const add = Math.max(0, Math.min(amt, free));
           if (add > 0) {
             inventory[pid] = (inventory[pid] ?? 0) + add;
             free -= add;
+            stored += add;
             parts.push(`${add} ${PRODUCT_CATALOG[pid as keyof typeof PRODUCT_CATALOG].name.toLowerCase()}`);
           }
         }
         if (parts.length > 0) {
           notifications.push({ type: "success", message: `Your animals produced ${parts.join(", ")}.` });
+        }
+        // Overflow used to vanish without a trace — players with full silos
+        // lost milk/eggs/wool invisibly. Say so.
+        const wasted = totalProduced - stored;
+        if (wasted > 0) {
+          notifications.push({
+            type: "warning",
+            message: `${wasted} unit${wasted === 1 ? "" : "s"} of animal produce spoiled — storage is full. Sell goods or build a silo.`,
+          });
         }
       }
     }

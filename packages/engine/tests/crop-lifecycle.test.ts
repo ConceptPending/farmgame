@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createGameState, nextTurn, getCropDef, CROP_CATALOG } from "../src/index.js";
 import { applyCommand } from "../src/command-handler.js";
+import { cropSystem } from "../src/systems/crop.js";
 import type { CropId, GameState } from "../src/index.js";
 
 function stateWithSeed(seed = 1) {
@@ -60,6 +61,45 @@ describe("crop lifecycle", () => {
       // during the wait can charge seasonal expenses that exceed the harvest).
       expect(sellResult.state.money).toBeGreaterThan(harvestResult.state.money);
     }
+  });
+
+  it("non-lethal frost damages health but still advances growth", () => {
+    // Regression: the frost-damage branch used to return early, silently
+    // costing the crop an entire growth month with no growthMonths tick.
+    const base = stateWithSeed();
+    const { state: planted, fieldId } = setupFieldAndPlant(base, "corn"); // frostTolerance 0.1
+    const frosty: GameState = {
+      ...planted,
+      weather: { ...planted.weather, condition: "frost", temperature: 28 },
+    };
+    const before = frosty.fields.find((f) => f.id === fieldId)!;
+    const result = cropSystem(frosty);
+    const after = result.state.fields.find((f) => f.id === fieldId)!;
+
+    expect(after.state).toBe("growing"); // damaged, not dead
+    expect(after.health).toBeLessThan(before.health); // frost hurt it
+    expect(after.growthMonths).toBe(before.growthMonths + 1); // the month still counts
+    expect(after.growth).toBeGreaterThan(before.growth); // and growth advanced
+    expect(result.causes.some((c) => c.kind === "frost_damage")).toBe(true);
+  });
+
+  it("a dead field can be plowed back into service directly", () => {
+    const base = stateWithSeed();
+    const { state: planted, fieldId } = setupFieldAndPlant(base, "corn");
+    const dead: GameState = {
+      ...planted,
+      fields: planted.fields.map((f) =>
+        f.id === fieldId ? { ...f, state: "dead" as const, health: 0 } : f,
+      ),
+    };
+    const r = applyCommand(dead, { type: "PLOW_FIELD", fieldId });
+    expect(r.success).toBe(true);
+    const field = r.state.fields.find((f) => f.id === fieldId)!;
+    expect(field.state).toBe("plowed");
+    expect(field.cropId).toBeNull();
+    expect(field.growth).toBe(0);
+    expect(field.growthMonths).toBe(0);
+    expect(field.health).toBe(1);
   });
 
   it("all 12 crops are profitable (baseYield * basePrice > seedCost)", () => {
