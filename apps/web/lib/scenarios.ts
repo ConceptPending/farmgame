@@ -26,10 +26,10 @@ const RIVAL_FOCUS = [["wheat", "corn"], ["tomato", "peppers"], ["soybeans", "pot
 
 function makeRivals(count: number, aggressiveness: number): RivalConfig[] {
   return Array.from({ length: count }, (_, i) => ({
-    name: RIVAL_NAMES[i % RIVAL_NAMES.length],
+    name: RIVAL_NAMES[i % RIVAL_NAMES.length]!,
     aggressiveness,
     startingPlots: 2,
-    focusGoods: RIVAL_FOCUS[i % RIVAL_FOCUS.length],
+    focusGoods: RIVAL_FOCUS[i % RIVAL_FOCUS.length]!,
   }));
 }
 

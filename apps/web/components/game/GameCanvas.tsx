@@ -96,7 +96,7 @@ export function GameCanvas() {
           // Right-click to inspect: select tile + field
           useUIStore.getState().setSelectedTileIndex(event.tileIndex);
           const tile = currentState.world.tiles[event.tileIndex];
-          if (tile?.fieldId !== null) {
+          if (tile && tile.fieldId !== null) {
             useUIStore.getState().setSelectedFieldId(tile.fieldId);
           } else {
             useUIStore.getState().setSelectedFieldId(null);
@@ -240,7 +240,9 @@ export function GameCanvas() {
     const parent = canvasRef.current?.parentElement;
     if (!parent) return;
     const ro = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
       if (width > 0 && height > 0) rendererRef.current?.resize(width, height);
     });
     ro.observe(parent);

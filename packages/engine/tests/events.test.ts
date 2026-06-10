@@ -7,13 +7,13 @@ const EVENT_RE = /Locust|Hailstorm|Blight|bumper|subsidy|inheritance|breakdown/i
 function plantAField(state: GameState): GameState {
   const indices: number[] = [];
   for (let i = 0; i < state.world.tiles.length && indices.length < 4; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
       indices.push(i);
     }
   }
   let s = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices }).state;
-  const fieldId = s.fields[0].id;
+  const fieldId = s.fields[0]!.id;
   s = applyCommand(s, { type: "PLOW_FIELD", fieldId }).state;
   s = applyCommand(s, { type: "PLANT_FIELD", fieldId, cropId: "wheat" }).state;
   return s;

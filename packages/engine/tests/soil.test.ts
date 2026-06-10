@@ -5,7 +5,7 @@ import type { GameState, SoilNutrients } from "../src/index.js";
 function dirtTiles(state: GameState, n: number): number[] {
   const out: number[] = [];
   for (let i = 0; i < state.world.tiles.length && out.length < n; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) out.push(i);
   }
   return out;
@@ -20,7 +20,7 @@ function plowedField(nutrients: SoilNutrients) {
     world: { ...s.world, tiles: s.world.tiles.map((t, i) => (idx.includes(i) ? { ...t, nutrients: { ...nutrients } } : t)) },
   };
   s = applyCommand(s, { type: "DESIGNATE_FIELD", tileIndices: idx }).state;
-  const fieldId = s.fields[0].id;
+  const fieldId = s.fields[0]!.id;
   s = applyCommand(s, { type: "PLOW_FIELD", fieldId }).state;
   return { s, fieldId, idx };
 }
@@ -41,13 +41,13 @@ describe("nutrient depletion & fixation", () => {
   it("harvesting a crop draws down the nutrients it consumes", () => {
     const { s, fieldId, idx } = plowedField({ n: 0.9, p: 0.9, k: 0.9 });
     const after = harvestYield(s, fieldId, "corn").s; // corn consumes n: 0.1
-    expect(after.world.tiles[idx[0]].nutrients.n).toBeCloseTo(0.8, 5);
+    expect(after.world.tiles[idx[0]!]!.nutrients.n).toBeCloseTo(0.8, 5);
   });
 
   it("harvesting a legume FIXES nitrogen", () => {
     const { s, fieldId, idx } = plowedField({ n: 0.3, p: 0.9, k: 0.9 });
     const after = harvestYield(s, fieldId, "soybeans").s; // soybeans consume n: -0.1
-    expect(after.world.tiles[idx[0]].nutrients.n).toBeCloseTo(0.4, 5);
+    expect(after.world.tiles[idx[0]!]!.nutrients.n).toBeCloseTo(0.4, 5);
   });
 });
 
@@ -86,18 +86,18 @@ describe("crop rotation", () => {
 describe("recovery & fertilizer", () => {
   it("rested soil recovers toward its quality baseline", () => {
     let s = createGameState({ seed: 1, goal: { type: "sandbox" } });
-    const i = dirtTiles(s, 1)[0];
+    const i = dirtTiles(s, 1)[0]!;
     s = {
       ...s,
       world: { ...s.world, tiles: s.world.tiles.map((t, j) => (j === i ? { ...t, soilQuality: 0.7, nutrients: { n: 0.2, p: 0.2, k: 0.2 } } : t)) },
     };
     for (let k = 0; k < 30; k++) s = nextTurn(s).state;
-    expect(s.world.tiles[i].nutrients.n).toBeGreaterThan(0.22);
+    expect(s.world.tiles[i]!.nutrients.n).toBeGreaterThan(0.22);
   });
 
   it("fertilizer replenishes N-P-K", () => {
     const { s, fieldId, idx } = plowedField({ n: 0.3, p: 0.3, k: 0.3 });
     const after = applyCommand(s, { type: "SPRAY", fieldId, sprayType: "fertilizer" }).state;
-    expect(after.world.tiles[idx[0]].nutrients.n).toBeCloseTo(0.5, 5);
+    expect(after.world.tiles[idx[0]!]!.nutrients.n).toBeCloseTo(0.5, 5);
   });
 });

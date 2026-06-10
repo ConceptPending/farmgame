@@ -128,6 +128,7 @@ export class GridOverlay {
     const { world } = state;
     for (let i = 0; i < world.tiles.length; i++) {
       const tile = world.tiles[i];
+      if (!tile) continue;
       const x = (i % world.width) * TILE_SIZE;
       const y = Math.floor(i / world.width) * TILE_SIZE;
 

@@ -66,7 +66,7 @@ export function plotValue(world: WorldState, plotX: number, plotY: number): numb
   let soilSum = 0;
   for (let dy = 0; dy < world.plotSize; dy++) {
     for (let dx = 0; dx < world.plotSize; dx++) {
-      soilSum += world.tiles[(startY + dy) * world.width + (startX + dx)].soilQuality;
+      soilSum += world.tiles[(startY + dy) * world.width + (startX + dx)]!.soilQuality;
     }
   }
   const avgSoil = soilSum / (world.plotSize * world.plotSize);

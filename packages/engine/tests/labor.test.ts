@@ -36,7 +36,7 @@ describe("labor budget", () => {
       laborCost({ type: "DESIGNATE_FIELD", tileIndices: tiles }, s),
     );
     s = result.state;
-    const plowCmd = { type: "PLOW_FIELD" as const, fieldId: s.fields[0].id };
+    const plowCmd = { type: "PLOW_FIELD" as const, fieldId: s.fields[0]!.id };
     const plowed = applyCommand(s, plowCmd);
     expect(plowed.success).toBe(true);
     expect(plowed.state.labor.used).toBe(s.labor.used + laborCost(plowCmd, s));

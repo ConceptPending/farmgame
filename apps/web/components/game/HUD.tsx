@@ -64,7 +64,7 @@ export function HUD() {
   // notification restarts the timer, so a quiet stretch clears the stack —
   // previously the last 3 messages sat on screen forever.
   const TOAST_TTL_MS = 6000;
-  const latestNotificationId = notifications.length > 0 ? notifications[notifications.length - 1].id : 0;
+  const latestNotificationId = notifications[notifications.length - 1]?.id ?? 0;
   const [toastCutoffId, setToastCutoffId] = useState(0);
   useEffect(() => {
     if (latestNotificationId === 0) return;

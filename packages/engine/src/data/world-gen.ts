@@ -75,7 +75,7 @@ function markPlotOwned(tiles: Tile[], plotX: number, plotY: number): void {
   for (let dy = 0; dy < PLOT_SIZE; dy++) {
     for (let dx = 0; dx < PLOT_SIZE; dx++) {
       const idx = tileIndex(startX + dx, startY + dy, WORLD_SIZE);
-      const tile = tiles[idx];
+      const tile = tiles[idx]!;
       tile.owned = true;
       // Convert grass to dirt for owned farmland (but keep water/rock)
       if (tile.terrain === "grass" || tile.terrain === "forest") {
@@ -107,9 +107,9 @@ function generateRiver(tiles: Tile[], rng: RngState): { rng: RngState } {
       const x = riverX + dx;
       if (x >= 0 && x < WORLD_SIZE) {
         const idx = tileIndex(x, y, WORLD_SIZE);
-        tiles[idx].terrain = "water";
-        tiles[idx].moisture = 1.0;
-        tiles[idx].soilQuality = 0;
+        tiles[idx]!.terrain = "water";
+        tiles[idx]!.moisture = 1.0;
+        tiles[idx]!.soilQuality = 0;
       }
     }
   }
@@ -144,15 +144,15 @@ function generateForests(tiles: Tile[], rng: RngState): { rng: RngState } {
         if (dx * dx + dy * dy > radius * radius) continue;
 
         const idx = tileIndex(x, y, WORLD_SIZE);
-        if (tiles[idx].terrain === "water") continue;
+        if (tiles[idx]!.terrain === "water") continue;
 
         // Random chance to place tree (sparser at edges)
         const treeResult = nextFloat(r);
         r = treeResult.rng;
         const dist = Math.sqrt(dx * dx + dy * dy) / radius;
         if (treeResult.value < 0.7 - dist * 0.4) {
-          tiles[idx].terrain = "forest";
-          tiles[idx].soilQuality = 0.3 + treeResult.value * 0.3;
+          tiles[idx]!.terrain = "forest";
+          tiles[idx]!.soilQuality = 0.3 + treeResult.value * 0.3;
         }
       }
     }
@@ -177,9 +177,9 @@ function generateRocks(tiles: Tile[], rng: RngState): { rng: RngState } {
     const y = yResult.value;
     const idx = tileIndex(x, y, WORLD_SIZE);
 
-    if (tiles[idx].terrain === "water") continue;
-    tiles[idx].terrain = "rock";
-    tiles[idx].soilQuality = 0;
+    if (tiles[idx]!.terrain === "water") continue;
+    tiles[idx]!.terrain = "rock";
+    tiles[idx]!.soilQuality = 0;
 
     // Sometimes place a small cluster (2-3 rocks)
     const clusterResult = nextFloat(r);
@@ -190,12 +190,12 @@ function generateRocks(tiles: Tile[], rng: RngState): { rng: RngState } {
         const ny = y + dy;
         if (nx >= WORLD_SIZE || ny >= WORLD_SIZE) continue;
         const nIdx = tileIndex(nx, ny, WORLD_SIZE);
-        if (tiles[nIdx].terrain === "water") continue;
+        if (tiles[nIdx]!.terrain === "water") continue;
         const placeResult = nextFloat(r);
         r = placeResult.rng;
         if (placeResult.value < 0.4) {
-          tiles[nIdx].terrain = "rock";
-          tiles[nIdx].soilQuality = 0;
+          tiles[nIdx]!.terrain = "rock";
+          tiles[nIdx]!.soilQuality = 0;
         }
       }
     }
@@ -211,7 +211,7 @@ function setSoilQuality(tiles: Tile[], rng: RngState): { rng: RngState } {
   const waterPositions: { x: number; y: number }[] = [];
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
-      if (tiles[tileIndex(x, y, WORLD_SIZE)].terrain === "water") {
+      if (tiles[tileIndex(x, y, WORLD_SIZE)]!.terrain === "water") {
         waterPositions.push({ x, y });
       }
     }
@@ -220,7 +220,7 @@ function setSoilQuality(tiles: Tile[], rng: RngState): { rng: RngState } {
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
       const idx = tileIndex(x, y, WORLD_SIZE);
-      const tile = tiles[idx];
+      const tile = tiles[idx]!;
       if (tile.terrain === "water" || tile.terrain === "rock") continue;
 
       // Base quality from river proximity
@@ -247,7 +247,7 @@ function setInitialMoisture(tiles: Tile[]): void {
   for (let y = 0; y < WORLD_SIZE; y++) {
     for (let x = 0; x < WORLD_SIZE; x++) {
       const idx = tileIndex(x, y, WORLD_SIZE);
-      const tile = tiles[idx];
+      const tile = tiles[idx]!;
       if (tile.terrain === "water") {
         tile.moisture = 1.0;
         continue;
@@ -260,7 +260,7 @@ function setInitialMoisture(tiles: Tile[]): void {
           const nx = x + dx;
           const ny = y + dy;
           if (nx < 0 || nx >= WORLD_SIZE || ny < 0 || ny >= WORLD_SIZE) continue;
-          if (tiles[tileIndex(nx, ny, WORLD_SIZE)].terrain === "water") {
+          if (tiles[tileIndex(nx, ny, WORLD_SIZE)]!.terrain === "water") {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < minWaterDist) minWaterDist = dist;
           }

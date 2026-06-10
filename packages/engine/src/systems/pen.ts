@@ -51,7 +51,8 @@ function buildingByTile(buildings: Building[]): Map<number, Building> {
 const PASSABLE_BUILDINGS = new Set(["water_trough", "feed_trough"]);
 
 function isWall(state: GameState, idx: number, byTile: Map<number, Building>): boolean {
-  if (state.world.tiles[idx].terrain === "water") return true;
+  const tile = state.world.tiles[idx];
+  if (!tile || tile.terrain === "water") return true;
   const b = byTile.get(idx);
   if (!b) return false;
   if (b.type === "fence") return b.condition > FENCE_BREACH;
@@ -130,7 +131,7 @@ export function findPen(
       [-1, 0],
       [0, 1],
       [0, -1],
-    ]) {
+    ] as const) {
       const nx = x + dx;
       const ny = y + dy;
       const ni = ny * width + nx;
@@ -179,7 +180,7 @@ export function penIndex(
     let hasWaterTrough = false;
     let hasFeedTrough = false;
     for (const t of tiles) {
-      if (state.world.tiles[t].terrain === "grass") grass++;
+      if (state.world.tiles[t]!.terrain === "grass") grass++;
     }
     for (const b of buildings) {
       if (!tiles.has(b.tileIndex)) continue;
@@ -298,7 +299,7 @@ function wanderTarget(
     [-1, 0],
     [0, 1],
     [0, -1],
-  ]) {
+  ] as const) {
     const nx = x + dx;
     const ny = y + dy;
     if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
@@ -308,7 +309,7 @@ function wanderTarget(
   }
   if (cand.length === 0) return { tile: null, rng };
   const r = nextInt(rng, 0, cand.length - 1);
-  return { tile: cand[r.value], rng: r.rng };
+  return { tile: cand[r.value]!, rng: r.rng };
 }
 
 /**
@@ -381,7 +382,7 @@ export function penSystem(state: GameState): {
         survivors.push(a);
         continue;
       }
-      if (state.world.tiles[dest.tile].owned) {
+      if (state.world.tiles[dest.tile]!.owned) {
         survivors.push({ ...a, tileIndex: dest.tile });
       } else {
         lost++;

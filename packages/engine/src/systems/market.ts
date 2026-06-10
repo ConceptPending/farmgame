@@ -67,8 +67,9 @@ export function marketSystem(state: GameState): {
   if (eventResult.value) {
     const cropPickResult = nextFloat(rng);
     rng = cropPickResult.rng;
+    // nextFloat is [0, 1), so the floor is always a valid index.
     const eventCropIdx = Math.floor(cropPickResult.value * ALL_CROP_IDS.length);
-    const eventCropId = ALL_CROP_IDS[eventCropIdx];
+    const eventCropId = ALL_CROP_IDS[eventCropIdx]!;
     const eventDef = CROP_CATALOG[eventCropId];
 
     const typeResult = nextFloat(rng);
@@ -76,7 +77,7 @@ export function marketSystem(state: GameState): {
 
     if (typeResult.value < 0.5) {
       // Demand spike
-      newPrices[eventCropId] = Math.min(eventDef.basePrice * 3, newPrices[eventCropId] * 1.3);
+      newPrices[eventCropId] = Math.min(eventDef.basePrice * 3, newPrices[eventCropId]! * 1.3);
       newDemand[eventCropId] = Math.min(2, (newDemand[eventCropId] ?? 1) * 1.3);
       notifications.push({
         type: "info",
@@ -85,7 +86,7 @@ export function marketSystem(state: GameState): {
       causes.push({ kind: "market_event_spike", good: eventCropId, pct: 0.3 });
     } else {
       // Price crash
-      newPrices[eventCropId] = Math.max(eventDef.basePrice * 0.3, newPrices[eventCropId] * 0.7);
+      newPrices[eventCropId] = Math.max(eventDef.basePrice * 0.3, newPrices[eventCropId]! * 0.7);
       newDemand[eventCropId] = Math.max(0.5, (newDemand[eventCropId] ?? 1) * 0.8);
       notifications.push({
         type: "warning",

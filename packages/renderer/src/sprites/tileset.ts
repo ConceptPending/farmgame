@@ -123,7 +123,9 @@ export async function generateTileset(app: Application): Promise<void> {
   // --- Rows 6-9: per-crop sprites, 4 growth stages each ---
   ALL_CROP_IDS.forEach((id, k) => {
     const v = CROP_VISUALS[id];
+    // CROP_ROWS only has room for 16 crops (4 rows × 4 crops); skip overflow.
     const row = CROP_ROWS[Math.floor(k / 4)];
+    if (row === undefined) return;
     const colBase = (k % 4) * 4;
     for (let stage = 0; stage < 4; stage++) drawCrop(g, colBase + stage, row, stage, v);
   });
@@ -164,6 +166,7 @@ export async function generateTileset(app: Application): Promise<void> {
   // Cut per-crop textures, keyed crop_<id>_<stage>.
   ALL_CROP_IDS.forEach((id, k) => {
     const row = CROP_ROWS[Math.floor(k / 4)];
+    if (row === undefined) return;
     const colBase = (k % 4) * 4;
     for (let stage = 0; stage < 4; stage++) {
       const frame = new Rectangle((colBase + stage) * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);

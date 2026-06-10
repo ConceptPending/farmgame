@@ -17,7 +17,7 @@ describe("net worth", () => {
   it("counts cash plus inventory at market value", () => {
     const s = freshState();
     const base = computeNetWorth(s);
-    const price = s.market.prices.wheat;
+    const price = s.market.prices.wheat!;
     const withStock = { ...s, inventory: { wheat: 10 } };
     expect(computeNetWorth(withStock) - base).toBeGreaterThanOrEqual(10 * price - 1);
   });

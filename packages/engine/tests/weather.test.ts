@@ -29,7 +29,7 @@ describe("weather system", () => {
     for (const seed of [1, 42, 777]) {
       let state = createGameState({ seed });
       for (let i = 0; i < 24; i++) {
-        const predicted = state.weather.forecast[0];
+        const predicted = state.weather.forecast[0]!;
         state = nextTurn(state).state;
         expect(state.weather.condition).toBe(predicted.condition);
         expect(state.weather.temperature).toBeGreaterThanOrEqual(predicted.tempLow);
@@ -55,7 +55,7 @@ describe("weather system", () => {
       expect(state.monthOfSeason).toBe(3);
       // forecast[1] covers winter month 2.
       total++;
-      if (state.weather.forecast[1].condition === "frost") frosty++;
+      if (state.weather.forecast[1]!.condition === "frost") frosty++;
     }
     // Winter profile: 40% frost. Fall profile: 10%. With 60 samples, observing
     // a frost share over 20% cleanly separates the two.

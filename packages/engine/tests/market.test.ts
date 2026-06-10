@@ -42,7 +42,7 @@ describe("market system", () => {
   it("selling depresses price", () => {
     let state = createGameState({ seed: 42, startingMoney: 5000 });
     state = { ...state, inventory: { wheat: 100 } };
-    const priceBefore = state.market.prices["wheat"];
+    const priceBefore = state.market.prices["wheat"]!;
     const result = applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 100 });
     expect(result.state.market.prices["wheat"]).toBeLessThan(priceBefore);
   });
@@ -73,7 +73,7 @@ describe("market system", () => {
     state = { ...state, inventory: { wheat: 100 } };
     // Sell to depress demand
     state = applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 100 }).state;
-    const demandAfterSell = state.market.demand["wheat"];
+    const demandAfterSell = state.market.demand["wheat"]!;
     expect(demandAfterSell).toBeLessThan(1);
 
     // Tick to let demand recover

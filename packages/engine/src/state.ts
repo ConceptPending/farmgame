@@ -103,7 +103,7 @@ export const BASE_LABOR_CAPACITY = 12;
 
 /** Map a 1..3 month-of-season to the phase tag. */
 export function monthPhase(monthOfSeason: number): MonthPhase {
-  return MONTH_PHASES[Math.max(0, Math.min(MONTH_PHASES.length - 1, monthOfSeason - 1))];
+  return MONTH_PHASES[Math.max(0, Math.min(MONTH_PHASES.length - 1, monthOfSeason - 1))]!; // clamped
 }
 
 /** Absolute month 1..12 from a (season, monthOfSeason) pair. */
@@ -164,7 +164,7 @@ export function createGameState(options: CreateGameOptions = {}): GameState {
         if (free.length === 0) break;
         const pick = nextInt(rng, 0, free.length - 1);
         rng = pick.rng;
-        const plot = free[pick.value];
+        const plot = free[pick.value]!; // nextInt is bounded to `free`
         taken.add(plot);
         plots.push(plot);
       }

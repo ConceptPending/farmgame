@@ -98,7 +98,7 @@ export function rivalSystem(state: GameState): {
         const pool = adj.length > 0 ? adj : free;
         const pick = nextInt(rng, 0, pool.length - 1);
         rng = pick.rng;
-        const plot = pool[pick.value];
+        const plot = pool[pick.value]!; // nextInt is bounded to the pool
         taken.add(plot);
         ownedPlots = [...r.ownedPlots, plot];
         notifications.push({ type: "info", message: `${r.name} expanded onto a new plot.` });

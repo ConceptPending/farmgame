@@ -27,7 +27,9 @@ export function InfoPanel() {
   // First risky weather in the next 5 days — surfaced as a one-line warning.
   let upcomingRisk: { glyph: string; color: string; label: string; inDays: number } | null = null;
   for (let i = 0; i < state.weather.forecast.length; i++) {
-    const cond = state.weather.forecast[i].condition;
+    const day = state.weather.forecast[i];
+    if (!day) continue;
+    const cond = day.condition;
     const r = RISKY_WEATHER[cond];
     if (r && (cond !== "rain" || i < 2)) {
       // Rain is mild — only surface it if it's right around the corner.

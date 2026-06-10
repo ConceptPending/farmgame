@@ -57,7 +57,7 @@ export function waterSystem(state: GameState): {
   for (let y = 0; y < world.height; y++) {
     for (let x = 0; x < world.width; x++) {
       const idx = tileIndex(x, y, world.width);
-      const tile = newTiles[idx];
+      const tile = newTiles[idx]!;
 
       // Water tiles always at 1.0
       if (tile.terrain === "water") continue;
@@ -120,7 +120,7 @@ export function waterSystem(state: GameState): {
   const newFields = state.fields.map((field) => {
     let sum = 0;
     for (const idx of field.tileIndices) {
-      sum += newTiles[idx].moisture;
+      sum += newTiles[idx]!.moisture;
     }
     return { ...field, moisture: sum / field.tileIndices.length };
   });

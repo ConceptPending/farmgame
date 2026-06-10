@@ -162,7 +162,7 @@ describe("pasture grazing", () => {
     const ungrazedAfter = nextTurn(ungrazed).state;
     // Pasture should have left at least one extra unit of wheat unused.
     expect(grazedAfter.inventory.wheat ?? 0).toBeGreaterThan(ungrazedAfter.inventory.wheat ?? 0);
-    expect(pastureGrazingOffset(grazed).get(grazed.animals[0].id) ?? 0).toBeGreaterThan(0);
+    expect(pastureGrazingOffset(grazed).get(grazed.animals[0]!.id) ?? 0).toBeGreaterThan(0);
   });
 });
 
@@ -202,7 +202,7 @@ describe("comfort & density", () => {
   it("a single animal in a 1-tile pen is comfortable (density 1.0)", () => {
     const { state, pen } = pennedFarm();
     const s = { ...state, animals: [createAnimal(state.nextAnimalId, "cow", pen)] };
-    const info = animalComfort(s).get(s.animals[0].id);
+    const info = animalComfort(s).get(s.animals[0]!.id);
     expect(info?.tier).toBe("comfortable");
     expect(info?.density).toBeCloseTo(1, 5);
   });
@@ -224,7 +224,7 @@ describe("comfort & density", () => {
       (t) => t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null,
     );
     const s = { ...base, animals: [createAnimal(base.nextAnimalId, "sheep", open)] };
-    expect(animalComfort(s).has(s.animals[0].id)).toBe(false);
+    expect(animalComfort(s).has(s.animals[0]!.id)).toBe(false);
   });
 
   it("cramping kills animals from stress even when fed", () => {
@@ -255,7 +255,7 @@ describe("water trough placement", () => {
     const H = s.world.height;
     let tile = -1;
     for (let i = s.world.tiles.length - 1; i >= 0 && tile < 0; i--) {
-      const t = s.world.tiles[i];
+      const t = s.world.tiles[i]!;
       if (!t.owned || t.terrain === "water" || t.fieldId !== null || t.buildingId !== null) continue;
       const x = i % W;
       const y = (i / W) | 0;
@@ -266,7 +266,7 @@ describe("water trough placement", () => {
           const nx = x + dx;
           const ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-          if (s.world.tiles[ny * W + nx].terrain === "water") {
+          if (s.world.tiles[ny * W + nx]!.terrain === "water") {
             nearWater = true;
             break check;
           }
@@ -330,10 +330,10 @@ describe("barns shelter from predators", () => {
     const base = createGameState({ seed: 7, startingMoney: 1000, goalNetWorth: 1e12 });
     const open: number[] = [];
     for (let i = 0; i < base.world.tiles.length; i++) {
-      const t = base.world.tiles[i];
+      const t = base.world.tiles[i]!;
       if (t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null) open.push(i);
     }
-    const herdTile = open[Math.floor(open.length / 2)];
+    const herdTile = open[Math.floor(open.length / 2)]!;
     const makeHerd = (withBarn: boolean): GameState => {
       const herd = Array.from({ length: 40 }, (_, i) =>
         createAnimal(1000 + i, "sheep", herdTile),
@@ -370,7 +370,7 @@ describe("fence repair", () => {
     let s = createGameState({ startingMoney: 1000, goalNetWorth: 1e12 });
     const tile = openOwned(s);
     s = applyCommand(s, { type: "BUILD", buildingType: "fence", tileIndex: tile }).state;
-    const fenceId = s.world.tiles[tile].buildingId!;
+    const fenceId = s.world.tiles[tile]!.buildingId!;
     s = { ...s, buildings: s.buildings.map((b) => (b.id === fenceId ? { ...b, condition: 0.5 } : b)) };
     const r = applyCommand(s, { type: "BUILD", buildingType: "fence", tileIndex: tile });
     expect(r.success).toBe(true);

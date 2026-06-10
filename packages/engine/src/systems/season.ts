@@ -15,7 +15,7 @@ export function seasonSystem(state: GameState): {
   if (nextMonth > MONTHS_PER_SEASON) {
     const currentIdx = SEASONS.indexOf(state.season);
     const nextIdx = (currentIdx + 1) % SEASONS.length;
-    const nextSeason = SEASONS[nextIdx];
+    const nextSeason = SEASONS[nextIdx]!; // modulo of a non-empty literal array
     const newYear = nextIdx === 0 ? state.year + 1 : state.year;
 
     notifications.push({

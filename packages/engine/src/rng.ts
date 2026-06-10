@@ -52,6 +52,7 @@ export function pickRandom<T>(
   rng: RngState,
   items: readonly T[],
 ): { value: T; rng: RngState } {
+  // Precondition: items is non-empty (nextInt is then bounded to it).
   const { value: idx, rng: next } = nextInt(rng, 0, items.length - 1);
-  return { value: items[idx], rng: next };
+  return { value: items[idx]!, rng: next };
 }

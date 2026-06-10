@@ -11,7 +11,7 @@ function stateWithSeed(seed = 42): GameState {
 
 function findOwnedDirtTile(state: GameState): number {
   for (let i = 0; i < state.world.tiles.length; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
       return i;
     }
@@ -22,7 +22,7 @@ function findOwnedDirtTile(state: GameState): number {
 function findOwnedDirtTiles(state: GameState, count: number): number[] {
   const indices: number[] = [];
   for (let i = 0; i < state.world.tiles.length && indices.length < count; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
       indices.push(i);
     }
@@ -34,7 +34,7 @@ function createTestField(state: GameState, tileCount = 4): { state: GameState; f
   const indices = findOwnedDirtTiles(state, tileCount);
   const result = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices });
   expect(result.success).toBe(true);
-  return { state: result.state, fieldId: result.state.fields[result.state.fields.length - 1].id };
+  return { state: result.state, fieldId: result.state.fields[result.state.fields.length - 1]!.id };
 }
 
 describe("BUY_PLOT", () => {
@@ -84,7 +84,7 @@ describe("BUY_PLOT", () => {
     for (let dy = 0; dy < plotSize; dy++) {
       for (let dx = 0; dx < plotSize; dx++) {
         const idx = (startY + dy) * state.world.width + (startX + dx);
-        expect(result.state.world.tiles[idx].owned).toBe(true);
+        expect(result.state.world.tiles[idx]!.owned).toBe(true);
       }
     }
   });
@@ -105,7 +105,7 @@ describe("DESIGNATE_FIELD", () => {
     const { state: newState, fieldId } = createTestField(state);
     const field = newState.fields.find((f) => f.id === fieldId)!;
     for (const idx of field.tileIndices) {
-      expect(newState.world.tiles[idx].fieldId).toBe(fieldId);
+      expect(newState.world.tiles[idx]!.fieldId).toBe(fieldId);
     }
   });
 
@@ -126,7 +126,7 @@ describe("DESIGNATE_FIELD", () => {
   it("rejects tiles already in a field", () => {
     const state = stateWithSeed();
     const { state: newState } = createTestField(state);
-    const usedIdx = newState.fields[0].tileIndices[0];
+    const usedIdx = newState.fields[0]!.tileIndices[0]!;
     const result = applyCommand(newState, { type: "DESIGNATE_FIELD", tileIndices: [usedIdx] });
     expect(result.success).toBe(false);
     expect(result.error).toContain("already belongs");
@@ -298,12 +298,12 @@ describe("REMOVE_FIELD", () => {
   it("removes a field and clears tile references", () => {
     const state = stateWithSeed();
     const { state: s1, fieldId } = createTestField(state);
-    const tileIndices = s1.fields[0].tileIndices;
+    const tileIndices = s1.fields[0]!.tileIndices;
     const result = applyCommand(s1, { type: "REMOVE_FIELD", fieldId });
     expect(result.success).toBe(true);
     expect(result.state.fields.length).toBe(0);
     for (const idx of tileIndices) {
-      expect(result.state.world.tiles[idx].fieldId).toBeNull();
+      expect(result.state.world.tiles[idx]!.fieldId).toBeNull();
     }
   });
 
@@ -322,7 +322,7 @@ describe("BUILD / DEMOLISH", () => {
     expect(result.success).toBe(true);
     expect(result.state.buildings.length).toBe(1);
     expect(result.state.money).toBe(state.money - BUILDING_CATALOG.silo.cost);
-    expect(result.state.world.tiles[tileIdx].buildingId).toBe(result.state.buildings[0].id);
+    expect(result.state.world.tiles[tileIdx]!.buildingId).toBe(result.state.buildings[0]!.id);
   });
 
   it("silo increases inventory capacity", () => {
@@ -354,7 +354,7 @@ describe("BUILD / DEMOLISH", () => {
   it("rejects building on field tile", () => {
     const state = stateWithSeed();
     const { state: s1 } = createTestField(state);
-    const fieldTileIdx = s1.fields[0].tileIndices[0];
+    const fieldTileIdx = s1.fields[0]!.tileIndices[0]!;
     const result = applyCommand(s1, { type: "BUILD", buildingType: "fence", tileIndex: fieldTileIdx });
     expect(result.success).toBe(false);
     expect(result.error).toContain("field");
@@ -372,7 +372,7 @@ describe("BUILD / DEMOLISH", () => {
     const state = stateWithSeed();
     const tileIdx = findOwnedDirtTile(state);
     const s1 = applyCommand(state, { type: "BUILD", buildingType: "silo", tileIndex: tileIdx }).state;
-    const siloId = s1.buildings[0].id;
+    const siloId = s1.buildings[0]!.id;
     // Fill storage past what base capacity could hold.
     const over = { ...s1, inventory: { wheat: s1.inventoryCapacity - 10 } };
     const blocked = applyCommand(over, { type: "DEMOLISH", buildingId: siloId });
@@ -388,18 +388,18 @@ describe("BUILD / DEMOLISH", () => {
     const state = stateWithSeed();
     const tileIdx = findOwnedDirtTile(state);
     const s1 = applyCommand(state, { type: "BUILD", buildingType: "fence", tileIndex: tileIdx }).state;
-    const buildingId = s1.buildings[0].id;
+    const buildingId = s1.buildings[0]!.id;
     const result = applyCommand(s1, { type: "DEMOLISH", buildingId });
     expect(result.success).toBe(true);
     expect(result.state.buildings.length).toBe(0);
-    expect(result.state.world.tiles[tileIdx].buildingId).toBeNull();
+    expect(result.state.world.tiles[tileIdx]!.buildingId).toBeNull();
   });
 
   it("demolishing silo reduces inventory capacity", () => {
     const state = stateWithSeed();
     const tileIdx = findOwnedDirtTile(state);
     const s1 = applyCommand(state, { type: "BUILD", buildingType: "silo", tileIndex: tileIdx }).state;
-    const result = applyCommand(s1, { type: "DEMOLISH", buildingId: s1.buildings[0].id });
+    const result = applyCommand(s1, { type: "DEMOLISH", buildingId: s1.buildings[0]!.id });
     expect(result.state.inventoryCapacity).toBe(state.inventoryCapacity);
   });
 
@@ -488,7 +488,7 @@ describe("SELL", () => {
 
   it("depresses market price when selling", () => {
     const state = { ...stateWithSeed(), inventory: { wheat: 50 } };
-    const priceBefore = state.market.prices["wheat"];
+    const priceBefore = state.market.prices["wheat"]!;
     const result = applyCommand(state, { type: "SELL", cropId: "wheat", quantity: 50 });
     expect(result.state.market.prices["wheat"]).toBeLessThan(priceBefore);
   });

@@ -226,7 +226,7 @@ describe("crop-death timing (PR M tuning fix)", () => {
       weather: { ...base.weather, condition: "clear", temperature: 60 },
     };
     const r = cropSystem(s);
-    expect(r.state.fields[0].state).toBe("ready");
+    expect(r.state.fields[0]!.state).toBe("ready");
     expect(r.causes.some((c) => c.kind === "ready_to_harvest")).toBe(true);
     expect(r.causes.some((c) => c.kind === "crop_died_health")).toBe(false);
   });

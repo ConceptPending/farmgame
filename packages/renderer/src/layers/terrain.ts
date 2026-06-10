@@ -34,10 +34,12 @@ function brightnessTint(factor: number): number {
   return (v << 16) | (v << 8) | v;
 }
 
-const RIVAL_COLORS = [0xff8c42, 0xff6b6b, 0xb39ddb, 0xffd166];
+const RIVAL_COLORS = [0xff8c42, 0xff6b6b, 0xb39ddb, 0xffd166] as const;
 
 export function rivalColor(rivalId: number): number {
-  return RIVAL_COLORS[(rivalId - 1) % RIVAL_COLORS.length];
+  // rivalId comes from engine state; ids start at 1, but a 0/negative id
+  // would make the modulo negative — fall back to the first color.
+  return RIVAL_COLORS[(rivalId - 1) % RIVAL_COLORS.length] ?? RIVAL_COLORS[0];
 }
 
 /** Map tile index → rival tint color for every rival-claimed plot's tiles. */
@@ -119,14 +121,14 @@ export class TerrainLayer {
       for (let i = 0; i < tileCount; i++) {
         const tile = world.tiles[i];
         const sprite = this.sprites[i];
-        if (!sprite) continue;
+        if (!tile || !sprite) continue;
 
         const tx = i % world.width;
         const ty = Math.floor(i / world.width);
         const hash = tileHash(tx, ty);
 
         const variants = TERRAIN_SPRITE_MAP[tile.terrain] ?? ["grass1"];
-        let texKey: string = variants[hash % variants.length];
+        let texKey: string = variants[hash % variants.length]!;
         // Sparse meadow decoration so grass expanses feel alive (deterministic).
         if (tile.terrain === "grass") {
           const deco = (hash >>> 16) % 100;
@@ -226,7 +228,7 @@ export class TerrainLayer {
     const SAND_DRY = 0xd8c389;
 
     const isWater = (x: number, y: number) =>
-      x >= 0 && y >= 0 && x < W && y < H && world.tiles[y * W + x].terrain === "water";
+      x >= 0 && y >= 0 && x < W && y < H && world.tiles[y * W + x]?.terrain === "water";
     const hash = (c: number) => {
       let h = Math.imul(c | 0, 2654435761) >>> 0;
       h ^= h >>> 13;

@@ -14,7 +14,7 @@ export function pennedFarm(money = 100_000): { state: GameState; pen: number } {
   search: for (let y = 3; y < s.world.height - 3; y++) {
     for (let x = 3; x < W - 3; x++) {
       const i = y * W + x;
-      if ([i, i - 1, i + 1, i - W, i + W].every((k) => t[k].terrain !== "water")) {
+      if ([i, i - 1, i + 1, i - W, i + W].every((k) => t[k]!.terrain !== "water")) {
         pen = i;
         break search;
       }

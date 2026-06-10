@@ -58,7 +58,7 @@ function handleBuyPlot(state: GameState, plotX: number, plotY: number): CommandR
   }
 
   // Check adjacency to an owned plot
-  const neighbors = [
+  const neighbors: [number, number][] = [
     [plotX - 1, plotY],
     [plotX + 1, plotY],
     [plotX, plotY - 1],
@@ -88,8 +88,9 @@ function handleBuyPlot(state: GameState, plotX: number, plotY: number): CommandR
   const newTiles = [...state.world.tiles];
   for (let dy = 0; dy < state.world.plotSize; dy++) {
     for (let dx = 0; dx < state.world.plotSize; dx++) {
+      // In range: plot coords were bounds-checked at the top of the handler.
       const idx = tileIndex(startX + dx, startY + dy, state.world.width);
-      const tile = { ...newTiles[idx], owned: true };
+      const tile = { ...newTiles[idx]!, owned: true };
       if (tile.terrain === "grass" || tile.terrain === "forest") {
         tile.terrain = "dirt";
       }
@@ -120,10 +121,8 @@ function handleDesignateField(state: GameState, tileIndices: number[]): CommandR
 
   // All tiles must be owned, clear terrain (dirt/grass), and not already in a field or building
   for (const idx of tileIndices) {
-    if (idx < 0 || idx >= state.world.tiles.length) {
-      return fail(state, "Tile index out of bounds");
-    }
     const tile = state.world.tiles[idx];
+    if (!tile) return fail(state, "Tile index out of bounds");
     if (!tile.owned) return fail(state, "All tiles must be on owned land");
     if (tile.terrain !== "dirt" && tile.terrain !== "grass") {
       return fail(state, "Cannot designate field on water, rock, or forest");
@@ -135,17 +134,17 @@ function handleDesignateField(state: GameState, tileIndices: number[]): CommandR
   const fieldId = state.nextFieldId;
   const field = createField(fieldId, tileIndices);
 
-  // Calculate average moisture from tiles
+  // Calculate average moisture from tiles (all validated in range above).
   let moistureSum = 0;
   for (const idx of tileIndices) {
-    moistureSum += state.world.tiles[idx].moisture;
+    moistureSum += state.world.tiles[idx]!.moisture;
   }
   field.moisture = moistureSum / tileIndices.length;
 
   // Update tiles to reference the field
   const newTiles = [...state.world.tiles];
   for (const idx of tileIndices) {
-    newTiles[idx] = { ...newTiles[idx], fieldId };
+    newTiles[idx] = { ...newTiles[idx]!, fieldId };
   }
 
   return {
@@ -280,7 +279,7 @@ function handleHarvestField(state: GameState, fieldId: number): CommandResult {
   // Crops draw down (and legumes fix) nutrients in the field's tiles.
   const newTiles = [...state.world.tiles];
   for (const idx of field.tileIndices) {
-    newTiles[idx] = { ...newTiles[idx], nutrients: applyConsumption(newTiles[idx].nutrients, def.consumes) };
+    newTiles[idx] = { ...newTiles[idx]!, nutrients: applyConsumption(newTiles[idx]!.nutrients, def.consumes) };
   }
 
   // Yield-loss breakdown the causal layer attaches to the harvest cause —
@@ -347,7 +346,7 @@ function handleRemoveField(state: GameState, fieldId: number): CommandResult {
 
   const newTiles = [...state.world.tiles];
   for (const idx of field.tileIndices) {
-    newTiles[idx] = { ...newTiles[idx], fieldId: null };
+    newTiles[idx] = { ...newTiles[idx]!, fieldId: null };
   }
 
   return {
@@ -362,11 +361,8 @@ function handleRemoveField(state: GameState, fieldId: number): CommandResult {
 }
 
 function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: number): CommandResult {
-  if (tileIdx < 0 || tileIdx >= state.world.tiles.length) {
-    return fail(state, "Tile index out of bounds");
-  }
-
   const tile = state.world.tiles[tileIdx];
+  if (!tile) return fail(state, "Tile index out of bounds");
   if (!tile.owned) return fail(state, "Must build on owned land");
 
   // Re-applying the fence tool to an existing fence repairs it in place.
@@ -407,7 +403,7 @@ function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: numb
         const ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= state.world.height) continue;
         const ni = ny * w + nx;
-        if (state.world.tiles[ni].terrain === "water" || pumps.has(ni)) {
+        if (state.world.tiles[ni]!.terrain === "water" || pumps.has(ni)) {
           nearWater = true;
           break outer;
         }
@@ -425,7 +421,7 @@ function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: numb
   const building = createBuilding(buildingId, buildingType, tileIdx);
 
   const newTiles = [...state.world.tiles];
-  newTiles[tileIdx] = { ...newTiles[tileIdx], buildingId };
+  newTiles[tileIdx] = { ...newTiles[tileIdx]!, buildingId };
 
   // Silos increase inventory capacity
   let newCapacity = state.inventoryCapacity;
@@ -454,7 +450,7 @@ function handleDemolish(state: GameState, buildingId: number): CommandResult {
   if (!building) return fail(state, "Building not found");
 
   const newTiles = [...state.world.tiles];
-  newTiles[building.tileIndex] = { ...newTiles[building.tileIndex], buildingId: null };
+  newTiles[building.tileIndex] = { ...newTiles[building.tileIndex]!, buildingId: null };
 
   let newCapacity = state.inventoryCapacity;
   if (building.type === "silo") {
@@ -509,7 +505,7 @@ function handleSpray(state: GameState, fieldId: number, sprayType: SprayType): C
       message = `Applied fertilizer to field #${fieldId}`;
       newTiles = [...state.world.tiles];
       for (const idx of field.tileIndices) {
-        newTiles[idx] = { ...newTiles[idx], nutrients: addNutrients(newTiles[idx].nutrients, 0.2) };
+        newTiles[idx] = { ...newTiles[idx]!, nutrients: addNutrients(newTiles[idx]!.nutrients, 0.2) };
       }
       break;
     case "pesticide":
@@ -551,7 +547,7 @@ function handleSpreadManure(state: GameState, fieldId: number): CommandResult {
 
   const newTiles = [...state.world.tiles];
   for (const idx of field.tileIndices) {
-    newTiles[idx] = { ...newTiles[idx], nutrients: addNutrients(newTiles[idx].nutrients, 0.15) };
+    newTiles[idx] = { ...newTiles[idx]!, nutrients: addNutrients(newTiles[idx]!.nutrients, 0.15) };
   }
 
   return {
@@ -621,9 +617,8 @@ function handleSell(state: GameState, goodId: string, quantity: number): Command
 
 /** Open owned ground an animal can stand on (no water, field, or building). */
 function isGrazeable(state: GameState, idx: number): boolean {
-  if (idx < 0 || idx >= state.world.tiles.length) return false;
   const t = state.world.tiles[idx];
-  return t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null;
+  return t !== undefined && t.owned && t.terrain !== "water" && t.fieldId === null && t.buildingId === null;
 }
 
 function handleBuyAnimal(state: GameState, animalType: AnimalType, tileIndex?: number): CommandResult {

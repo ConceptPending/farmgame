@@ -80,6 +80,7 @@ export function ScenarioIntroCard() {
 
   if (!open || !scenarioId) return null;
   const copy = INTROS[scenarioId];
+  if (!copy) return null;
 
   return (
     <div

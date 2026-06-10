@@ -16,7 +16,7 @@ export function fieldHealthSystem(state: GameState): {
   // Pre-compute forest tile set for pest proximity
   const forestSet = new Set<string>();
   for (let i = 0; i < world.tiles.length; i++) {
-    if (world.tiles[i].terrain === "forest") {
+    if (world.tiles[i]!.terrain === "forest") {
       const { x, y } = tileCoords(i, world.width);
       forestSet.add(`${x},${y}`);
     }

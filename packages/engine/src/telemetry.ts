@@ -151,7 +151,7 @@ function medianPrice(prices: Record<string, number>): number {
   const xs = Object.values(prices);
   if (xs.length === 0) return 0;
   const sorted = [...xs].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
+  return sorted[Math.floor(sorted.length / 2)]!; // non-empty checked above
 }
 
 function inventoryMarkToMarket(state: GameState): number {
@@ -295,7 +295,7 @@ export function aggregateRun(input: RunReportInput): RunReport {
     };
   }
 
-  const last = snapshots[snapshots.length - 1];
+  const last = snapshots[snapshots.length - 1]!; // empty case returned above
 
   const pressureTurnTotals = { frost: 0, drought: 0, heat: 0, weeds: 0, pests: 0 };
   const growthLostTotals = { temperature: 0, moisture: 0, health: 0 };

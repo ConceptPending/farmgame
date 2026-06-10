@@ -84,14 +84,15 @@ export class BuildingLayer {
     }
 
     for (let i = spriteIdx; i < this.activeCount; i++) {
-      this.spritePool[i].visible = false;
+      const sprite = this.spritePool[i];
+      if (sprite) sprite.visible = false;
     }
     this.activeCount = spriteIdx;
   }
 
   private getOrCreateSprite(idx: number): Sprite {
     if (idx < this.spritePool.length) {
-      return this.spritePool[idx];
+      return this.spritePool[idx]!;
     }
     const sprite = new Sprite();
     this.container.addChild(sprite);

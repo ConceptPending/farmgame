@@ -105,7 +105,7 @@ const ANIMAL_NAMES: Record<AnimalType, readonly string[]> = {
 /** Pick a name for `type` deterministically from `id`. */
 export function pickAnimalName(type: AnimalType, id: number): string {
   const pool = ANIMAL_NAMES[type];
-  return pool[Math.abs(id) % pool.length];
+  return pool[Math.abs(id) % pool.length]!; // modulo of a non-empty pool
 }
 
 export function createAnimal(id: number, type: AnimalType, tileIndex: number): Animal {

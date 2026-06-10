@@ -12,7 +12,7 @@ import { withPenned } from "./helpers.js";
 function dirtTiles(state: GameState, n: number): number[] {
   const out: number[] = [];
   for (let i = 0; i < state.world.tiles.length && out.length < n; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) out.push(i);
   }
   return out;
@@ -26,7 +26,7 @@ function plowedField(nutrients: SoilNutrients) {
     world: { ...s.world, tiles: s.world.tiles.map((t, i) => (idx.includes(i) ? { ...t, nutrients: { ...nutrients } } : t)) },
   };
   s = applyCommand(s, { type: "DESIGNATE_FIELD", tileIndices: idx }).state;
-  const fieldId = s.fields[0].id;
+  const fieldId = s.fields[0]!.id;
   s = applyCommand(s, { type: "PLOW_FIELD", fieldId }).state;
   return { s, fieldId, idx };
 }
@@ -37,7 +37,7 @@ describe("clover (forage cover crop)", () => {
     let g = applyCommand(s, { type: "PLANT_FIELD", fieldId, cropId: "clover" }).state;
     g = { ...g, fields: g.fields.map((f) => (f.id === fieldId ? { ...f, state: "ready", growth: 1, health: 1, weeds: 0 } : f)) };
     const after = applyCommand(g, { type: "HARVEST_FIELD", fieldId }).state;
-    expect(after.world.tiles[idx[0]].nutrients.n).toBeCloseTo(0.48, 5); // 0.3 + 0.18
+    expect(after.world.tiles[idx[0]!]!.nutrients.n).toBeCloseTo(0.48, 5); // 0.3 + 0.18
   });
 
   it("can be fed to animals like grain", () => {
@@ -62,7 +62,7 @@ describe("manure", () => {
     const stocked = { ...s, manure: 100 };
     const r = applyCommand(stocked, { type: "SPREAD_MANURE", fieldId });
     expect(r.success).toBe(true);
-    expect(r.state.world.tiles[idx[0]].nutrients.n).toBeCloseTo(0.45, 5); // +0.15
+    expect(r.state.world.tiles[idx[0]!]!.nutrients.n).toBeCloseTo(0.45, 5); // +0.15
     expect(r.state.manure).toBe(100 - 2 * 4); // 2 per tile, 4 tiles
 
     const broke = applyCommand({ ...s, manure: 0 }, { type: "SPREAD_MANURE", fieldId });

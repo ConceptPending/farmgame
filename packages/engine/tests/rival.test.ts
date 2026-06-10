@@ -24,7 +24,7 @@ describe("rival setup", () => {
       rivals: [rival({ name: "A", startingPlots: 2 }), rival({ name: "B", startingPlots: 1, focusGoods: ["corn"] })],
     });
     expect(s.rivals).toHaveLength(2);
-    const claimed = [...s.rivals[0].ownedPlots, ...s.rivals[1].ownedPlots];
+    const claimed = [...s.rivals[0]!.ownedPlots, ...s.rivals[1]!.ownedPlots];
     expect(new Set(claimed).size).toBe(claimed.length); // distinct
     const human = s.world.plotOwnership.map((o, i) => (o ? i : -1)).filter((i) => i >= 0);
     expect(claimed.some((p) => human.includes(p))).toBe(false);
@@ -41,7 +41,7 @@ describe("rival setup", () => {
 describe("land contention", () => {
   it("rejects buying a rival-owned plot", () => {
     const s = createGameState({ seed: 5, startingMoney: 100000, rivals: [rival({ startingPlots: 1 })] });
-    const plot = s.rivals[0].ownedPlots[0];
+    const plot = s.rivals[0]!.ownedPlots[0]!;
     const ppr = s.world.width / s.world.plotSize;
     const r = applyCommand(s, { type: "BUY_PLOT", plotX: plot % ppr, plotY: Math.floor(plot / ppr) });
     expect(r.success).toBe(false);
@@ -52,9 +52,9 @@ describe("land contention", () => {
 describe("rival behavior over a season", () => {
   it("grows net worth and depresses its focus good's price", () => {
     let s = createGameState({ seed: 5, goal: { type: "sandbox" }, rivals: [rival({ startingPlots: 3 })] });
-    const nwBefore = s.rivals[0].netWorth;
+    const nwBefore = s.rivals[0]!.netWorth;
     for (let i = 0; i < MONTHS_PER_SEASON + 2; i++) s = nextTurn(s).state;
-    expect(s.rivals[0].netWorth).toBeGreaterThan(nwBefore);
+    expect(s.rivals[0]!.netWorth).toBeGreaterThan(nwBefore);
     // sustained pressure keeps wheat's demand (price) below the no-rival ceiling
     expect(s.market.demand.wheat).toBeLessThan(0.97);
   });
@@ -72,9 +72,9 @@ describe("rival behavior over a season", () => {
     // Advance to the season boundary (spring months 2, 3, then summer month 1).
     for (let i = 0; i < MONTHS_PER_SEASON; i++) s = nextTurn(s).state;
     expect(s.monthOfSeason).toBe(1);
-    expect(s.rivals[0].prevSeasonSales).toEqual({ wheat: 7777 });
+    expect(s.rivals[0]!.prevSeasonSales).toEqual({ wheat: 7777 });
     // And the live seasonSales was regenerated (not the tagged value).
-    expect(s.rivals[0].seasonSales.wheat).not.toBe(7777);
+    expect(s.rivals[0]!.seasonSales.wheat).not.toBe(7777);
   });
 });
 
@@ -113,7 +113,7 @@ describe("standings & determinism", () => {
     const table = standings(s);
     expect(table).toHaveLength(3);
     expect(table.some((t) => t.isHuman)).toBe(true);
-    for (let i = 1; i < table.length; i++) expect(table[i - 1].netWorth).toBeGreaterThanOrEqual(table[i].netWorth);
+    for (let i = 1; i < table.length; i++) expect(table[i - 1]!.netWorth).toBeGreaterThanOrEqual(table[i]!.netWorth);
   });
 
   it("is reproducible for a seed", () => {
@@ -124,7 +124,7 @@ describe("standings & determinism", () => {
       a = nextTurn(a).state;
       b = nextTurn(b).state;
     }
-    expect(a.rivals[0].netWorth).toBe(b.rivals[0].netWorth);
-    expect(a.rivals[0].ownedPlots).toEqual(b.rivals[0].ownedPlots);
+    expect(a.rivals[0]!.netWorth).toBe(b.rivals[0]!.netWorth);
+    expect(a.rivals[0]!.ownedPlots).toEqual(b.rivals[0]!.ownedPlots);
   });
 });

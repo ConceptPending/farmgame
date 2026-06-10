@@ -107,13 +107,13 @@ describe("nextTurn", () => {
     // Create a field and plant
     const indices: number[] = [];
     for (let i = 0; i < state.world.tiles.length && indices.length < 4; i++) {
-      const t = state.world.tiles[i];
+      const t = state.world.tiles[i]!;
       if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
         indices.push(i);
       }
     }
     state = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices }).state;
-    const fieldId = state.fields[0].id;
+    const fieldId = state.fields[0]!.id;
     state = applyCommand(state, { type: "PLOW_FIELD", fieldId }).state;
     state = applyCommand(state, { type: "PLANT_FIELD", fieldId, cropId: "wheat" }).state;
 
@@ -140,13 +140,13 @@ describe("nextTurn", () => {
     // Create a field and plant
     const indices: number[] = [];
     for (let i = 0; i < state.world.tiles.length && indices.length < 4; i++) {
-      const t = state.world.tiles[i];
+      const t = state.world.tiles[i]!;
       if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
         indices.push(i);
       }
     }
     state = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices }).state;
-    const fieldId = state.fields[0].id;
+    const fieldId = state.fields[0]!.id;
     state = applyCommand(state, { type: "PLOW_FIELD", fieldId }).state;
     state = applyCommand(state, { type: "PLANT_FIELD", fieldId, cropId: "wheat" }).state;
 

@@ -68,8 +68,8 @@ export function eventSystem(state: GameState): {
     causes.push({ kind: "event_locust" });
   } else if (roll < 0.35 && activeFieldIdx.length > 0) {
     // Hailstorm — wipes out one random field's crop.
-    const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)];
-    const hit = state.fields[target];
+    const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)]!;
+    const hit = state.fields[target]!;
     fields = state.fields.map((f, i) =>
       i === target ? { ...f, state: "dead", health: 0 } : f,
     );
@@ -90,8 +90,8 @@ export function eventSystem(state: GameState): {
     causes.push({ kind: "event_blight" });
   } else if (roll < 0.65 && activeFieldIdx.length > 0) {
     // Bumper conditions — one growing field thrives.
-    const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)];
-    const hit = state.fields[target];
+    const target = activeFieldIdx[draw(0, activeFieldIdx.length - 1)]!;
+    const hit = state.fields[target]!;
     fields = state.fields.map((f, i) =>
       i === target
         ? { ...f, growth: Math.min(1, f.growth + 0.3), health: Math.min(1, f.health + 0.2) }

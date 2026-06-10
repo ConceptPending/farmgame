@@ -200,13 +200,15 @@ export function groupNotifications(input: Notification[]): Notification[] {
       const m = spec.pattern.exec(n.message);
       if (!m) continue;
       const species = m[spec.speciesIdx];
+      if (species === undefined) continue;
       const key = `${n.type}:${spec.pattern.source}:${species}`;
       let b = buckets.get(key);
       if (!b) {
         b = { firstIndex: i, type: n.type, spec, species, names: [] };
         buckets.set(key, b);
       }
-      if (spec.nameIdx) b.names.push(m[spec.nameIdx]);
+      const name = spec.nameIdx !== undefined ? m[spec.nameIdx] : undefined;
+      if (name !== undefined) b.names.push(name);
       return; // matched & bucketed
     }
     ungrouped.push({ index: i, n });
@@ -216,7 +218,7 @@ export function groupNotifications(input: Notification[]): Notification[] {
   for (const b of buckets.values()) {
     const count = b.names.length || countMatches(input, b.spec, b.species);
     const message = count === 1
-      ? input[b.firstIndex].message // singleton → keep the original phrasing
+      ? input[b.firstIndex]!.message // singleton → keep the original phrasing
       : b.spec.build(b.species, count, b.names);
     collapsed.push({ index: b.firstIndex, n: { type: b.type, message } });
   }
@@ -308,7 +310,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (fx.length > 0) set({ fxEvents: [...get().fxEvents, ...fx] });
       // Audio: at most one cue per command (FX events can fan out per-tile but
       // a single tonal blip per player action is what reads as feedback).
-      if (fx.length > 0) playSound(fx[0].kind === "manure" ? "build" : fx[0].kind);
+      const firstFx = fx[0];
+      if (firstFx) playSound(firstFx.kind === "manure" ? "build" : firstFx.kind);
       else if (command.type === "SELL" && result.state.money > state.money) playSound("money");
       // Causal summary — END_TURN populates it; other commands append to it
       // so a harvest's breakdown is visible without waiting for the next turn.

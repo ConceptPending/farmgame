@@ -85,7 +85,7 @@ function blip(ac: AudioContext, freqs: number[], type: OscillatorType, gain: num
   freqs.forEach((f, i) => {
     const o = ac.createOscillator();
     o.type = type;
-    o.frequency.setValueAtTime(freqs[0], now);
+    o.frequency.setValueAtTime(freqs[0]!, now);
     o.frequency.linearRampToValueAtTime(f, now + ((i + 1) / freqs.length) * (durationMs / 1000));
     o.connect(g);
     o.start(now);

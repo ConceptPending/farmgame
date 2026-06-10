@@ -24,7 +24,7 @@ const RIVALS = (n: number, focusGoods: string[][] = [["wheat","corn"],["tomato",
     name: `R${i + 1}`,
     aggressiveness: RIVAL_AGGR_HARD,
     startingPlots: 2,
-    focusGoods: focusGoods[i % focusGoods.length],
+    focusGoods: focusGoods[i % focusGoods.length]!,
   }));
 
 const RUNS = 25;

@@ -13,9 +13,11 @@ const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 export function avgNutrients(tiles: Tile[], indices: number[]): SoilNutrients {
   const sum = { n: 0, p: 0, k: 0 };
   for (const i of indices) {
-    sum.n += tiles[i].nutrients.n;
-    sum.p += tiles[i].nutrients.p;
-    sum.k += tiles[i].nutrients.k;
+    const tile = tiles[i];
+    if (!tile) continue;
+    sum.n += tile.nutrients.n;
+    sum.p += tile.nutrients.p;
+    sum.k += tile.nutrients.k;
   }
   const len = indices.length || 1;
   return { n: sum.n / len, p: sum.p / len, k: sum.k / len };

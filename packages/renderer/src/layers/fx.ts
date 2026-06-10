@@ -71,7 +71,7 @@ export class FXLayer {
     const g = this.graphics;
     g.clear();
     for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
+      const p = this.particles[i]!;
       p.ttl -= d;
       if (p.ttl <= 0) {
         this.particles.splice(i, 1);

@@ -58,7 +58,7 @@ describe("production", () => {
 describe("selling products", () => {
   it("sells a product for cash near the market price", () => {
     const s = { ...withBarn(), inventory: { eggs: 10 } };
-    const price = s.market.prices.eggs;
+    const price = s.market.prices.eggs!;
     const r = applyCommand(s, { type: "SELL", cropId: "eggs", quantity: 10 });
     expect(r.success).toBe(true);
     const gained = r.state.money - s.money;

@@ -201,7 +201,7 @@ export function SeasonSummaryPanel() {
   // sc.season is the NEW season (engine emits it that way). Walk back to find the previous.
   const SEASON_ORDER = ["spring", "summer", "fall", "winter"];
   const idx = sc && sc.kind === "season_change" ? SEASON_ORDER.indexOf(sc.season) : -1;
-  const prev = idx >= 0 ? SEASON_ORDER[(idx + SEASON_ORDER.length - 1) % SEASON_ORDER.length] : (state?.season ?? "season");
+  const prev = idx >= 0 ? SEASON_ORDER[(idx + SEASON_ORDER.length - 1) % SEASON_ORDER.length]! : (state?.season ?? "season");
   const prevYear = sc && sc.kind === "season_change" && idx === 0 ? sc.year - 1 : (sc && sc.kind === "season_change" ? sc.year : state?.year ?? 1);
   const header = `${prev.charAt(0).toUpperCase() + prev.slice(1)} of Year ${prevYear}`;
 

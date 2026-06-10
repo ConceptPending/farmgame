@@ -11,7 +11,7 @@ function stateWithSeed(seed = 1) {
 function findOwnedDirtTiles(state: GameState, count: number): number[] {
   const indices: number[] = [];
   for (let i = 0; i < state.world.tiles.length && indices.length < count; i++) {
-    const t = state.world.tiles[i];
+    const t = state.world.tiles[i]!;
     if (t.owned && t.terrain === "dirt" && t.fieldId === null && t.buildingId === null) {
       indices.push(i);
     }
@@ -22,7 +22,7 @@ function findOwnedDirtTiles(state: GameState, count: number): number[] {
 function setupFieldAndPlant(state: GameState, cropId: CropId): { state: GameState; fieldId: number } {
   const indices = findOwnedDirtTiles(state, 4);
   let s = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices }).state;
-  const fieldId = s.fields[s.fields.length - 1].id;
+  const fieldId = s.fields[s.fields.length - 1]!.id;
   s = applyCommand(s, { type: "PLOW_FIELD", fieldId }).state;
   s = applyCommand(s, { type: "PLANT_FIELD", fieldId, cropId }).state;
   return { state: s, fieldId };
@@ -142,13 +142,13 @@ describe("crop lifecycle", () => {
     // Create two fields with different crops
     const indices1 = findOwnedDirtTiles(state, 4);
     state = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices1 }).state;
-    const fieldId1 = state.fields[0].id;
+    const fieldId1 = state.fields[0]!.id;
     state = applyCommand(state, { type: "PLOW_FIELD", fieldId: fieldId1 }).state;
     state = applyCommand(state, { type: "PLANT_FIELD", fieldId: fieldId1, cropId: "lettuce" }).state;
 
     const indices2 = findOwnedDirtTiles(state, 4);
     state = applyCommand(state, { type: "DESIGNATE_FIELD", tileIndices: indices2 }).state;
-    const fieldId2 = state.fields[1].id;
+    const fieldId2 = state.fields[1]!.id;
     state = applyCommand(state, { type: "PLOW_FIELD", fieldId: fieldId2 }).state;
     state = applyCommand(state, { type: "PLANT_FIELD", fieldId: fieldId2, cropId: "corn" }).state;
 

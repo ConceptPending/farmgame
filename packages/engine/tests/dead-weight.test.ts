@@ -29,8 +29,8 @@ describe("windmill water source (PR O)", () => {
     const targetX = (center % W) + 7;
     const targetY = Math.floor(center / W);
     const targetIdx = targetY * W + targetX;
-    expect(b.world.tiles[targetIdx].moisture).toBeGreaterThan(
-      a.world.tiles[targetIdx].moisture,
+    expect(b.world.tiles[targetIdx]!.moisture).toBeGreaterThan(
+      a.world.tiles[targetIdx]!.moisture,
     );
   });
 });

@@ -39,7 +39,7 @@ describe("onboarding step derivation", () => {
     s = step(s, { type: "DESIGNATE_FIELD", tileIndices: ownedTiles });
     expect(currentOnboardingStep(s)).toBe("plow");
 
-    const fieldId = s.fields[0].id;
+    const fieldId = s.fields[0]!.id;
     s = step(s, { type: "PLOW_FIELD", fieldId });
     expect(currentOnboardingStep(s)).toBe("plant");
 

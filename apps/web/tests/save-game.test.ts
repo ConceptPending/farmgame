@@ -57,7 +57,7 @@ describe("save-game", () => {
     expect(r.payload.state.year).toBe(state.year);
     // Deep field — the world tile grid round-trips intact.
     expect(r.payload.state.world.tiles.length).toBe(state.world.tiles.length);
-    expect(r.payload.state.world.tiles[0].soilQuality).toBe(state.world.tiles[0].soilQuality);
+    expect(r.payload.state.world.tiles[0]!.soilQuality).toBe(state.world.tiles[0]!.soilQuality);
   });
 
   it("returns a typed not_found result for an empty slot", () => {

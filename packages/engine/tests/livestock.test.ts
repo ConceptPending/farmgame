@@ -19,7 +19,7 @@ describe("buying and selling", () => {
     expect(r.state.animals).toHaveLength(1);
     expect(r.state.money).toBe(5000 - ANIMAL_CATALOG.pig.cost);
     // It lands on a real, grazeable owned tile.
-    const tile = r.state.world.tiles[r.state.animals[0].tileIndex];
+    const tile = r.state.world.tiles[r.state.animals[0]!.tileIndex]!;
     expect(tile.owned).toBe(true);
     expect(tile.terrain).not.toBe("water");
   });
@@ -41,7 +41,7 @@ describe("buying and selling", () => {
       createGameState({ startingMoney: 5000, goalNetWorth: 1e12 }),
       { type: "BUY_ANIMAL", animalType: "chicken" },
     ).state;
-    const animal = bought.animals[0];
+    const animal = bought.animals[0]!;
     const r = applyCommand(bought, { type: "SELL_ANIMAL", animalId: animal.id });
     expect(r.success).toBe(true);
     expect(r.state.animals).toHaveLength(0);
@@ -53,8 +53,8 @@ describe("growth, feed, and breeding", () => {
   it("animals grow toward maturity each tick", () => {
     const s = withPenned("cow", 1);
     const after = nextTurn(s).state;
-    expect(after.animals[0].age).toBe(1);
-    expect(after.animals[0].maturity).toBeGreaterThan(0);
+    expect(after.animals[0]!.age).toBe(1);
+    expect(after.animals[0]!.maturity).toBeGreaterThan(0);
   });
 
   it("consumes grain feed at a season boundary", () => {
@@ -82,15 +82,15 @@ describe("identity (name + lifetime)", () => {
     const s = createGameState({ startingMoney: 5000, goalNetWorth: 1e12 });
     const r1 = applyCommand(s, { type: "BUY_ANIMAL", animalType: "cow" });
     const r2 = applyCommand(s, { type: "BUY_ANIMAL", animalType: "cow" });
-    expect(r1.state.animals[0].name).toBeTruthy();
+    expect(r1.state.animals[0]!.name).toBeTruthy();
     // Same id (nextAnimalId before each buy) → same name.
-    expect(r1.state.animals[0].name).toBe(r2.state.animals[0].name);
+    expect(r1.state.animals[0]!.name).toBe(r2.state.animals[0]!.name);
   });
 
   it("lifetime monthsAlive increments every tick", () => {
     const s = withPenned("cow", 1);
     const after = nextTurn(s).state;
-    expect(after.animals[0].lifetime.monthsAlive).toBe(1);
+    expect(after.animals[0]!.lifetime.monthsAlive).toBe(1);
   });
 
   it("lifetime products accumulate after a producing season", () => {
@@ -102,7 +102,7 @@ describe("identity (name + lifetime)", () => {
       monthOfSeason: MONTHS_PER_SEASON,
     };
     const after = nextTurn(s).state;
-    expect(after.animals[0].lifetime.products).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
+    expect(after.animals[0]!.lifetime.products).toBe(ANIMAL_CATALOG.chicken.yieldPerSeason);
   });
 
   it("warns when production spoils because storage is full", () => {
@@ -123,10 +123,10 @@ describe("identity (name + lifetime)", () => {
       createGameState({ startingMoney: 5000, goalNetWorth: 1e12 }),
       { type: "BUY_ANIMAL", animalType: "pig" },
     ).state;
-    const id = s.animals[0].id;
+    const id = s.animals[0]!.id;
     const r = applyCommand(s, { type: "RENAME_ANIMAL", animalId: id, name: "  Sir Bacon  " });
     expect(r.success).toBe(true);
-    expect(r.state.animals[0].name).toBe("Sir Bacon");
+    expect(r.state.animals[0]!.name).toBe("Sir Bacon");
     expect(applyCommand(r.state, { type: "RENAME_ANIMAL", animalId: id, name: "   " }).success).toBe(false);
   });
 });
@@ -137,7 +137,7 @@ describe("net worth", () => {
     const bought = applyCommand(base, { type: "BUY_ANIMAL", animalType: "cow" }).state;
     // Cash drops by cost, but the animal adds its value back.
     expect(computeNetWorth(base) - computeNetWorth(bought)).toBe(
-      ANIMAL_CATALOG.cow.cost - animalValue(bought.animals[0]),
+      ANIMAL_CATALOG.cow.cost - animalValue(bought.animals[0]!),
     );
   });
 });

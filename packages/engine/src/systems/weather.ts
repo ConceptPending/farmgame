@@ -104,7 +104,8 @@ const MONTHS_PER_SEASON = 3;
 /** The season in effect `monthsAhead` monthly turns from (season, monthOfSeason). */
 export function seasonAt(season: Season, monthOfSeason: number, monthsAhead: number): Season {
   const seasonsAhead = Math.floor((monthOfSeason - 1 + monthsAhead) / MONTHS_PER_SEASON);
-  return SEASON_ORDER[(SEASON_ORDER.indexOf(season) + seasonsAhead) % SEASON_ORDER.length];
+  // Modulo of a non-empty literal array — always in range.
+  return SEASON_ORDER[(SEASON_ORDER.indexOf(season) + seasonsAhead) % SEASON_ORDER.length]!;
 }
 
 function generateForecastMonth(
@@ -163,8 +164,8 @@ export function weatherSystem(state: GameState): {
   const standing = state.weather.forecast;
   let condition: WeatherCondition;
   let temperature: number;
-  if (standing.length >= FORECAST_HORIZON) {
-    const due = standing[0];
+  const due = standing[0];
+  if (due !== undefined && standing.length >= FORECAST_HORIZON) {
     condition = due.condition;
     const tempRoll = nextFloat(rng);
     rng = tempRoll.rng;
