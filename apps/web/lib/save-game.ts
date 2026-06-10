@@ -170,16 +170,21 @@ export function readSave(slotId: string): LoadResult {
   } catch (e) {
     return { ok: false, error: { kind: "corrupt", detail: String(e) } };
   }
-  if (!isSavePayload(parsed)) {
+  if (!isSaveEnvelope(parsed)) {
     return { ok: false, error: { kind: "corrupt", detail: "shape mismatch" } };
   }
+  // Version gate before the state-shape check: an old save's state legitimately
+  // has a different shape and should report as outdated, not corrupt.
   if (parsed.version !== SAVE_VERSION) {
     return {
       ok: false,
       error: { kind: "version_mismatch", saved: parsed.version, current: SAVE_VERSION },
     };
   }
-  return { ok: true, payload: parsed };
+  if (!isLoadableState(parsed.state)) {
+    return { ok: false, error: { kind: "corrupt", detail: "state shape mismatch" } };
+  }
+  return { ok: true, payload: parsed as SavePayload };
 }
 
 /** Delete the save in `slotId`. No-op if it doesn't exist. */
@@ -259,16 +264,56 @@ function toMeta(slotId: string, payload: SavePayload): SaveMeta {
   };
 }
 
-/** Cheap structural type guard — we don't validate every nested field but we do
- *  reject obviously-bad shapes (missing version, no state object). */
-function isSavePayload(v: unknown): v is SavePayload {
-  if (!v || typeof v !== "object") return false;
+/** Outer wrapper check — enough to read `version` safely for the gate. */
+function isSaveEnvelope(
+  v: unknown,
+): v is { version: number; savedAt: string; name: string; state: unknown } {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const o = v as Record<string, unknown>;
   return (
     typeof o.version === "number" &&
     typeof o.savedAt === "string" &&
     typeof o.name === "string" &&
-    !!o.state &&
-    typeof o.state === "object"
+    "state" in o
+  );
+}
+
+const SEASONS = new Set(["spring", "summer", "fall", "winter"]);
+
+/**
+ * Spot-check the load-bearing GameState fields that `toMeta`, the HUD, and the
+ * first engine tick dereference immediately. Not exhaustive — the hard version
+ * gate handles schema drift; this rejects truncated or hand-edited payloads
+ * that would otherwise crash deep inside the renderer or engine.
+ */
+function isLoadableState(v: unknown): v is GameState {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+  const s = v as Record<string, unknown>;
+  const world = s.world as Record<string, unknown> | null | undefined;
+  return (
+    typeof s.money === "number" &&
+    typeof s.tick === "number" &&
+    typeof s.year === "number" &&
+    typeof s.monthOfSeason === "number" &&
+    typeof s.season === "string" &&
+    SEASONS.has(s.season) &&
+    typeof s.status === "string" &&
+    Array.isArray(s.fields) &&
+    Array.isArray(s.animals) &&
+    Array.isArray(s.buildings) &&
+    !!world &&
+    typeof world === "object" &&
+    !Array.isArray(world) &&
+    typeof world.width === "number" &&
+    Array.isArray(world.tiles) &&
+    world.tiles.length > 0 &&
+    !!s.labor &&
+    typeof s.labor === "object" &&
+    !!s.market &&
+    typeof s.market === "object" &&
+    !!s.rng &&
+    typeof s.rng === "object" &&
+    !!s.goal &&
+    typeof s.goal === "object"
   );
 }

@@ -229,6 +229,20 @@ export function GameCanvas() {
     }
   }, [state]);
 
+  // Keep the Pixi backbuffer matched to the container. Observe the parent,
+  // not the canvas: autoDensity pins the canvas style to px sizes after init,
+  // so the canvas element itself stops tracking layout changes.
+  useEffect(() => {
+    const parent = canvasRef.current?.parentElement;
+    if (!parent) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) rendererRef.current?.resize(width, height);
+    });
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
+
   // Publish mouse position over the canvas so overlay tooltips can anchor to it.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -269,6 +283,12 @@ export function GameCanvas() {
     <canvas
       ref={canvasRef}
       style={{
+        // Absolute so the canvas doesn't contribute min-content size to the
+        // flex parent: Pixi's autoDensity pins style.width/height in px after
+        // init, which would otherwise stop the map pane from ever shrinking.
+        position: "absolute",
+        top: 0,
+        left: 0,
         width: "100%",
         height: "100%",
         display: "block",

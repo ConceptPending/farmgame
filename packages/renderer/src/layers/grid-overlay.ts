@@ -37,6 +37,7 @@ export class GridOverlay {
   private lastHoveredTileIndex = -2;
   private hoverPhase = 0;
   private overlayDirty = true;
+  private lastState: GameState | null = null;
   private worldWidth = 48;
   private worldHeight = 48;
 
@@ -74,6 +75,15 @@ export class GridOverlay {
   update(state: GameState): void {
     this.worldWidth = state.world.width;
     this.worldHeight = state.world.height;
+
+    // Engine state is immutable, so a new reference means tile data (moisture,
+    // nutrients, ownership) may have changed — with a data overlay open the
+    // heatmap must repaint or it shows last turn's values. Hover-driven calls
+    // re-pass the same reference and skip this.
+    if (state !== this.lastState) {
+      this.lastState = state;
+      if (this.overlayMode !== "none") this.overlayDirty = true;
+    }
 
     // Only redraw overlay when mode changes or explicitly marked dirty
     if (this.overlayDirty || this.overlayMode !== this.lastOverlayMode) {

@@ -78,9 +78,28 @@ export const SPRITES = {
 } as const;
 
 const textureCache = new Map<string, Texture>();
+/** The sheet RenderTexture every cached Texture is a frame of. Module-level
+ *  because the cache is module-level: one tileset serves the (single) live
+ *  renderer instance; re-generating destroys the previous sheet first. */
+let sheetTexture: RenderTexture | null = null;
+
+/** Destroy every cached texture and the backing sheet. Called from
+ *  GameRenderer.destroy() — without it each mount/unmount cycle leaked a
+ *  256×160 RenderTexture plus ~150 sub-textures of GPU memory. */
+export function destroyTileset(): void {
+  for (const tex of textureCache.values()) tex.destroy(false);
+  textureCache.clear();
+  if (sheetTexture) {
+    sheetTexture.destroy(true);
+    sheetTexture = null;
+  }
+}
 
 /** Generate and cache all tile textures programmatically. */
 export async function generateTileset(app: Application): Promise<void> {
+  // A previous renderer's tileset may still be cached (re-init without a
+  // destroy, or a destroy that raced init) — release it before overwriting.
+  destroyTileset();
   const w = SHEET_COLS * TILE_SIZE;
   const h = SHEET_ROWS * TILE_SIZE;
   const g = new Graphics();
@@ -148,6 +167,7 @@ export async function generateTileset(app: Application): Promise<void> {
   // Render to texture
   const rt = RenderTexture.create({ width: w, height: h });
   app.renderer.render({ container: g, target: rt });
+  sheetTexture = rt;
 
   // Cut individual textures (static sprites)
   for (const [key, pos] of Object.entries(SPRITES)) {

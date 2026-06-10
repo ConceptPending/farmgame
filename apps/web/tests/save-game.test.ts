@@ -94,6 +94,48 @@ describe("save-game", () => {
     if (!r.ok) expect(r.error.kind).toBe("corrupt");
   });
 
+  it("rejects a right-version save whose state is gutted", () => {
+    const envelope = (state: unknown) =>
+      JSON.stringify({ version: SAVE_VERSION, savedAt: new Date().toISOString(), name: "x", state });
+
+    for (const bad of [{}, [], null, { money: 100 }]) {
+      window.localStorage.setItem("farmgame.save.slot1", envelope(bad));
+      const r = readSave("slot1");
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.kind).toBe("corrupt");
+    }
+
+    // Truncated: a real state minus its world — the field toMeta/the renderer
+    // dereference first.
+    const real = createGameState({ seed: 9 });
+    const gutted = { ...real, world: undefined };
+    window.localStorage.setItem("farmgame.save.slot1", envelope(gutted));
+    const r = readSave("slot1");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe("corrupt");
+  });
+
+  it("old-version saves report version_mismatch even when their state shape differs", () => {
+    window.localStorage.setItem(
+      "farmgame.save.slot1",
+      JSON.stringify({ version: SAVE_VERSION - 1, savedAt: "2024-01-01", name: "old", state: { legacy: true } }),
+    );
+    const r = readSave("slot1");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe("version_mismatch");
+  });
+
+  it("listSaves skips a corrupt slot instead of throwing", () => {
+    const state = createGameState({ seed: 10 });
+    writeSave("slot1", state, "Good");
+    window.localStorage.setItem(
+      "farmgame.save.slot2",
+      JSON.stringify({ version: SAVE_VERSION, savedAt: "x", name: "bad", state: {} }),
+    );
+    const list = listSaves();
+    expect(list.map((s) => s.slotId)).toEqual(["slot1"]);
+  });
+
   it("deleteSave removes only the target slot", () => {
     const state = createGameState({ seed: 2 });
     writeSave("slot1", state);

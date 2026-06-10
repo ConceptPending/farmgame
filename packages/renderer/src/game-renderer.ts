@@ -11,7 +11,7 @@ import { GridOverlay, type OverlayMode } from "./layers/grid-overlay.js";
 import { WeatherEffects } from "./layers/weather-effects.js";
 import { Camera } from "./camera.js";
 import { InputHandler, type InputEvent } from "./input.js";
-import { generateTileset, TILE_SIZE } from "./sprites/tileset.js";
+import { generateTileset, destroyTileset, TILE_SIZE } from "./sprites/tileset.js";
 
 export interface RendererOptions {
   canvas: HTMLCanvasElement;
@@ -37,6 +37,7 @@ export class GameRenderer {
   private ambient: Graphics;
   private lastSeason: Season | null = null;
   private initialized = false;
+  private destroyed = false;
   private onInput: ((event: InputEvent) => void) | null = null;
   private animationTickerId: number | null = null;
   private lastState: GameState | null = null;
@@ -71,8 +72,19 @@ export class GameRenderer {
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
     });
+    // destroy() may land while we're awaiting — finish teardown here rather
+    // than starting the RAF loop on a dead instance.
+    if (this.destroyed) {
+      this.teardownApp();
+      return;
+    }
 
     await generateTileset(this.app);
+    if (this.destroyed) {
+      destroyTileset();
+      this.teardownApp();
+      return;
+    }
 
     this.app.stage.addChild(this.world);
     this.world.addChild(this.terrainLayer.container);
@@ -165,6 +177,17 @@ export class GameRenderer {
     this.inputHandler.setDragEnabled(enabled);
   }
 
+  /**
+   * Resize the backbuffer to new logical (CSS-pixel) dimensions. autoDensity
+   * keeps the canvas style in sync; the screen-space ambient wash is the one
+   * thing sized at draw time, so repaint it.
+   */
+  resize(width: number, height: number): void {
+    if (!this.initialized || this.destroyed) return;
+    this.app.renderer.resize(width, height);
+    if (this.lastSeason) this.drawAmbient(this.lastSeason);
+  }
+
   /** Called when game state changes (every tick, ~1-3 seconds). */
   update(state: GameState): void {
     if (!this.initialized) return;
@@ -203,12 +226,26 @@ export class GameRenderer {
   }
 
   destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
     if (this.animationTickerId !== null) {
       cancelAnimationFrame(this.animationTickerId);
+      this.animationTickerId = null;
     }
     this.camera.detach();
     this.inputHandler.detach();
-    this.app.destroy(true);
+    // If init() is still awaiting, it observes `destroyed` after each await
+    // and finishes the app/tileset teardown itself.
+    if (this.initialized) {
+      destroyTileset();
+      this.teardownApp();
+    }
     this.initialized = false;
+  }
+
+  /** Deep-destroy the pixi Application without touching the React-owned
+   *  canvas element (removeView would yank it out of the DOM). */
+  private teardownApp(): void {
+    this.app.destroy({ removeView: false }, { children: true });
   }
 }
