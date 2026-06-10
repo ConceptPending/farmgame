@@ -19,6 +19,16 @@ export interface RendererOptions {
   height: number;
 }
 
+/** Multiplicative ground tint per season — warm and dry through summer/fall,
+ *  cold and desaturated in winter. Subtle enough that terrain variants stay
+ *  distinct, strong enough that the season is legible without the HUD. */
+const SEASON_TERRAIN_TINT: Record<Season, number> = {
+  spring: 0xffffff,
+  summer: 0xfdf2d4,
+  fall: 0xf0d8b4,
+  winter: 0xc4d4e4,
+};
+
 export class GameRenderer {
   private app: Application;
   private world: Container;
@@ -244,6 +254,13 @@ export class GameRenderer {
       this.lastSeason = state.season;
       this.drawAmbient(state.season);
       this.seasonOverlay.setSeason(state.season, state.world.width, state.world.height);
+      // Tint the ground itself, not just the screen wash — this is what makes
+      // a season read at a glance. Container tint multiplies with the per-tile
+      // tints (rival claims, brightness variation), and only the ground layers
+      // take it so crops/buildings/animals keep their readable palette.
+      const tint = SEASON_TERRAIN_TINT[state.season];
+      this.terrainLayer.container.tint = tint;
+      this.penDecorLayer.container.tint = tint;
     }
   }
 

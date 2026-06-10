@@ -199,6 +199,19 @@ export class TerrainLayer {
     this.sprites = [];
 
     const { world } = state;
+
+    // Opaque backdrop in the layer itself. Unowned tiles render at 50% alpha
+    // (the "wild land" haze) and previously blended with the app's sky-blue
+    // *clear color* — outside any layer, so seasonal container tints never
+    // reached half of every unowned pixel. Same color here means the resting
+    // look is pixel-identical, but the whole blend now lives inside the
+    // tinted layer and winters/falls land on the full map.
+    const backdrop = new Graphics();
+    backdrop
+      .rect(0, 0, world.width * TILE_SIZE, world.height * TILE_SIZE)
+      .fill(0x87ceeb);
+    this.container.addChild(backdrop);
+
     for (let y = 0; y < world.height; y++) {
       for (let x = 0; x < world.width; x++) {
         const sprite = new Sprite(getTileTexture("grass1"));

@@ -108,17 +108,26 @@ function drawFallLeaves(g: Graphics, rnd: () => number, w: number, h: number): v
 }
 
 function drawWinterSnow(g: Graphics, rnd: () => number, w: number, h: number): void {
-  // Heavy speckling so the map actually reads as snow-covered.
-  for (let i = 0; i < 900; i++) {
+  // Heavy speckling so the map actually reads as snow-covered. (The cold
+  // terrain tint does the broad-stroke work; this is the texture on top.)
+  for (let i = 0; i < 1400; i++) {
     const x = Math.floor(rnd() * w);
     const y = Math.floor(rnd() * h);
     const c = rnd() < 0.6 ? 0xffffff : 0xeaf3fb;
-    g.rect(x, y, 1, 1).fill({ color: c, alpha: 0.85 });
+    g.rect(x, y, 1, 1).fill({ color: c, alpha: 0.9 });
   }
   // Small snow clumps for accents.
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 90; i++) {
     const x = Math.floor(rnd() * (w - 2));
     const y = Math.floor(rnd() * (h - 2));
     g.rect(x, y, 2, 2).fill({ color: 0xffffff, alpha: 0.9 });
+  }
+  // A few drifted patches — wider, soft mounds so coverage varies across the
+  // map instead of reading as uniform static.
+  for (let i = 0; i < 26; i++) {
+    const x = Math.floor(rnd() * (w - 6));
+    const y = Math.floor(rnd() * (h - 3));
+    g.rect(x, y + 1, 6, 1).fill({ color: 0xffffff, alpha: 0.5 });
+    g.rect(x + 1, y, 4, 3).fill({ color: 0xffffff, alpha: 0.35 });
   }
 }

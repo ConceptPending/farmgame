@@ -151,8 +151,10 @@ export async function generateTileset(app: Application): Promise<void> {
   drawSheep(g, 2, 5);
   drawCow(g, 3, 5);
 
-  // Render to texture
-  const rt = RenderTexture.create({ width: w, height: h });
+  // Render to texture. Nearest-neighbour sampling is what keeps 16px pixel
+  // art crisp when the camera zooms — the default linear filter smears every
+  // tile into a blur past ~2x.
+  const rt = RenderTexture.create({ width: w, height: h, scaleMode: "nearest", antialias: false });
   app.renderer.render({ container: g, target: rt });
   sheetTexture = rt;
 
