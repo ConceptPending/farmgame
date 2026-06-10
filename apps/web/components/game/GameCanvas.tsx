@@ -213,6 +213,14 @@ export function GameCanvas() {
       // until the next tick — which never comes in turn-based (paused) mode.
       const current = useGameStore.getState().state;
       if (current) renderer.update(current);
+
+      // Apply the current UI-driven renderer settings. The overlay/drag
+      // effects below already ran (against a null rendererRef) while init was
+      // awaiting, so the fresh renderer must pull the current values itself.
+      const ui = useUIStore.getState();
+      renderer.setOverlayMode(ui.selectedOverlay);
+      const dragForFence = ui.selectedTool === "build" && ui.selectedBuildingType === "fence";
+      renderer.setDragEnabled(ui.selectedTool === "designate_field" || dragForFence);
     }
 
     setup();

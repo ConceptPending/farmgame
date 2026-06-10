@@ -42,6 +42,40 @@ export class GameRenderer {
   private animationTickerId: number | null = null;
   private lastState: GameState | null = null;
   private dragStartTileIndex: number | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+
+  // GPU resets (driver crash, tab suspension on laptops) kill the WebGL
+  // context. preventDefault on `webglcontextlost` is what tells the browser
+  // we intend to handle restoration; without it `webglcontextrestored` never
+  // fires and the canvas stays blank forever.
+  private handleContextLost = (e: Event) => {
+    e.preventDefault();
+  };
+  private handleContextRestored = () => {
+    void this.recoverFromContextLoss();
+  };
+
+  /**
+   * In-place recovery after the context comes back. Pixi re-uploads textures
+   * with CPU-side sources and rebuilds Graphics geometry itself; the one
+   * resource that can't self-heal is the tileset RenderTexture (it only ever
+   * existed on the GPU), so regenerate it and force the texture-caching
+   * terrain layer to rebuild. The other sprite layers rebind their textures
+   * on every update. Recovery stays inside the renderer deliberately — a
+   * host-driven destroy/re-init on the same canvas loops, because Pixi's own
+   * destroy() force-loses the context it would need for the next init.
+   */
+  private async recoverFromContextLoss(): Promise<void> {
+    if (!this.initialized || this.destroyed) return;
+    // Give Pixi's contextChange runner a frame to finish re-initialising its
+    // GL state before we render the tileset sheet on the restored context.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (this.destroyed) return;
+    await generateTileset(this.app);
+    if (this.destroyed) return;
+    this.terrainLayer.reset();
+    if (this.lastState) this.update(this.lastState);
+  }
 
   constructor() {
     this.app = new Application();
@@ -83,6 +117,10 @@ export class GameRenderer {
       this.teardownApp();
       return;
     }
+
+    this.canvas = options.canvas;
+    options.canvas.addEventListener("webglcontextlost", this.handleContextLost);
+    options.canvas.addEventListener("webglcontextrestored", this.handleContextRestored);
 
     this.app.stage.addChild(this.world);
     this.world.addChild(this.terrainLayer.container);
@@ -229,6 +267,11 @@ export class GameRenderer {
     if (this.animationTickerId !== null) {
       cancelAnimationFrame(this.animationTickerId);
       this.animationTickerId = null;
+    }
+    if (this.canvas) {
+      this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
+      this.canvas.removeEventListener("webglcontextrestored", this.handleContextRestored);
+      this.canvas = null;
     }
     this.camera.detach();
     this.inputHandler.detach();

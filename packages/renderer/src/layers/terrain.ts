@@ -79,6 +79,16 @@ export class TerrainLayer {
     this.edgeOverlay = new Graphics();
   }
 
+  /** Drop all cached sprites and fingerprints so the next update() rebuilds
+   *  from scratch — required after a WebGL context restore, when every
+   *  sprite still references a texture from the regenerated (old) tileset. */
+  reset(): void {
+    this.created = false;
+    this.lastTerrainKey = "";
+    this.lastOwnershipKey = "";
+    this.lastFieldStateKey = "";
+  }
+
   update(state: GameState): void {
     const { world } = state;
     const tileCount = world.tiles.length;
