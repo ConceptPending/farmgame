@@ -68,6 +68,7 @@ export function ScenarioIntroCard() {
     // once when the player lands on the start of a tutorial scenario, not
     // again as the game state changes. (state.tick === 0 inside the effect
     // body is the gate that keeps this idempotent.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId, lastConfig]);
 
   const dismiss = (rememberDismissed: boolean) => {

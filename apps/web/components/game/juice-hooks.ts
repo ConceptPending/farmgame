@@ -30,6 +30,7 @@ export function useAnimatedNumber(target: number, durationMs = 400): number {
     // `displayed` is intentionally not in the dep list — it's snapshot into
     // fromRef when the target changes; reading it on every render would
     // re-fire this effect every animation frame and restart the tween.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, durationMs]);
 
   return displayed;

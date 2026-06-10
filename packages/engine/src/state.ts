@@ -134,6 +134,9 @@ export interface CreateGameOptions {
 
 export function createGameState(options: CreateGameOptions = {}): GameState {
   const {
+    // The single sanctioned Date.now() in the engine: the *default* seed when
+    // the caller passes none. Reproducible runs must pass an explicit seed.
+    // eslint-disable-next-line no-restricted-properties
     seed = Date.now(),
     startingMoney = 500,
     expenseMultiplier = 1,

@@ -1,3 +1,8 @@
+/* eslint-disable no-param-reassign --
+ * World generation is a builder: it constructs fresh Tile objects and shapes
+ * them in place *before* they ever become engine state, and threads RNG by
+ * reassigning the parameter. Nothing here touches a live GameState, which is
+ * what the engine-wide rule protects. */
 import type { RngState } from "../rng.js";
 import { nextFloat, nextInt } from "../rng.js";
 import type { Tile, WorldState } from "../entities/world.js";

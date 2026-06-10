@@ -16,8 +16,8 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint src tests --max-warnings 0"
   },
   "devDependencies": {
     "vitest": "^3.0.0",

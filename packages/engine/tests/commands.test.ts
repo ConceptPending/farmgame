@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createGameState } from "../src/state.js";
 import { applyCommand } from "../src/command-handler.js";
 import type { GameState } from "../src/state.js";
+import type { CropId } from "../src/entities/crop.js";
 import { BUILDING_CATALOG } from "../src/entities/building.js";
 
 function stateWithSeed(seed = 42): GameState {
@@ -240,7 +241,7 @@ describe("PLANT_FIELD", () => {
     const result = applyCommand(s2, {
       type: "PLANT_FIELD",
       fieldId,
-      cropId: "banana" as any,
+      cropId: "banana" as CropId,
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain("Unknown crop");

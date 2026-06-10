@@ -235,7 +235,7 @@ describe("comfort & density", () => {
       ...createAnimal(state.nextAnimalId + i, "chicken", pen),
       health: 0.05,
     }));
-    let s = { ...state, animals, inventory: { wheat: 1000 }, monthOfSeason: MONTHS_PER_SEASON };
+    let s: GameState = { ...state, animals, inventory: { wheat: 1000 }, monthOfSeason: MONTHS_PER_SEASON };
     let stressDeaths = 0;
     for (let i = 0; i < MONTHS_PER_SEASON * 3 && s.animals.length > 0; i++) {
       const r = nextTurn(s);
@@ -328,7 +328,6 @@ describe("barns shelter from predators", () => {
     // Many loose sheep + one predator roll each; barn presence halves the
     // per-animal chance, so the sheltered herd should suffer fewer losses.
     const base = createGameState({ seed: 7, startingMoney: 1000, goalNetWorth: 1e12 });
-    const W = base.world.width;
     const open: number[] = [];
     for (let i = 0; i < base.world.tiles.length; i++) {
       const t = base.world.tiles[i];

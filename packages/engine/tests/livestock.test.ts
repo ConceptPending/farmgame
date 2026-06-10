@@ -8,6 +8,7 @@ import {
   ANIMAL_CATALOG,
   MONTHS_PER_SEASON,
 } from "../src/index.js";
+import type { GameState } from "../src/index.js";
 import { withPenned } from "./helpers.js";
 
 describe("buying and selling", () => {
@@ -143,7 +144,7 @@ describe("net worth", () => {
 
 describe("determinism", () => {
   it("livestock breeding is reproducible for a seed", () => {
-    const build = () => ({ ...withPenned("chicken", 4), inventory: { wheat: 100000 } });
+    const build = (): GameState => ({ ...withPenned("chicken", 4), inventory: { wheat: 100000 } });
     let a = build();
     let b = build();
     for (let i = 0; i < MONTHS_PER_SEASON * 4; i++) {
