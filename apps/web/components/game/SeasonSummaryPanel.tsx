@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 import { causeCategory, causeCopy, causePriority, type Cause, type CauseCategory } from "@farmgame/engine";
 import {
   summariseSeasonForSuggestions,
@@ -191,6 +192,7 @@ export function SeasonSummaryPanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const dialogRef = useModalA11y<HTMLDivElement>(!suppressed && causes.length > 0);
   if (suppressed || causes.length === 0) return null;
 
   const grouped = groupCauses(causes);
@@ -226,7 +228,13 @@ export function SeasonSummaryPanel() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Season summary — ${header}`}
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#16213e",
           border: "1px solid #2a3f6a",
           borderRadius: 10,

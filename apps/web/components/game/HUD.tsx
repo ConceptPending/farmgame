@@ -340,22 +340,26 @@ export function HUD() {
         </div>
       </div>
 
-      {/* Notifications toast area */}
-      {toasts.length > 0 && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 16,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 3,
-            zIndex: 50,
-            pointerEvents: "none",
-          }}
-        >
+      {/* Notifications toast area. The container always renders (not just
+          when toasts exist) so the aria-live region persists in the DOM —
+          screen readers only announce changes inside a region they have
+          already seen. */}
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: "fixed",
+          bottom: 16,
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 3,
+          zIndex: 50,
+          pointerEvents: "none",
+        }}
+      >
           {toasts.map((n) => {
             const color = NOTIFICATION_COLOR[n.type];
             const glyph = NOTIFICATION_GLYPH[n.type];
@@ -381,7 +385,7 @@ export function HUD() {
               </div>
             );
           })}
-          {notifications.length > 3 && (
+          {toasts.length > 0 && notifications.length > 3 && (
             <button
               onClick={() => openPanel("log")}
               style={{
@@ -399,8 +403,7 @@ export function HUD() {
               +{notifications.length - 3} earlier · view log
             </button>
           )}
-        </div>
-      )}
+      </div>
     </>
   );
 }

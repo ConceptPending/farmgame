@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 import { getCropDef, type CropId } from "@farmgame/engine";
 
 const STORAGE_KEY = "farmgame.lettuceHint.dismissed";
@@ -54,6 +55,7 @@ export function EarlyLettuceHint() {
     if (shouldFire(state)) setDismissed(false);
   }, [state]);
 
+  const dialogRef = useModalA11y<HTMLDivElement>(!dismissed && !!state);
   if (dismissed || !state) return null;
 
   const dismiss = (rememberAcrossGames: boolean) => {
@@ -78,7 +80,13 @@ export function EarlyLettuceHint() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tip: plant lettuce alongside the wheat"
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#16213e",
           border: "1px solid #2a3f6a",
           borderRadius: 10,

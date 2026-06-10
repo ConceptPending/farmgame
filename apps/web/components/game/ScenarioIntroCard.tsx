@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 
 interface ScenarioIntroCopy {
   title: string;
@@ -78,6 +79,8 @@ export function ScenarioIntroCard() {
     setOpen(false);
   };
 
+  const showing = open && !!scenarioId && !!INTROS[scenarioId ?? ""];
+  const dialogRef = useModalA11y<HTMLDivElement>(showing);
   if (!open || !scenarioId) return null;
   const copy = INTROS[scenarioId];
   if (!copy) return null;
@@ -99,7 +102,13 @@ export function ScenarioIntroCard() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.title}
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#16213e",
           border: "1px solid #2a3f6a",
           borderRadius: 10,

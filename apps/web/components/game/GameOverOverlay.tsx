@@ -1,6 +1,7 @@
 "use client";
 
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 import { computeNetWorth } from "@farmgame/engine";
 
 export function GameOverOverlay() {
@@ -9,6 +10,8 @@ export function GameOverOverlay() {
   const returnToMenu = useGameStore((s) => s.returnToMenu);
   const lastConfig = useGameStore((s) => s.lastConfig);
 
+  const over = !!state && state.status !== "playing";
+  const dialogRef = useModalA11y<HTMLDivElement>(over);
   if (!state || state.status === "playing") return null;
 
   const won = state.status === "won";
@@ -27,7 +30,13 @@ export function GameOverOverlay() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={won ? "You win" : "Bankrupt — game over"}
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#16213e",
           border: `2px solid ${won ? "#4ecca3" : "#ff6b6b"}`,
           borderRadius: 10,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { useModalA11y } from "../ui/modal-a11y";
 
 interface PanelModalProps {
   title: string;
@@ -28,6 +29,10 @@ export function PanelModal({ title, onClose, children, width = 420, accent = "#4
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Dialog semantics: focus moves into the card, Tab is trapped, and focus
+  // returns to the opener on close.
+  const dialogRef = useModalA11y<HTMLDivElement>();
+
   return (
     <div
       // Scrim: clicking the backdrop (but not the card) closes the panel.
@@ -46,6 +51,11 @@ export function PanelModal({ title, onClose, children, width = 420, accent = "#4
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
         style={{
           background: "#16213e",
           border: "1px solid #2a3f6a",
@@ -58,6 +68,7 @@ export function PanelModal({ title, onClose, children, width = 420, accent = "#4
           flexDirection: "column",
           overflow: "hidden",
           fontSize: 13,
+          outline: "none",
         }}
       >
         {/* Header */}

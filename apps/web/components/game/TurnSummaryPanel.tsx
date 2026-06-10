@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 import {
   causeCategory,
   causeCopy,
@@ -109,7 +110,9 @@ export function TurnSummaryPanel() {
 
   const grouped = groupCauses(causes);
   const hasAnything = Array.from(grouped.values()).some((g) => g.length > 0);
-  if (!hasAnything || suppressed) return null;
+  const open = hasAnything && !suppressed;
+  const dialogRef = useModalA11y<HTMLDivElement>(open);
+  if (!open) return null;
 
   const toggleSuppress = (next: boolean) => {
     if (typeof window !== "undefined") {
@@ -143,7 +146,13 @@ export function TurnSummaryPanel() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Turn summary — ${monthLabel}`}
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#16213e",
           border: "1px solid #2a3f6a",
           borderRadius: 10,

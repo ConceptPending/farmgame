@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useGameStore } from "../../stores/game-store";
+import { useModalA11y } from "../ui/modal-a11y";
 import {
   aggregateRun,
   simulateBatch,
@@ -73,6 +74,7 @@ export function DebugReportPanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const dialogRef = useModalA11y<HTMLDivElement>(open);
   if (!open) return null;
 
   const currentRun: RunReport | null =
@@ -133,7 +135,13 @@ export function DebugReportPanel() {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Debug balance report"
+        tabIndex={-1}
         style={{
+          outline: "none",
           background: "#101a2e",
           border: "1px solid #2a3f6a",
           borderRadius: 8,

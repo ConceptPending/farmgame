@@ -167,6 +167,7 @@ export function ToolPalette() {
           <button
             key={tool.id}
             onClick={() => setSelectedTool(tool.id)}
+            aria-pressed={active}
             title={cost > 0 ? `${tool.label} — ${cost} labor` : tool.label}
             style={{
               ...buttonStyle(active),
@@ -231,6 +232,7 @@ export function ToolPalette() {
               <button
                 key={id}
                 onClick={() => setSelectedCrop(id)}
+                aria-pressed={active}
                 title={def.archetypeTagline}
                 style={{
                   ...subButtonStyle(active),
@@ -274,6 +276,7 @@ export function ToolPalette() {
             <button
               key={type}
               onClick={() => setSelectedBuildingType(type)}
+              aria-pressed={selectedBuildingType === type}
               style={subButtonStyle(selectedBuildingType === type)}
             >
               {BUILDING_CATALOG[type].name}
@@ -299,6 +302,7 @@ export function ToolPalette() {
             <button
               key={type}
               onClick={() => setSelectedAnimalType(type)}
+              aria-pressed={selectedAnimalType === type}
               style={subButtonStyle(selectedAnimalType === type)}
             >
               {ANIMAL_CATALOG[type].name}
@@ -324,6 +328,7 @@ export function ToolPalette() {
             <button
               key={type}
               onClick={() => setSelectedSprayType(type)}
+              aria-pressed={selectedSprayType === type}
               style={subButtonStyle(selectedSprayType === type)}
             >
               {type.charAt(0).toUpperCase() + type.slice(1)}
