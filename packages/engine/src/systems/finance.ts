@@ -4,6 +4,7 @@ import type { GoalProgress } from "../entities/goal.js";
 import { BUILDING_CATALOG } from "../entities/building.js";
 import { EQUIPMENT_CATALOG } from "../entities/equipment.js";
 import { animalValue } from "../entities/animal.js";
+import { plotValue } from "../entities/world.js";
 import { getCropDef } from "../data/crops.js";
 import type { Cause } from "../entities/cause.js";
 
@@ -47,21 +48,6 @@ export function computeSeasonalExpenses(state: GameState): SeasonalExpenses {
   return { landTax, upkeep, interest, total: landTax + upkeep + interest };
 }
 
-/** Average soil quality over a plot's tiles, used to value owned land. */
-function plotValue(state: GameState, plotX: number, plotY: number): number {
-  const { world } = state;
-  const startX = plotX * world.plotSize;
-  const startY = plotY * world.plotSize;
-  let soilSum = 0;
-  for (let dy = 0; dy < world.plotSize; dy++) {
-    for (let dx = 0; dx < world.plotSize; dx++) {
-      soilSum += world.tiles[(startY + dy) * world.width + (startX + dx)].soilQuality;
-    }
-  }
-  const avgSoil = soilSum / (world.plotSize * world.plotSize);
-  return Math.round(200 + avgSoil * 300);
-}
-
 /**
  * Total net worth: cash + owned land + buildings + inventory at market value,
  * minus outstanding loan. This is what the win condition is measured against.
@@ -72,7 +58,7 @@ export function computeNetWorth(state: GameState): number {
   const plotsPerRow = state.world.width / state.world.plotSize;
   for (let i = 0; i < state.world.plotOwnership.length; i++) {
     if (!state.world.plotOwnership[i]) continue;
-    total += plotValue(state, i % plotsPerRow, Math.floor(i / plotsPerRow));
+    total += plotValue(state.world, i % plotsPerRow, Math.floor(i / plotsPerRow));
   }
 
   for (const b of state.buildings) {

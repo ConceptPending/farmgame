@@ -6,6 +6,7 @@ import { CROP_CATALOG, ALL_CROP_IDS } from "../data/crops.js";
 import { PRODUCT_CATALOG } from "../data/products.js";
 import { nextBool } from "../rng.js";
 import {
+  penIndex,
   pastureGrazingOffset,
   animalAmenities,
   animalComfort,
@@ -60,9 +61,11 @@ export function livestockSystem(state: GameState): {
   if (state.monthOfSeason === 1) {
     // Effective feed need per animal: feed troughs cut waste; pasture (grass
     // tiles inside the pen) provides free grazing up to a cap.
-    const pasture = pastureGrazingOffset(state);
-    const amenities = animalAmenities(state);
-    const comfort = animalComfort(state);
+    // One pen flood-fill shared by all three derived views (was 3× per turn).
+    const pens = penIndex(state);
+    const pasture = pastureGrazingOffset(state, state.buildings, pens);
+    const amenities = animalAmenities(state, state.buildings, pens);
+    const comfort = animalComfort(state, state.buildings, pens);
     let troughSaved = 0;
     let pastureSaved = 0;
     const needed = animals.reduce((sum, a) => {

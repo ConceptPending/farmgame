@@ -9,12 +9,6 @@ export interface ForecastMonth {
   rainfall: number;
 }
 
-/**
- * Legacy alias for the day-grained forecast type. Kept exported for now so
- * existing UI imports don't break; consumers should migrate to `ForecastMonth`.
- */
-export type ForecastDay = ForecastMonth;
-
 export interface WeatherState {
   temperature: number;
   rainfall: number;

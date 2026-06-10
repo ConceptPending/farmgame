@@ -26,6 +26,7 @@ import {
   type EquipmentType,
 } from "./index.js";
 import { CROP_CATALOG } from "./data/crops.js";
+import { plotValue } from "./entities/world.js";
 import type { CropId } from "./entities/crop.js";
 import type { Cause } from "./entities/cause.js";
 import { rivalOwning } from "./entities/rival.js";
@@ -191,16 +192,7 @@ function pickCheapestAdjacentPlot(state: GameState): { plotX: number; plotY: num
         isOwned(px - 1, py) || isOwned(px + 1, py) || isOwned(px, py - 1) || isOwned(px, py + 1);
       if (!adjacent) continue;
 
-      // Cost mirrors handleBuyPlot: 200 + avgSoil*300, rounded.
-      let soilSum = 0;
-      const startX = px * PS;
-      const startY = py * PS;
-      for (let dy = 0; dy < PS; dy++) {
-        for (let dx = 0; dx < PS; dx++) {
-          soilSum += state.world.tiles[(startY + dy) * W + (startX + dx)].soilQuality;
-        }
-      }
-      const cost = Math.round(200 + (soilSum / (PS * PS)) * 300);
+      const cost = plotValue(state.world, px, py);
       if (best === null || cost < best.cost) best = { plotX: px, plotY: py, cost };
     }
   }

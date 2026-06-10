@@ -21,7 +21,7 @@ export {
   type TickResult,
   type CreateGameOptions,
 } from "./state.js";
-export { laborCost, canAfford, minLaborCost } from "./entities/labor.js";
+export { laborCost, canAfford } from "./entities/labor.js";
 
 // Causal feedback layer — structured records of why things happened.
 export type { Cause, CauseCategory } from "./entities/cause.js";
@@ -105,7 +105,7 @@ export { createBuilding, BUILDING_CATALOG } from "./entities/building.js";
 
 export type {
   WeatherCondition,
-  ForecastDay,
+  ForecastMonth,
   WeatherState,
 } from "./entities/weather.js";
 export { createWeatherState } from "./entities/weather.js";

@@ -111,13 +111,3 @@ export function canAfford(
   return laborUsed + laborCost(command, state) <= laborCapacity;
 }
 
-/**
- * Lower-bound cost for UI palette badges that don't know which field the
- * player will click. Returns the minimum any field of any size could cost —
- * i.e. the per-tile floor for field-targeting commands and the flat cost for
- * everything else.
- */
-export function minLaborCost(command: GameCommand): number {
-  // For per-tile commands, state-less laborCost already returns the floor (1).
-  return laborCost(command);
-}

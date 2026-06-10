@@ -5,7 +5,7 @@ import type { CropId } from "./entities/crop.js";
 import type { BuildingType } from "./entities/building.js";
 import { BUILDING_CATALOG, createBuilding } from "./entities/building.js";
 import { createField } from "./entities/field.js";
-import { tileIndex } from "./entities/world.js";
+import { tileIndex, plotValue } from "./entities/world.js";
 import { getCropDef } from "./data/crops.js";
 import { getGoodInfo } from "./data/goods.js";
 import { SELL_DEMAND_IMPACT, MIN_DEMAND } from "./systems/market.js";
@@ -72,18 +72,8 @@ function handleBuyPlot(state: GameState, plotX: number, plotY: number): CommandR
     return fail(state, "Plot must be adjacent to owned land");
   }
 
-  // Calculate cost based on average soil quality of the plot's tiles
-  let soilSum = 0;
-  const startX = plotX * state.world.plotSize;
-  const startY = plotY * state.world.plotSize;
-  for (let dy = 0; dy < state.world.plotSize; dy++) {
-    for (let dx = 0; dx < state.world.plotSize; dx++) {
-      const idx = tileIndex(startX + dx, startY + dy, state.world.width);
-      soilSum += state.world.tiles[idx].soilQuality;
-    }
-  }
-  const avgSoil = soilSum / (state.world.plotSize * state.world.plotSize);
-  const cost = Math.round(200 + avgSoil * 300);
+  // Cost = the plot's market value (soil-quality based) — see plotValue.
+  const cost = plotValue(state.world, plotX, plotY);
 
   if (state.money < cost) {
     return fail(state, `Not enough money. Need $${cost}, have $${state.money}`);
@@ -93,6 +83,8 @@ function handleBuyPlot(state: GameState, plotX: number, plotY: number): CommandR
   const newPlotOwnership = [...state.world.plotOwnership];
   newPlotOwnership[plotIdx] = true;
 
+  const startX = plotX * state.world.plotSize;
+  const startY = plotY * state.world.plotSize;
   const newTiles = [...state.world.tiles];
   for (let dy = 0; dy < state.world.plotSize; dy++) {
     for (let dx = 0; dx < state.world.plotSize; dx++) {
@@ -399,6 +391,7 @@ function handleBuild(state: GameState, buildingType: BuildingType, tileIdx: numb
   if (tile.buildingId !== null) return fail(state, "Tile already has a building");
   if (tile.fieldId !== null) return fail(state, "Cannot build on a field tile");
   if (tile.terrain === "water") return fail(state, "Cannot build on water");
+  if (tile.terrain === "rock") return fail(state, "Cannot build on rock");
 
   // Water trough must sit within 3 tiles of a water source (water tile or pump).
   if (buildingType === "water_trough") {

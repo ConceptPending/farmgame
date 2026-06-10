@@ -73,19 +73,15 @@ export function fieldHealthSystem(state: GameState): {
     // show "lost 12% to weeds" rather than just "weeds high". Critical
     // pest damage was −0.45/turn in PR L which could kill a 3+ month crop
     // before maturity; softened to −0.18 here.
-    const healthBefore = health;
-    if (weeds > 0.5) health -= (weeds - 0.5) * 0.12;
-    if (pests > 0.5) health -= (pests - 0.5) * 0.18;
-    if (pests > 0.8) health -= 0.18;
     const weedLoss = weeds > 0.5 ? (weeds - 0.5) * 0.12 : 0;
     const pestLoss = (pests > 0.5 ? (pests - 0.5) * 0.18 : 0) + (pests > 0.8 ? 0.18 : 0);
+    health -= weedLoss + pestLoss;
     if (weedLoss > 0.001) {
       causes.push({ kind: "weed_pressure", fieldId: field.id, weeds, healthLost: weedLoss });
     }
     if (pestLoss > 0.001) {
       causes.push({ kind: "pest_pressure", fieldId: field.id, pests, healthLost: pestLoss });
     }
-    void healthBefore;
 
     health = Math.max(0, Math.min(1, health));
 

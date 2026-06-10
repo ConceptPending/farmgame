@@ -44,6 +44,11 @@ export function eventSystem(state: GameState): {
   let fields = state.fields;
   let money = state.money;
 
+  // NOTE: the four field-targeting branches below require an active field;
+  // with none planted, every roll < 0.8 falls through to the subsidy branch,
+  // so ~80% of early-game events are free money. Deliberate — events
+  // shouldn't punish a player who has nothing built to damage yet.
+
   // Helper to draw an integer in [min, max] while threading rng.
   const draw = (min: number, max: number): number => {
     const r = nextInt(rng, min, max);

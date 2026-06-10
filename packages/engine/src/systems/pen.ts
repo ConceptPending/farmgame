@@ -143,23 +143,30 @@ export function findPen(
 }
 
 /** Per-pen lookup of grass tile counts + which trough buildings sit inside. */
-interface PenInfo {
+export interface PenInfo {
   tiles: Set<number>;
   grass: number;
   hasWaterTrough: boolean;
   hasFeedTrough: boolean;
 }
 
+/** Penned animals grouped by the pen they occupy. */
+export type PenAnimalIndex = Map<PenInfo, Animal[]>;
+
 /**
  * Group penned animals by the pen they're in, and tally each pen's grazing
  * grass + amenity buildings. Animals not inside any pen are omitted.
+ *
+ * Flood-fills the world per distinct pen — callers that need several derived
+ * views in one turn (livestockSystem uses grazing + amenities + comfort)
+ * should compute this once and pass it to each helper.
  */
-function penIndex(
+export function penIndex(
   state: GameState,
   buildings: Building[] = state.buildings,
-): { animalsByPen: Map<PenInfo, Animal[]>; penByTile: Map<number, PenInfo> } {
+): PenAnimalIndex {
   const penByTile = new Map<number, PenInfo>();
-  const animalsByPen = new Map<PenInfo, Animal[]>();
+  const animalsByPen: PenAnimalIndex = new Map();
   for (const a of state.animals) {
     const existing = penByTile.get(a.tileIndex);
     if (existing) {
@@ -183,7 +190,7 @@ function penIndex(
     for (const t of tiles) penByTile.set(t, info);
     animalsByPen.set(info, [a]);
   }
-  return { animalsByPen, penByTile };
+  return animalsByPen;
 }
 
 /**
@@ -194,10 +201,10 @@ function penIndex(
 export function pastureGrazingOffset(
   state: GameState,
   buildings: Building[] = state.buildings,
+  index: PenAnimalIndex = penIndex(state, buildings),
 ): Map<number, number> {
   const out = new Map<number, number>();
-  const { animalsByPen } = penIndex(state, buildings);
-  for (const [pen, group] of animalsByPen) {
+  for (const [pen, group] of index) {
     if (pen.grass === 0) continue;
     const pool = pen.grass * PASTURE_YIELD;
     const totalWeight = group.reduce(
@@ -249,10 +256,10 @@ function comfortFor(density: number): ComfortInfo {
 export function animalComfort(
   state: GameState,
   buildings: Building[] = state.buildings,
+  index: PenAnimalIndex = penIndex(state, buildings),
 ): Map<number, ComfortInfo> {
   const out = new Map<number, ComfortInfo>();
-  const { animalsByPen } = penIndex(state, buildings);
-  for (const [pen, group] of animalsByPen) {
+  for (const [pen, group] of index) {
     const density = pen.tiles.size > 0 ? group.length / pen.tiles.size : Infinity;
     const info = comfortFor(density);
     for (const a of group) out.set(a.id, info);
@@ -264,10 +271,10 @@ export function animalComfort(
 export function animalAmenities(
   state: GameState,
   buildings: Building[] = state.buildings,
+  index: PenAnimalIndex = penIndex(state, buildings),
 ): Map<number, { water: boolean; feed: boolean }> {
   const out = new Map<number, { water: boolean; feed: boolean }>();
-  const { animalsByPen } = penIndex(state, buildings);
-  for (const [pen, group] of animalsByPen) {
+  for (const [pen, group] of index) {
     for (const a of group) {
       out.set(a.id, { water: pen.hasWaterTrough, feed: pen.hasFeedTrough });
     }
