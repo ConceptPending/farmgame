@@ -70,9 +70,22 @@ describe("RNG", () => {
   });
 
   it("state is immutable - original rng unchanged after calls", () => {
+    // createRng hashes the caller's seed, so don't pin the raw value — the
+    // contract under test is that a draw never mutates the input state.
     const rng = createRng(42);
+    const before = rng.seed;
     const result = nextFloat(rng);
-    expect(rng.seed).toBe(42);
-    expect(result.rng.seed).not.toBe(42);
+    expect(rng.seed).toBe(before);
+    expect(result.rng.seed).not.toBe(before);
+  });
+
+  it("consecutive seeds produce uncorrelated streams (not shifted copies)", () => {
+    // Mulberry32 steps its state by +1 per draw; without seed hashing,
+    // stream(N) drawn after one step equals stream(N+1) — which silently
+    // correlated every consecutive-seed sim batch.
+    const first = nextFloat(createRng(1));
+    const second = nextFloat(first.rng);
+    const other = nextFloat(createRng(2));
+    expect(other.value).not.toBe(second.value);
   });
 });

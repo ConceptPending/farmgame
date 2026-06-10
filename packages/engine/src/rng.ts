@@ -7,7 +7,16 @@ export interface RngState {
 }
 
 export function createRng(seed: number): RngState {
-  return { seed: seed >>> 0 };
+  // Avalanche the caller's seed (splitmix32 finalizer) before use. Mulberry32
+  // advances its state by +1 per draw, so without this, seeds N and N+1
+  // produce the *same stream offset by one draw* — and batch simulations that
+  // use consecutive seeds (sim-harness) get statistically correlated runs.
+  // Deterministic: the same caller seed always maps to the same stream.
+  let h = (seed >>> 0) + 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 16), 0x21f0aaad);
+  h = Math.imul(h ^ (h >>> 15), 0x735a2d97);
+  h ^= h >>> 15;
+  return { seed: h >>> 0 };
 }
 
 /** Returns [0, 1) float and advances state. */
