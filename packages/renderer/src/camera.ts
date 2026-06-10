@@ -1,3 +1,4 @@
+import { WORLD_SIZE } from "@farmgame/shared";
 import type { Container } from "pixi.js";
 import { TILE_SIZE } from "./sprites/tileset.js";
 
@@ -8,8 +9,8 @@ export class Camera {
   private lastX = 0;
   private lastY = 0;
   private keys = new Set<string>();
-  private worldTilesW = 48;
-  private worldTilesH = 48;
+  private worldTilesW = WORLD_SIZE;
+  private worldTilesH = WORLD_SIZE;
 
   /** Tell the camera the world dimensions so it can bound panning. */
   setWorldSize(widthTiles: number, heightTiles: number): void {

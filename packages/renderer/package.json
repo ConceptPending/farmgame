@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "pixi.js": "^8.6.0",
-    "@farmgame/engine": "workspace:*"
+    "@farmgame/engine": "workspace:*",
+    "@farmgame/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

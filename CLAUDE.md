@@ -21,12 +21,12 @@ Tasks are Turbo-coordinated (`turbo.json`): `build`/`test`/`typecheck` depend on
 
 | Package | Role | May import | Must NOT |
 |---|---|---|---|
-| `packages/engine` | Pure deterministic simulation | engine-internal only | **no DOM, no Pixi, no React, no I/O** |
-| `packages/renderer` | Pixi.js 8 canvas | `@farmgame/engine`, pixi | **never mutate engine state; never dispatch commands** |
-| `packages/shared` | constants/types (zod) | — | — |
+| `packages/engine` | Pure deterministic simulation | engine-internal + `@farmgame/shared` | **no DOM, no Pixi, no React, no I/O** |
+| `packages/renderer` | Pixi.js 8 canvas | `@farmgame/engine`, `@farmgame/shared`, pixi | **never mutate engine state; never dispatch commands** |
+| `packages/shared` | world-geometry constants (dependency-free) | — | — |
 | `apps/web` | Next.js 15 + Zustand UI | all `@farmgame/*` | — |
 
-Workspace deps are `workspace:*`; web aliases `@/*` → `apps/web/src/*`. `apps/web/next.config.ts` transpiles the workspace packages.
+Workspace deps are `workspace:*`. `apps/web/next.config.ts` transpiles the workspace packages. The engine-purity rules (no DOM/Date.now/react/pixi imports, no param mutation) are lint-enforced via the engine-scoped block in the root `eslint.config.mjs`.
 
 ## The engine — determinism is the contract
 

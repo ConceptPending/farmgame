@@ -1,3 +1,4 @@
+import { WORLD_SIZE } from "@farmgame/shared";
 import { Container, Graphics } from "pixi.js";
 import type { GameState, FieldState } from "@farmgame/engine";
 import { TILE_SIZE } from "../sprites/tileset.js";
@@ -38,8 +39,8 @@ export class GridOverlay {
   private hoverPhase = 0;
   private overlayDirty = true;
   private lastState: GameState | null = null;
-  private worldWidth = 48;
-  private worldHeight = 48;
+  private worldWidth = WORLD_SIZE;
+  private worldHeight = WORLD_SIZE;
 
   constructor() {
     this.container = new Container();

@@ -1,3 +1,4 @@
+import { WORLD_SIZE } from "@farmgame/shared";
 import type { Container } from "pixi.js";
 import { TILE_SIZE } from "./sprites/tileset.js";
 
@@ -12,8 +13,8 @@ export type InputEvent =
 export class InputHandler {
   private canvas: HTMLCanvasElement | null = null;
   private callback: ((event: InputEvent) => void) | null = null;
-  private worldWidth = 48;
-  private worldHeight = 48;
+  private worldWidth = WORLD_SIZE;
+  private worldHeight = WORLD_SIZE;
   private world: Container | null = null;
   private dragStartTile: number | null = null;
   private dragStartTileX = 0;

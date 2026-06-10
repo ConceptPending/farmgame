@@ -77,6 +77,10 @@ importers:
         version: 3.2.4(@types/node@25.3.2)
 
   packages/engine:
+    dependencies:
+      '@farmgame/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -90,6 +94,9 @@ importers:
       '@farmgame/engine':
         specifier: workspace:*
         version: link:../engine
+      '@farmgame/shared':
+        specifier: workspace:*
+        version: link:../shared
       pixi.js:
         specifier: ^8.6.0
         version: 8.16.0
@@ -99,10 +106,6 @@ importers:
         version: 5.9.3
 
   packages/shared:
-    dependencies:
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ^5.7.0

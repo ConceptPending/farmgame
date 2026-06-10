@@ -3,14 +3,11 @@
  * them in place *before* they ever become engine state, and threads RNG by
  * reassigning the parameter. Nothing here touches a live GameState, which is
  * what the engine-wide rule protects. */
+import { WORLD_SIZE, PLOT_SIZE, PLOTS_PER_ROW } from "@farmgame/shared";
 import type { RngState } from "../rng.js";
 import { nextFloat, nextInt } from "../rng.js";
 import type { Tile, WorldState } from "../entities/world.js";
 import { createTile, tileIndex } from "../entities/world.js";
-
-const WORLD_SIZE = 48;
-const PLOT_SIZE = 8;
-const PLOTS_PER_ROW = WORLD_SIZE / PLOT_SIZE; // 6
 
 export interface WorldGenResult {
   world: WorldState;
