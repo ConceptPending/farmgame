@@ -34,7 +34,7 @@ Workspace deps are `workspace:*`. `apps/web/next.config.ts` transpiles the works
 - **State is immutable.** `GameState` (`state.ts`) is updated by spreading (`{ ...state, ... }`), arrays included. **Never mutate in place** (`state.fields[0].health = …`) — nothing stops you at compile time; tests and Zustand devtools are the only guard.
 - **RNG is seeded and threaded immutably.** `packages/engine/src/rng.ts` (Mulberry32). Every draw returns `{ value, rng: newState }` — you **must** capture and thread the returned `rng` into the next call. Dropping it (`nextFloat(rng).value` without keeping `.rng`) silently breaks reproducibility.
 - **`Date.now()` is banned in the engine** except as the *default* seed in `createGameState()` when the caller passes none. For reproducible replays/tests, always pass an explicit `seed`.
-- **Commands:** player actions go through `command-handler.ts:applyCommand(state, command)` → `{ state, success, error?, notifications, causes? }`. `GameCommand` (`commands.ts`) is a ~29-variant union. **Labor is hard-gated**: a command exceeding `labor.capacity` fails *before* any state change. `END_TURN` short-circuits to `nextTurn()`.
+- **Commands:** player actions go through `command-handler.ts:applyCommand(state, command)` → `{ state, success, error?, notifications, causes? }`. `GameCommand` (`commands.ts`) is a 20-variant union. **Labor is hard-gated**: a command exceeding `labor.capacity` fails *before* any state change. `END_TURN` short-circuits to `nextTurn()`.
 - **Saves:** `apps/web/lib/save-game.ts` — slots in localStorage (`farmgame.save.<slot>`), shape `{ version, savedAt, name, state }`. There is **no migration** across breaking versions: v1/v2 saves are intentionally orphaned and rejected on load. If you change `GameState` shape, bump the version and decide rejection vs. migration deliberately.
 
 ## Renderer & web
@@ -45,7 +45,7 @@ Workspace deps are `workspace:*`. `apps/web/next.config.ts` transpiles the works
 
 ## Tests
 
-Vitest. The engine suite (`packages/engine/tests/`, ~26 files) is the real coverage — determinism, every system, multi-year scenario runs; keep it green and extend it when you change a system. `apps/web/tests/` (~3 files) covers save/load + coaching only; React components are untested.
+Vitest. The engine suite (`packages/engine/tests/`, ~26 files) is the real coverage — determinism, every system, multi-year scenario runs; keep it green and extend it when you change a system. It is also typechecked (`tsconfig.test.json`). `apps/web/tests/` covers save/load, store dispatch/autosave, and coaching; React components are untested.
 
 ## Build / deploy
 
@@ -54,7 +54,7 @@ Vercel builds `apps/web` via Turbo with a frozen pnpm lockfile; output is `apps/
 ## Gotchas
 
 - RNG threading and in-place mutation are the two silent-determinism killers — review every engine change for both.
-- `tools/_*-shot.mjs` are local-only Puppeteer screenshot helpers (not built/deployed); leave them out of feature commits.
+- `tools/_*` are local-only helper scripts (Puppeteer captures, smoke probes) — gitignored; never commit them. `tools/_audit-smoke.mjs` boots the dev server's game in headless Chrome and checks mount/END_TURN/remount/resize.
 - Four seasons × 3 months = 12 turns/year; don't conflate `season` and `monthOfSeason`.
 
 ## Before declaring a task done

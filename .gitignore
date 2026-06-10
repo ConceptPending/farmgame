@@ -6,4 +6,8 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
-.vercel
+.DS_Store
+
+# Local-only helper scripts (Puppeteer captures, balance probes) — the
+# underscore prefix marks them as never-committed; see CLAUDE.md.
+tools/_*

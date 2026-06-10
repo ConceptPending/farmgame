@@ -12,6 +12,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "composite": true
+    // Plain `tsc` per package (Turbo orders builds via ^build); `composite`
+    // + project references were a half-adopted alternative that only emitted
+    // .tsbuildinfo for nothing. `incremental` keeps the fast local rebuilds.
+    "incremental": true
   }
 }

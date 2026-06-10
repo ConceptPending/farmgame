@@ -48,11 +48,13 @@ docs/design/             # design notes
 
 ## Deployment
 
-The repo ships a root `vercel.json` that:
+`apps/web/vercel.json` (the Vercel project's Root Directory is `apps/web`):
 
-- installs with `pnpm install --frozen-lockfile`
+- installs from the repo root with `pnpm install --frozen-lockfile`
 - builds via `pnpm turbo build --filter @farmgame/web` (so the workspace packages build before Next does)
-- points `outputDirectory` at `apps/web/.next`
+- `outputDirectory` is `.next` (relative to `apps/web`)
+
+CI (`.github/workflows/ci.yml`) runs build/typecheck/lint/test on every PR and push to main.
 
 No environment variables are required — the game is fully client-side and stores saves in `localStorage`.
 
@@ -66,7 +68,7 @@ vercel --prod
 
 ## Testing
 
-- Engine: 256 tests in `packages/engine/tests/` covering commands, tick pipeline, crop lifecycle, world, weather, market, field health, RNG determinism.
-- Web: 27 tests in `apps/web/tests/`.
+- Engine: 260+ tests in `packages/engine/tests/` covering commands, tick pipeline, crop lifecycle, world, weather, market, field health, RNG determinism, and multi-year balance scenarios.
+- Web: 36 tests in `apps/web/tests/` (saves, store dispatch/autosave, onboarding, season suggestions).
 
 Run with `pnpm turbo test`.
